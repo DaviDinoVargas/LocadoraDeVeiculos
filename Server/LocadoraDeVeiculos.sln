@@ -15,6 +15,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "5. Testes", "5. Testes", "{
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LocadoraDeVeiculos.Core.Aplicacao", "LocadoraDeVeiculos.Core.Aplicacao\LocadoraDeVeiculos.Core.Aplicacao.csproj", "{44E092D6-EA70-4D09-8908-76D2615A40B1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LocadoraDeVeiculos.Core.Dominio", "LocadoraDeVeiculos.Core.Dominio\LocadoraDeVeiculos.Core.Dominio.csproj", "{0EF16C67-FA94-495C-A20F-E7529488610C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -25,12 +27,17 @@ Global
 		{44E092D6-EA70-4D09-8908-76D2615A40B1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{44E092D6-EA70-4D09-8908-76D2615A40B1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{44E092D6-EA70-4D09-8908-76D2615A40B1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0EF16C67-FA94-495C-A20F-E7529488610C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0EF16C67-FA94-495C-A20F-E7529488610C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0EF16C67-FA94-495C-A20F-E7529488610C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0EF16C67-FA94-495C-A20F-E7529488610C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{44E092D6-EA70-4D09-8908-76D2615A40B1} = {E412C11A-7275-4EF7-BE3C-31BA64907887}
+		{0EF16C67-FA94-495C-A20F-E7529488610C} = {E412C11A-7275-4EF7-BE3C-31BA64907887}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {13646D35-D167-4E90-8848-E2C68846E0DD}
