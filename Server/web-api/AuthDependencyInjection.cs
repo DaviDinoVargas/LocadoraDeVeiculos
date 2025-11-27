@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Services;
+using LocadoraDeVeiculos.WebApi.Identify;
+
 
 namespace LocadoraDeVeiculos.WebApi;
 

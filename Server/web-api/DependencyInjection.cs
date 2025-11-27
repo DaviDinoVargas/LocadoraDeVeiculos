@@ -1,6 +1,9 @@
 ﻿using FluentValidation;
+using LocadoraDeVeiculos.Core.Aplicacao.Compartilhado;
 using LocadoraDeVeiculos.Core.Dominio.Compartilhado;
 using LocadoraDeVeiculos.Infraestrutura.Orm.Compartilhado;
+using LocadoraDeVeiculos.WebApi;
+using LocadoraDeVeiculos.WebApi.Filters;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Serilog;
@@ -162,7 +165,11 @@ public static class DependencyInjection
     {
         services.AddMediatR(cfg =>
         {
-            //cfg.RegisterServicesFromAssemblyContaining<InserirMedicoRequest>();
+            
+            cfg.RegisterServicesFromAssemblies(
+                typeof(MarkerDoCoreAplicacao).Assembly,
+                typeof(Program).Assembly 
+            );
         });
     }
 }
