@@ -8,7 +8,7 @@ public static class DatabaseConfig
     {
         using var scope = app.ApplicationServices.CreateScope();
 
-        var dbContext = scope.ServiceProvider.GetRequiredService<LocadoraDeVeiculosMDbContext>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<LocadoraDeVeiculosDbContext>();
 
         var migracaoConcluida = MigradorBancoDados.AtualizarBancoDados(dbContext);
 
