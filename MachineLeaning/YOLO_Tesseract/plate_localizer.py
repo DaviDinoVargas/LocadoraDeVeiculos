@@ -2,9 +2,6 @@ import cv2
 from utils import ensure_dir
 import os
 
-
-
-
 def crop_box(frame, box, margin=0.1):
     h, w = frame.shape[:2]
     x1, y1, x2, y2 = box
@@ -17,17 +14,7 @@ def crop_box(frame, box, margin=0.1):
     x2 = min(w, x2 + mx)
     y2 = min(h, y2 + my)
     return frame[y1:y2, x1:x2]
-
-
-
-
 def find_plate_candidates(detections):
-# """
-# Filtra detecções possivelmente relevantes para placa.
-# Depende do seu modelo: se o YOLO tiver classe específica 'license_plate', priorize-a.
-# Caso contrário, procura por veículo e depois aplica heurísticas (aspect ratio).
-# """
-# # Espera lista de {'box':(x1,y1,x2,y2), 'label': 'car'...}
     candidates = []
     for d in detections:
         label = d.get('label','') .lower()

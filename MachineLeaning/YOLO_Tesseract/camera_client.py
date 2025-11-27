@@ -1,8 +1,5 @@
 import cv2
 
-
-
-
 def list_cameras(max_probe=8):
     available = []
     for i in range(max_probe):

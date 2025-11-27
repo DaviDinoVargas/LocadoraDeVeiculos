@@ -10,7 +10,7 @@ class YoloDetector:
 
     def predict(self, frame, imgsz=640, conf=0.25):
 # frame: BGR numpy array
-# returns list of detections: [{ 'box':(x1,y1,x2,y2), 'conf':..., 'class':..., 'label':... }, ...]
+# returns list of detections
         res = self.model.predict(frame, imgsz=imgsz, conf=conf, verbose=False)
         out = []
 # ultralytics returns a list of Results (one per image). Aqui single-image

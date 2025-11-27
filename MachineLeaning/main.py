@@ -17,7 +17,6 @@ SCRIPTS = {
     "yolo_tesseract":{"path": BASE_DIR / "yolo_tesseract" / "main.py", "enabled": True},
 }
 
-# se quiser desabilitar algum, defina a variável de ambiente DISABLE_<NAME>=1
 for name in list(SCRIPTS.keys()):
     env_flag = os.environ.get(f"DISABLE_{name.upper()}")
     if env_flag and env_flag not in ("0", "false", "False"):
@@ -53,11 +52,7 @@ def start_process(name, script_path: Path):
         print(f"[orch] script for {name} not found: {script_path}")
         return None
     env = os.environ.copy()
-    # opcional: configurar variáveis específicas por serviço aqui
-    # ex: if name == 'camera_server': env['PORT'] = '5001'
-    # start process
     try:
-        # On Windows, creationflags could be used; keep portable default
         p = subprocess.Popen(
             [PY, str(script_path)],
             cwd=str(script_path.parent),
@@ -134,7 +129,7 @@ def orchestrate():
                 else:
                     print(f"[orch] não vai reiniciar {name} (policy={RESTART_POLICY})")
 
-            # se nenhum processo tiver ativo, encerramos
+            # se nenhum processo tiver ativo, encerra
             if not any(p.poll() is None for p in procs.values()):
                 print("[orch] nenhum subprocesso ativo, encerrando orquestrador.")
                 break
@@ -159,7 +154,6 @@ if __name__ == "__main__":
         signal.signal(signal.SIGINT, _handle_signal)
         signal.signal(signal.SIGTERM, _handle_signal)
     except Exception:
-        # Windows may raise if signals not available; KeyboardInterrupt still works
         pass
 
     print("[orch] iniciando orquestrador de ML...")

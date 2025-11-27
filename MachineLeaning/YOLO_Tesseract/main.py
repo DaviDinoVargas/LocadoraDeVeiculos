@@ -8,7 +8,6 @@ import uvicorn
 
 app = FastAPI(title='YOLO_Tesseract Service')
 service = YoloTessService()
-
 class StartReq(BaseModel):
     camera: int
     fps: float = 10.0
@@ -40,7 +39,6 @@ def stop(cam: int):
 LAST = []
 
 def on_plate_detected(payload):
-    # payload: {'camera':..., 'plate':..., 'bbox':(...) }
     LAST.append(payload)
     # keep only recent
     if len(LAST) > 200:
