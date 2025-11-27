@@ -8,8 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Compartilhado\" />
-    <Folder Include="ModuloAutenticacao\" />
+    <Folder Include="ModuloAutenticacao\Commands\" />
+    <Folder Include="ModuloAutenticacao\DTOs\" />
+    <Folder Include="ModuloAutenticacao\Services\" />
+    <Folder Include="NewFolder\" />
   </ItemGroup>
 
   <ItemGroup>
