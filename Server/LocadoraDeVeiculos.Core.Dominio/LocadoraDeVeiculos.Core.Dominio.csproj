@@ -9,7 +9,6 @@
 
   <ItemGroup>
     <Folder Include="Compartilhado\" />
-    <Folder Include="ModuloAutenticacao\" />
   </ItemGroup>
 
   <ItemGroup>
