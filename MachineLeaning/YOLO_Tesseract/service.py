@@ -55,28 +55,25 @@ class YoloTessService:
 
                 now = time.time()
                 if now - last < interval:
-                    # pequena espera para não travar a CPU totalmente
+                    # evitar o travamento da cpu
                     time.sleep(0.001)
                     continue
 
                 last = now
                 # infer
                 dets = self.detector.predict(frame, conf=MIN_CONFIDENCE)
-                # filtra candidatos de placa
+                # filtrar candidatos na identificação da placa
                 candidates = find_plate_candidates(dets)
                 for cand in candidates:
                     x1, y1, x2, y2 = cand['box']
                     area = (x2 - x1) * (y2 - y1)
                     if area < MIN_PLATE_AREA:
                         continue
-
                     crop = crop_box(frame, (x1, y1, x2, y2), margin=0.1)
                     if crop is None or getattr(crop, "size", 0) == 0:
                         continue
-
                     if SAVE_CROPS:
                         save_crop(frame=crop, out_dir=CROPS_DIR, prefix=f'cam{cam_index}')
-
                     # faz OCR
                     text = ocr_plate_image(crop)
                     if text:
@@ -89,9 +86,8 @@ class YoloTessService:
                                     'bbox': cand['box'],
                                 })
                             except Exception as e:
-                                # melhor log do que print simples
                                 log.exception('Erro no callback da câmera %s: %s', cam_index, e)
-                # evita loop muito tight quando não há detecções
+                # evitar fazer loop quando não há detecção
                 time.sleep(0.001)
         except Exception as e:
             log.exception('Erro no loop de processamento da câmera %s: %s', cam_index, e)
