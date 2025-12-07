@@ -1,4 +1,5 @@
-﻿using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
+﻿using LocadoraDeVeiculos.Core.Dominio.Compartilhado;
+using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
 using System;
 using System.Collections.Generic;
 using System.Linq;

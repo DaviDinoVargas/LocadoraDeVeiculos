@@ -7,16 +7,22 @@ using System.Threading.Tasks;
 
 namespace LocadoraDeVeiculos.Core.Dominio.Compartilhado
 {
-    public abstract class EntidadeBase
+    public abstract class EntidadeBase<T>
     {
-        public Guid Id { get; set; }
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public DateTimeOffset CriadoEmUtc { get; set; } = DateTime.UtcNow;
+        public DateTimeOffset? ExcluidoEmUtc { get; set; }
+        public bool Excluido { get; set; }
 
-        protected EntidadeBase()
+        public Guid EmpresaId { get; set; }
+        public Usuario? Empresa { get; set; }
+
+        public abstract void AtualizarRegistro(T registroEditado);
+
+        public void Excluir()
         {
-            Id = Guid.NewGuid();
+            Excluido = true;
+            ExcluidoEmUtc = DateTime.UtcNow;
         }
-
-        public Guid UsuarioId { get; set; }
-        public Usuario? Usuario { get; set; }
     }
 }

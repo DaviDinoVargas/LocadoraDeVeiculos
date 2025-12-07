@@ -2,9 +2,13 @@
 using LocadoraDeVeiculos.Core.Aplicacao.Compartilhado;
 using LocadoraDeVeiculos.Core.Aplicacao.ModuloFuncionario.Commands;
 using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
+using LocadoraDeVeiculos.Core.Dominio.ModuloFuncionario;
 using LocadoraDeVeiculos.Infraestrutura.Orm.jwt.Services;
+using LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
+using LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloFuncionario;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,7 +18,7 @@ using System.Threading.Tasks;
 namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloFuncionario.Handlers;
 
 public class ExcluirFuncionarioCommandHandler(
-    AppDbContext dbContext,
+    LocadoraDeVeiculosDbContext dbContext,
     RepositorioFuncionarioEmOrm repositorioFuncionario,
     RefreshTokenProvider refreshTokenProvider,
     UserManager<Usuario> userManager,

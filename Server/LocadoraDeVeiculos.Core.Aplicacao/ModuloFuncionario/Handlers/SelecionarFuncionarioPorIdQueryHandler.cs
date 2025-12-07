@@ -1,6 +1,8 @@
 ﻿using FluentResults;
 using LocadoraDeVeiculos.Core.Aplicacao.Compartilhado;
 using LocadoraDeVeiculos.Core.Aplicacao.ModuloFuncionario.Commands;
+using LocadoraDeVeiculos.Core.Dominio.ModuloFuncionario;
+using LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloFuncionario;
 using MediatR;
 using System;
 using System.Collections.Generic;

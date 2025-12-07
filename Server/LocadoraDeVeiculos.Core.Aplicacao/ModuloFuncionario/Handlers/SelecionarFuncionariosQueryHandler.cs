@@ -1,8 +1,10 @@
 ﻿using FluentResults;
 using LocadoraDeVeiculos.Core.Aplicacao.ModuloFuncionario.Commands;
+using LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloFuncionario;
 using MediatR;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
