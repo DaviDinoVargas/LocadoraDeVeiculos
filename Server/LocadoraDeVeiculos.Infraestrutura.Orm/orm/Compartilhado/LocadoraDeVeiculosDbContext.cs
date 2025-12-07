@@ -1,6 +1,7 @@
 ﻿using LocadoraDeVeiculos.Core.Dominio.Compartilhado;
 using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
 using LocadoraDeVeiculos.Core.Dominio.ModuloFuncionario;
+using LocadoraDeVeiculos.Core.Dominio.ModuloGrupoAutomovel;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,7 +14,7 @@ public class LocadoraDeVeiculosDbContext(
 {
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<Funcionario> Funcionarios { get; set; }
-
+    public DbSet<GrupoAutomovel> GruposAutomovel { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // Se tiver filtros multi-tenant no futuro, colocar aqui

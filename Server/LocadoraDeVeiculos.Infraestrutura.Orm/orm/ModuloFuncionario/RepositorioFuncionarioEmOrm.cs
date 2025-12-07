@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloFuncionario;
 
-public class RepositorioFuncionarioEmOrm : RepositorioBaseEmOrm<Funcionario>
+public class RepositorioFuncionarioEmOrm : RepositorioBaseEmOrm<Funcionario>, IRepositorioFuncionario
 {
     private readonly LocadoraDeVeiculosDbContext dbContext;
 
@@ -41,5 +41,10 @@ public class RepositorioFuncionarioEmOrm : RepositorioBaseEmOrm<Funcionario>
             .Include(u => u.Empresa)
             .Include(u => u.Usuario)
             .ToListAsync();
+    }
+
+    public Task<List<Funcionario>> SelecionarTodosAsync(int quantity)
+    {
+        throw new NotImplementedException();
     }
 }

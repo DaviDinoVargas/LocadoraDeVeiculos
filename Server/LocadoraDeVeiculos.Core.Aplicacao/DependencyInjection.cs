@@ -3,6 +3,10 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using FluentValidation;
+using LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloFuncionario;
+using LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloGrupoAutomovel;
+using LocadoraDeVeiculos.Core.Dominio.ModuloFuncionario;
+using LocadoraDeVeiculos.Core.Dominio.ModuloGrupoAutomovel;
 
 namespace LocadoraDeVeiculos.Core.Aplicacao;
 
@@ -24,6 +28,9 @@ public static class DependencyInjection
             config.LicenseKey = licenseKey;
             config.RegisterServicesFromAssembly(assembly);
         });
+
+        services.AddScoped<IRepositorioGrupoAutomovel, RepositorioGrupoAutomovelEmOrm>();
+        services.AddScoped<IRepositorioFuncionario, RepositorioFuncionarioEmOrm>();
 
         return services;
     }

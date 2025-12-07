@@ -18,7 +18,7 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado
                 .AddUserSecrets<LocadoraDeVeiculosDbContextFactory>() 
                 .Build();
 
-            var connectionString = config["SQL_CONNECTION_STRING"];
+            var connectionString = config.GetConnectionString("SQL_CONNECTION_STRING");
 
             if (string.IsNullOrWhiteSpace(connectionString))
                 throw new Exception("Connection string 'SQL_CONNECTION_STRING' não encontrada nos User Secrets.");
