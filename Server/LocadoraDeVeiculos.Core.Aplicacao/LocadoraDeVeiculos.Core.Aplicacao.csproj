@@ -7,6 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Folder Include="ModuloFuncionario\Handlers\" />
+    <Folder Include="ModuloFuncionario\Validators\" />
     <Folder Include="NewFolder\" />
   </ItemGroup>
 
