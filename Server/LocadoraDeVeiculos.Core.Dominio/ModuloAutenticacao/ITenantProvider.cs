@@ -8,6 +8,7 @@ namespace LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao
 {
     public interface ITenantProvider
     {
-        Guid? UsuarioId { get; }
+        Guid? EmpresaId { get; }
+        bool EstaNoCargo(string cargo);
     }
 }

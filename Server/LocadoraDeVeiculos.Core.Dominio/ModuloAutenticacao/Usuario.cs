@@ -5,14 +5,23 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao
+namespace LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
+
+public class Usuario : IdentityUser<Guid>
 {
-    public class Usuario : IdentityUser<Guid>
+    public string FullName { get; set; }
+    public Guid AccessTokenVersionId { get; set; } = Guid.Empty;
+
+    public Usuario()
     {
-        public Usuario()
-        {
-            Id = Guid.NewGuid();
-            EmailConfirmed = true;
-        }
+        Id = Guid.NewGuid();
+        EmailConfirmed = true;
     }
 }
+
+public record UsuarioAutenticado(
+    Guid Id,
+    string NomeCompleto,
+    string Email,
+    CargoUsuario Cargo
+);
