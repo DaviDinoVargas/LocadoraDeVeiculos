@@ -1,21 +1,32 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.Json;
 
-namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
 
-public static class LocadoraDeVeiculosDbContextFactory
+namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado
 {
-    public static LocadoraDeVeiculosDbContext CriarDbContext(string connectionString)
+    public class LocadoraDeVeiculosDbContextFactory
+        : IDesignTimeDbContextFactory<LocadoraDeVeiculosDbContext>
     {
-        var options = new DbContextOptionsBuilder<LocadoraDeVeiculosDbContext>()
-            .UseSqlServer(connectionString, opt => opt.EnableRetryOnFailure(3))
-            .Options;
+        public LocadoraDeVeiculosDbContext CreateDbContext(string[] args)
+        {
+            // carrega a configuração como no runtime
+            var config = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: true)
+                .AddUserSecrets<LocadoraDeVeiculosDbContextFactory>() 
+                .Build();
 
-        // TenantProvider nulo por padrão
-        return new LocadoraDeVeiculosDbContext(options);
+            var connectionString = config["SQL_CONNECTION_STRING"];
+
+            if (string.IsNullOrWhiteSpace(connectionString))
+                throw new Exception("Connection string 'SQL_CONNECTION_STRING' não encontrada nos User Secrets.");
+
+            var optionsBuilder = new DbContextOptionsBuilder<LocadoraDeVeiculosDbContext>()
+                .UseSqlServer(connectionString, opt => opt.EnableRetryOnFailure(3));
+
+            return new LocadoraDeVeiculosDbContext(optionsBuilder.Options);
+        }
     }
 }
