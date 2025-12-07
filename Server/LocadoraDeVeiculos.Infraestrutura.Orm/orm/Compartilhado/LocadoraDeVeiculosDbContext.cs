@@ -9,11 +9,14 @@ using System.Reflection.Emit;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LocadoraDeVeiculos.Infraestrutura.Orm.Compartilhado;
+namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
 
 public class LocadoraDeVeiculosDbContext(DbContextOptions options, ITenantProvider? tenantProvider = null)
     : IdentityDbContext<Usuario, Cargo, Guid>(options), IContextoPersistencia
 {
+
+    public DbSet<RefreshToken> RefreshTokens { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         if (tenantProvider is not null)

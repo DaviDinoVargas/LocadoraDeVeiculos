@@ -1,4 +1,5 @@
 ﻿using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
+using LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
@@ -14,14 +15,14 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.jwt.Services;
 
 public class AccessTokenProvider
 {
-    private readonly AppDbContext dbContext;
+    private readonly LocadoraDeVeiculosDbContext dbContext;
     private readonly UserManager<Usuario> userManager;
 
     private readonly string audienciaValida;
     private readonly string chaveAssinaturaJwt;
 
     public AccessTokenProvider(
-        AppDbContext dbContext,
+        LocadoraDeVeiculosDbContext dbContext,
         UserManager<Usuario> userManager,
         IConfiguration config
     )

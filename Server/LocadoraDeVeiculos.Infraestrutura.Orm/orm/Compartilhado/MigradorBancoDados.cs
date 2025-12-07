@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LocadoraDeVeiculos.Infraestrutura.Orm.Compartilhado;
+namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
 
 public static class MigradorBancoDados
 {

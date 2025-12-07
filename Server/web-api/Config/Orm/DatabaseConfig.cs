@@ -1,4 +1,5 @@
-﻿using LocadoraDeVeiculos.Infraestrutura.Orm.Compartilhado;
+﻿using LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
+using Microsoft.EntityFrameworkCore;
 using System;
 
 namespace LocadoraDeVeiculos.WebApi.Config.Orm;
@@ -9,7 +10,7 @@ public static class DatabaseOperations
     {
         var scope = app.Services.CreateScope();
 
-        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<LocadoraDeVeiculosDbContext>();
 
         dbContext.Database.Migrate();
     }

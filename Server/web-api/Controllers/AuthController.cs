@@ -1,13 +1,10 @@
-﻿using Azure.Core;
-using LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Commands.Autenticar;
-using LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Commands.Registrar;
+﻿
+using LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Commands;
 using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
 using LocadoraDeVeiculos.WebApi.Compartilhado;
 using LocadoraDeVeiculos.WebApi.Config.Identify;
-using LocadoraDeVeiculos.WebApi.Extensions;
+using LocadoraDeVeiculos.WebApi.Models.ModuloAutenticacao;
 using MediatR;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LocadoraDeVeiculos.WebApi.Controllers;

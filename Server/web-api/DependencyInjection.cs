@@ -1,7 +1,7 @@
 ﻿using FluentValidation;
 using LocadoraDeVeiculos.Core.Aplicacao.Compartilhado;
 using LocadoraDeVeiculos.Core.Dominio.Compartilhado;
-using LocadoraDeVeiculos.Infraestrutura.Orm.Compartilhado;
+using LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
 using LocadoraDeVeiculos.WebApi;
 using LocadoraDeVeiculos.WebApi.Filters;
 using Microsoft.EntityFrameworkCore;

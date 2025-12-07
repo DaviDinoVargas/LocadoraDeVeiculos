@@ -6,6 +6,8 @@ using System.Text;
 using System;
 using System.Text.Json;
 using System.IdentityModel.Tokens.Jwt;
+using LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
+using System.Security.Claims;
 
 namespace LocadoraDeVeiculos.WebApi.Config.Identify;
 
@@ -24,7 +26,7 @@ public static class IdentityConfig
             options.Password.RequireNonAlphanumeric = false;
             options.Password.RequiredLength = 6;
         })
-        .AddEntityFrameworkStores<AppDbContext>()
+        .AddEntityFrameworkStores<LocadoraDeVeiculosDbContext>()
         .AddDefaultTokenProviders();
 
         services.AddJwtAuthentication(configuration);

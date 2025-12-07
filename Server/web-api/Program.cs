@@ -9,6 +9,7 @@ using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
 using LocadoraDeVeiculos.Infraestrutura.Orm.Identify;
 using LocadoraDeVeiculos.WebApi.Config;
 using LocadoraDeVeiculos.WebApi.Config.Orm;
+using LocadoraDeVeiculos.Infraestrutura.Orm.jwt;
 
 namespace LocadoraDeVeiculos.WebApi
 {
@@ -35,6 +36,8 @@ namespace LocadoraDeVeiculos.WebApi
             builder.Services.ConfigureIdentityProviders();
             builder.Services.ConfigureJwtAuthentication(builder.Configuration);
 
+            builder.Services.AddCamadaInfraestruturaJwt();
+
             // Controllers
             builder.Services.ConfigureControllersWithFilters();
 
@@ -48,7 +51,8 @@ namespace LocadoraDeVeiculos.WebApi
 
             app.UseGlobalExceptionHandler();
 
-            app.AutoMigrateDatabase();
+
+            //app.AutoMigrateDatabase();
 
             app.UseSwagger();
             app.UseSwaggerUI();

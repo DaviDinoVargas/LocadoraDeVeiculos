@@ -1,11 +1,10 @@
 ﻿using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
-using LocadoraDeVeiculos.Infraestrutura.Orm.Compartilhado;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Services;
-using LocadoraDeVeiculos.WebApi.Identify;
+using LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
 
 
 namespace LocadoraDeVeiculos.WebApi;
@@ -15,7 +14,7 @@ public static class AuthDependencyInjection
     public static void ConfigureIdentityProviders(this IServiceCollection services)
     {
         services.AddScoped<ITokenProvider, JwtProvider>();
-        services.AddScoped<ITenantProvider, ApiTenantProvider>();
+        //services.AddScoped<ITenantProvider, ApiTenantProvider>();
 
         services.AddIdentity<Usuario, Cargo>(options =>
         {

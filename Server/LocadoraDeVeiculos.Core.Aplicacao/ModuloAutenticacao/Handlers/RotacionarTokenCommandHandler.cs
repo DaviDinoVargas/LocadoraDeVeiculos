@@ -1,17 +1,16 @@
-﻿using Azure.Core;
-using FluentResults;
-using LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Commands.Autenticar;
+﻿using FluentResults;
+using LocadoraDeVeiculos.Core.Aplicacao.Compartilhado;
+using LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Commands;
+using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
+using LocadoraDeVeiculos.Infraestrutura.Orm.jwt.Services;
+using LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
 using MediatR;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Handlers;
 
 public class RotacionarTokenCommandHandler(
-    AppDbContext dbContext,
+    LocadoraDeVeiculosDbContext dbContext,
     AccessTokenProvider accessTokenProvider,
     RefreshTokenProvider refreshTokenProvider,
     ILogger<RotacionarTokenCommandHandler> logger

@@ -1,5 +1,5 @@
 ﻿using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
-using LocadoraDeVeiculos.Infraestrutura.Orm.Compartilhado;
+using LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +11,7 @@ using System.Text;
 namespace LocadoraDeVeiculos.Infraestrutura.Orm.jwt.Services;
 
 public class RefreshTokenProvider(
-    AppDbContext dbContext,
+    LocadoraDeVeiculosDbContext dbContext,
     UserManager<Usuario> userManager,
     IHttpContextAccessor contextAccessor
 )
