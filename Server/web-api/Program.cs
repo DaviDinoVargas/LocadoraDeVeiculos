@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Identity;
 using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
 using LocadoraDeVeiculos.Infraestrutura.Orm.Identify;
 using LocadoraDeVeiculos.WebApi.Config;
+using LocadoraDeVeiculos.WebApi.Config.Orm;
 
 namespace LocadoraDeVeiculos.WebApi
 {
