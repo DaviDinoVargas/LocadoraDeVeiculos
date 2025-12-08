@@ -46,8 +46,8 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAutomovel.Handlers
                 return Result.Fail(ResultadosErro.RegistroNaoEncontradoErro(command.Id));
 
             // Verificar se existe aluguel em aberto para este automóvel
-            if (await _repositorioAutomovel.ExisteAluguelEmAbertoAsync(command.Id))
-                return Result.Fail(ResultadosErro.RegistroVinculadoErro("Não é possível editar um automóvel com aluguel em aberto."));
+            //if (await _repositorioAutomovel.ExisteAluguelEmAbertoAsync(command.Id))
+            //    return Result.Fail(ResultadosErro.RegistroVinculadoErro("Não é possível editar um automóvel com aluguel em aberto."));
 
             ValidationResult resultadoValidacao = await _validator.ValidateAsync(command, cancellationToken);
 

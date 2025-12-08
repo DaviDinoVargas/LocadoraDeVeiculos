@@ -60,5 +60,10 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloAutomovel
                 .OrderBy(a => a.Placa)
                 .ToListAsync();
         }
+
+        public Task<List<Automovel>> SelecionarTodosAsync(int quantity)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

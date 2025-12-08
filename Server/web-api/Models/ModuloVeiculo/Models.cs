@@ -1,7 +1,6 @@
 ﻿using LocadoraDeVeiculos.Core.Dominio.ModuloAutomovel;
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 
 namespace LocadoraDeVeiculos.WebApi.Models.ModuloAutomovel
 {
@@ -47,8 +46,6 @@ namespace LocadoraDeVeiculos.WebApi.Models.ModuloAutomovel
 
     public record ExcluirAutomovelResponse();
 
-    public record SelecionarAutomoveisResponse(IReadOnlyList<SelecionarAutomoveisDto> Registros);
-
     public record SelecionarAutomoveisDto(
         Guid Id,
         string Placa,
@@ -59,8 +56,11 @@ namespace LocadoraDeVeiculos.WebApi.Models.ModuloAutomovel
         decimal CapacidadeTanque,
         int Ano,
         string? Foto,
-        Guid GrupoAutomovelId,
-        string GrupoAutomovelNome
+        Guid GrupoAutomovelId
+    );
+
+    public record SelecionarAutomoveisResponse(
+        IReadOnlyList<SelecionarAutomoveisDto> Registros
     );
 
     public record SelecionarAutomovelPorIdResponse(
@@ -77,5 +77,7 @@ namespace LocadoraDeVeiculos.WebApi.Models.ModuloAutomovel
         string GrupoAutomovelNome
     );
 
-    public record SelecionarAutomoveisPorGrupoResponse(IReadOnlyList<SelecionarAutomoveisDto> Registros);
+    public record SelecionarAutomoveisPorGrupoResponse(
+        IReadOnlyList<SelecionarAutomoveisDto> Registros
+    );
 }
