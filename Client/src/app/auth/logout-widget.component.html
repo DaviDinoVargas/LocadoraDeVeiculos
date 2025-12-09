@@ -1,4 +1,10 @@
 <div *ngIf="show" class="logout-widget">
-  <span>Usuário: {{ usuarioNome }}</span>
-  <button mat-button (click)="sair()">Sair</button>
+  <div class="user-info">
+    <mat-icon class="user-icon">person</mat-icon>
+    <span class="user-name">{{ usuarioNome }}</span>
+  </div>
+  <button mat-stroked-button color="warn" (click)="sair()" class="logout-btn">
+    <mat-icon>logout</mat-icon>
+    Sair
+  </button>
 </div>
