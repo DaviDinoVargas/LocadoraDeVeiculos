@@ -4,6 +4,7 @@ using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
 using LocadoraDeVeiculos.Core.Dominio.ModuloAutomovel;
 using LocadoraDeVeiculos.Core.Dominio.ModuloCliente;
 using LocadoraDeVeiculos.Core.Dominio.ModuloCondutor;
+using LocadoraDeVeiculos.Core.Dominio.ModuloConfiguracao;
 using LocadoraDeVeiculos.Core.Dominio.ModuloDevolucao;
 using LocadoraDeVeiculos.Core.Dominio.ModuloFuncionario;
 using LocadoraDeVeiculos.Core.Dominio.ModuloGrupoAutomovel;
@@ -29,6 +30,7 @@ public class LocadoraDeVeiculosDbContext(
     public DbSet<TaxaServico> TaxasServico { get; set; }
     public DbSet<Aluguel> Alugueis { get; set; }
     public DbSet<Devolucao> Devolucoes { get; set; }
+    public DbSet<Configuracao> Configuracoes { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // Se tiver filtros multi-tenant no futuro, colocar aqui
