@@ -48,6 +48,10 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloAluguel
                    .HasConversion<int>()
                    .IsRequired();
 
+            builder.Property(a => a.QuilometragemInicial)
+              .HasColumnType("decimal(10,2)")
+              .IsRequired(false);
+
             // Relacionamento Many-to-Many
 
             builder

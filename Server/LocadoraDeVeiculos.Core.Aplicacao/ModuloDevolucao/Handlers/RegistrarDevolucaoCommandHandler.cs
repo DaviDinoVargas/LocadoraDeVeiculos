@@ -2,9 +2,11 @@
 using FluentValidation;
 using FluentValidation.Results;
 using LocadoraDeVeiculos.Core.Aplicacao.Compartilhado;
+using LocadoraDeVeiculos.Core.Aplicacao.ModuloConfiguracao.Commands;
 using LocadoraDeVeiculos.Core.Aplicacao.ModuloDevolucao.Commands;
 using LocadoraDeVeiculos.Core.Dominio.ModuloAluguel;
 using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
+using LocadoraDeVeiculos.Core.Dominio.ModuloConfiguracao;
 using LocadoraDeVeiculos.Core.Dominio.ModuloDevolucao;
 using LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
 using MediatR;
@@ -21,15 +23,16 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloDevolucao.Handlers
         private readonly LocadoraDeVeiculosDbContext _appDbContext;
         private readonly IRepositorioDevolucao _repositorioDevolucao;
         private readonly IRepositorioAluguel _repositorioAluguel;
+        private readonly IRepositorioConfiguracao _repositorioConfiguracao;
         private readonly ITenantProvider _tenantProvider;
         private readonly IValidator<RegistrarDevolucaoCommand> _validator;
         private readonly ILogger<RegistrarDevolucaoCommandHandler> _logger;
-        private readonly decimal _precoCombustivel = 5.50m; // TODO: Buscar do módulo de Configurações! NÃO ESQUECER
 
         public RegistrarDevolucaoCommandHandler(
             LocadoraDeVeiculosDbContext appDbContext,
             IRepositorioDevolucao repositorioDevolucao,
             IRepositorioAluguel repositorioAluguel,
+            IRepositorioConfiguracao repositorioConfiguracao,
             ITenantProvider tenantProvider,
             IValidator<RegistrarDevolucaoCommand> validator,
             ILogger<RegistrarDevolucaoCommandHandler> logger)
@@ -37,6 +40,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloDevolucao.Handlers
             _appDbContext = appDbContext;
             _repositorioDevolucao = repositorioDevolucao;
             _repositorioAluguel = repositorioAluguel;
+            _repositorioConfiguracao = repositorioConfiguracao;
             _tenantProvider = tenantProvider;
             _validator = validator;
             _logger = logger;
@@ -59,8 +63,8 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloDevolucao.Handlers
             if (aluguel is null)
                 return Result.Fail(ResultadosErro.RegistroNaoEncontradoErro(command.AluguelId));
 
-            //if (aluguel.Status != StatusAluguel.EmAndamento)
-            //    return Result.Fail(ResultadosErro.RegistroInvalidoErro("Só é possível registrar devolução para aluguéis em andamento."));
+            if (aluguel.Status != StatusAluguel.EmAndamento)
+                return Result.Fail(ResultadosErro.RegistroInvalidoErro("Só é possível registrar devolução para aluguéis em andamento."));
 
             // Verificar se já existe devolução para este aluguel
             if (await _repositorioDevolucao.ExisteDevolucaoParaAluguelAsync(command.AluguelId))
@@ -68,6 +72,12 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloDevolucao.Handlers
 
             try
             {
+                // Obter configurações da empresa
+                var empresaId = _tenantProvider.EmpresaId.GetValueOrDefault();
+                var configuracao = await _repositorioConfiguracao.SelecionarPorEmpresaIdAsync(empresaId);
+
+                decimal precoCombustivel = configuracao?.PrecoCombustivel ?? 5.50m; // Valor padrão se não houver configuração
+
                 var devolucao = new Devolucao(
                     command.AluguelId,
                     command.DataDevolucao,
@@ -76,17 +86,15 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloDevolucao.Handlers
                     command.NivelCombustivel
                 )
                 {
-                    EmpresaId = _tenantProvider.EmpresaId.GetValueOrDefault()
+                    EmpresaId = empresaId
                 };
 
                 // Calcular valores (multas, combustível, total)
-                // TODO: Buscar preço do combustível do módulo de Configurações
-                // TODO: Buscar capacidade do tanque do automóvel
                 decimal capacidadeTanque = aluguel.Automovel?.CapacidadeTanque ?? 50m;
-                decimal quilometragemInicial = 0; // TODO: Adicionar quilometragem inicial no aluguel
+                decimal quilometragemInicial = aluguel.QuilometragemInicial ?? 0;
 
                 devolucao.CalcularValores(
-                    _precoCombustivel,
+                    precoCombustivel,
                     capacidadeTanque,
                     quilometragemInicial,
                     aluguel.DataRetornoPrevisto,

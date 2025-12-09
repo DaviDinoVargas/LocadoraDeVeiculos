@@ -33,6 +33,7 @@ namespace LocadoraDeVeiculos.Core.Dominio.ModuloAluguel
 
         // Taxas e Serviços selecionados
         public List<TaxaServico> TaxasServicos { get; set; } = new();
+        public decimal? QuilometragemInicial { get; set; }
 
         protected Aluguel() { }
 
