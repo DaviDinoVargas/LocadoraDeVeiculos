@@ -62,5 +62,13 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloTaxaServico
         {
             throw new NotImplementedException();
         }
+
+        public async Task<List<TaxaServico>> SelecionarPorIdsAsync(List<Guid> ids)
+        {
+            return await dbContext.TaxasServico
+                .Where(t => ids.Contains(t.Id))
+                .OrderBy(t => t.Nome)
+                .ToListAsync();
+        }
     }
 }

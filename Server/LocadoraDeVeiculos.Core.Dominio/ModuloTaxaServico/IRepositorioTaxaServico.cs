@@ -10,5 +10,6 @@ namespace LocadoraDeVeiculos.Core.Dominio.ModuloTaxaServico
         Task<bool> ExisteTaxaServicoComNomeAsync(string nome, Guid? idExcluir = null);
         Task<bool> ExisteAluguelVinculadoAsync(Guid taxaServicoId);
         Task<List<TaxaServico>> SelecionarPorTipoAsync(TipoCalculo tipoCalculo);
+        Task<List<TaxaServico>> SelecionarPorIdsAsync(List<Guid> ids);
     }
 }
