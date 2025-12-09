@@ -27,7 +27,7 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloCondutor
                    .IsRequired();
 
             builder.Property(c => c.ValidadeCnh)
-                   .HasColumnType("datetimeoffset")
+                   .HasColumnType("datetime2")
                    .IsRequired();
 
             builder.Property(c => c.Telefone)
