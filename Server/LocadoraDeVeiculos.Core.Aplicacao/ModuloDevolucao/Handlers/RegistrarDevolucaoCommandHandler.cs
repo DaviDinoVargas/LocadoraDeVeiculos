@@ -63,8 +63,8 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloDevolucao.Handlers
             if (aluguel is null)
                 return Result.Fail(ResultadosErro.RegistroNaoEncontradoErro(command.AluguelId));
 
-            if (aluguel.Status != StatusAluguel.EmAndamento)
-                return Result.Fail(ResultadosErro.RegistroInvalidoErro("Só é possível registrar devolução para aluguéis em andamento."));
+            //if (aluguel.Status != StatusAluguel.EmAndamento)
+            //    return Result.Fail(ResultadosErro.RegistroInvalidoErro("Só é possível registrar devolução para aluguéis em andamento."));
 
             // Verificar se já existe devolução para este aluguel
             if (await _repositorioDevolucao.ExisteDevolucaoParaAluguelAsync(command.AluguelId))
