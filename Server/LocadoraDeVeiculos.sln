@@ -23,6 +23,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LocadoraDeVeiculos.Testes.U
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LocadoraDeVeiculos.WebApi", "web-api\LocadoraDeVeiculos.WebApi.csproj", "{3CBD600F-3E3C-8AF6-BC09-3A8591F60AD9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LocadoraDeVeiculos.Tests.Integracao", "LocadoraDeVeiculos.Tests.Integracao\LocadoraDeVeiculos.Tests.Integracao.csproj", "{41D0F8A9-4B85-4925-B73C-AA8CE6DFB703}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -49,6 +51,10 @@ Global
 		{3CBD600F-3E3C-8AF6-BC09-3A8591F60AD9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3CBD600F-3E3C-8AF6-BC09-3A8591F60AD9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3CBD600F-3E3C-8AF6-BC09-3A8591F60AD9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{41D0F8A9-4B85-4925-B73C-AA8CE6DFB703}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{41D0F8A9-4B85-4925-B73C-AA8CE6DFB703}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{41D0F8A9-4B85-4925-B73C-AA8CE6DFB703}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{41D0F8A9-4B85-4925-B73C-AA8CE6DFB703}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -59,6 +65,7 @@ Global
 		{F0E81DAF-E29C-43D4-8380-9C9EC4D26D62} = {8B693827-205D-45BB-9C0A-6BD01C9AF92A}
 		{0AA22DC6-3CA0-4783-90BC-0C5DF9559E58} = {31BC5243-DE3B-4C46-984A-31415AC665B0}
 		{3CBD600F-3E3C-8AF6-BC09-3A8591F60AD9} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{41D0F8A9-4B85-4925-B73C-AA8CE6DFB703} = {31BC5243-DE3B-4C46-984A-31415AC665B0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {13646D35-D167-4E90-8848-E2C68846E0DD}
