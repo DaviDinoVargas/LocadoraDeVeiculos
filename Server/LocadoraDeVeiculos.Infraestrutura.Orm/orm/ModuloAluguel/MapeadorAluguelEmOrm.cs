@@ -1,4 +1,5 @@
 ﻿using LocadoraDeVeiculos.Core.Dominio.ModuloAluguel;
+using LocadoraDeVeiculos.Core.Dominio.ModuloTaxaServico;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -47,10 +48,22 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloAluguel
                    .HasConversion<int>()
                    .IsRequired();
 
-            // Relacionamento Many-to-Many com TaxasServicos
-            builder.HasMany(a => a.TaxasServicos)
-                   .WithMany()
-                   .UsingEntity(j => j.ToTable("AluguelTaxasServicos"));
+            // Relacionamento Many-to-Many
+
+            builder
+                .HasMany(a => a.TaxasServicos)
+                .WithMany()
+                .UsingEntity<Dictionary<string, object>>(
+                    "AluguelTaxasServicos",
+                    j => j.HasOne<TaxaServico>()
+                          .WithMany()
+                          .HasForeignKey("TaxasServicosId")
+                          .OnDelete(DeleteBehavior.Restrict), 
+                    j => j.HasOne<Aluguel>()
+                          .WithMany()
+                          .HasForeignKey("AluguelId")
+                          .OnDelete(DeleteBehavior.Cascade)  
+                );
 
             // Índices
             builder.HasIndex(a => new { a.EmpresaId, a.Excluido });
