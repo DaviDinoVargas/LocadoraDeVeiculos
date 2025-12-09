@@ -1,0 +1,160 @@
+<div class="container mt-3">
+  <h4 *ngIf="!editMode">Novo Funcionário</h4>
+  <h4 *ngIf="editMode">Editar Funcionário</h4>
+
+  <form [formGroup]="form" (ngSubmit)="salvar()">
+    <!-- Nome Completo -->
+    <div class="mb-3">
+      <label class="form-label">Nome Completo</label>
+      <input class="form-control" formControlName="nomeCompleto"/>
+      <div *ngIf="form.controls['nomeCompleto'].invalid && form.controls['nomeCompleto'].touched"
+           class="text-danger small">
+        Nome é obrigatório.
+      </div>
+    </div>
+
+    <!-- CPF -->
+    <div class="mb-3">
+      <label class="form-label">CPF</label>
+      <input class="form-control" formControlName="cpf" placeholder="000.000.000-00"/>
+      <div *ngIf="form.controls['cpf'].invalid && form.controls['cpf'].touched"
+           class="text-danger small">
+        CPF inválido.
+      </div>
+    </div>
+
+    <!-- Email -->
+    <div class="mb-3">
+      <label class="form-label">Email</label>
+      <input type="email" class="form-control" formControlName="email"/>
+      <div *ngIf="form.controls['email'].invalid && form.controls['email'].touched"
+           class="text-danger small">
+        Email inválido.
+      </div>
+    </div>
+
+    <!-- Senha (apenas para criação ou se quiser alterar) -->
+    <div *ngIf="!editMode">
+      <div class="mb-3">
+        <label class="form-label">Senha</label>
+        <div class="input-group">
+          <input [type]="showPassword ? 'text' : 'password'"
+                 class="form-control"
+                 formControlName="senha"
+                 placeholder="Mínimo 6 caracteres"/>
+          <button class="btn btn-outline-secondary"
+                  type="button"
+                  (click)="toggleShowPassword()">
+            <i class="bi" [ngClass]="showPassword ? 'bi-eye-slash' : 'bi-eye'"></i>
+          </button>
+        </div>
+        <div *ngIf="form.controls['senha'].invalid && form.controls['senha'].touched"
+             class="text-danger small">
+          Senha é obrigatória (mínimo 6 caracteres).
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Confirmar Senha</label>
+        <div class="input-group">
+          <input [type]="showConfirmPassword ? 'text' : 'password'"
+                 class="form-control"
+                 formControlName="confirmarSenha"/>
+          <button class="btn btn-outline-secondary"
+                  type="button"
+                  (click)="toggleShowConfirmPassword()">
+            <i class="bi" [ngClass]="showConfirmPassword ? 'bi-eye-slash' : 'bi-eye'"></i>
+          </button>
+        </div>
+        <div *ngIf="form.controls['confirmarSenha'].invalid && form.controls['confirmarSenha'].touched"
+             class="text-danger small">
+          Confirmação de senha é obrigatória.
+        </div>
+      </div>
+    </div>
+
+    <!-- Senha (opcional para edição) -->
+    <div *ngIf="editMode">
+      <div class="mb-3">
+        <label class="form-label">Nova Senha (opcional)</label>
+        <div class="input-group">
+          <input [type]="showPassword ? 'text' : 'password'"
+                 class="form-control"
+                 formControlName="senha"
+                 placeholder="Deixe em branco para manter a senha atual"/>
+          <button class="btn btn-outline-secondary"
+                  type="button"
+                  (click)="toggleShowPassword()">
+            <i class="bi" [ngClass]="showPassword ? 'bi-eye-slash' : 'bi-eye'"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Confirmar Nova Senha</label>
+        <div class="input-group">
+          <input [type]="showConfirmPassword ? 'text' : 'password'"
+                 class="form-control"
+                 formControlName="confirmarSenha"/>
+          <button class="btn btn-outline-secondary"
+                  type="button"
+                  (click)="toggleShowConfirmPassword()">
+            <i class="bi" [ngClass]="showConfirmPassword ? 'bi-eye-slash' : 'bi-eye'"></i>
+          </button>
+        </div>
+      </div>
+      <div *ngIf="form.hasError('mismatch')" class="text-danger small mb-3">
+        As senhas não coincidem.
+      </div>
+    </div>
+
+    <!-- Salário -->
+    <div class="mb-3">
+      <label class="form-label">Salário</label>
+      <div class="input-group">
+        <span class="input-group-text">R$</span>
+        <input type="number"
+               step="0.01"
+               class="form-control"
+               formControlName="salario"/>
+      </div>
+      <div *ngIf="form.controls['salario'].invalid && form.controls['salario'].touched"
+           class="text-danger small">
+        Salário deve ser maior que 0.
+      </div>
+    </div>
+
+    <!-- Data de Admissão -->
+    <div class="mb-3">
+      <label class="form-label">Data de Admissão</label>
+      <input type="date" class="form-control" formControlName="admissaoEmUtc"/>
+      <div *ngIf="form.controls['admissaoEmUtc'].invalid && form.controls['admissaoEmUtc'].touched"
+           class="text-danger small">
+        Data de admissão é obrigatória.
+      </div>
+    </div>
+
+    <!-- Botões -->
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary"
+              type="submit"
+              [disabled]="loading">
+        <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
+        {{ editMode ? 'Salvar' : 'Criar' }}
+      </button>
+      <button class="btn btn-secondary"
+              type="button"
+              (click)="cancelar()"
+              [disabled]="loading">
+        Cancelar
+      </button>
+    </div>
+
+    <!-- Erros do servidor -->
+    <div *ngIf="serverErrors.length > 0" class="alert alert-danger mt-3">
+      <ul class="mb-0">
+        <li *ngFor="let error of serverErrors">{{ error }}</li>
+      </ul>
+    </div>
+  </form>
+</div>

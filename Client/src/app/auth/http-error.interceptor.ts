@@ -1,19 +1,9 @@
-import { HttpInterceptorFn, HttpRequest, HttpHandlerFn, HttpEvent, HttpErrorResponse } from '@angular/common/http';
+import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { throwError } from 'rxjs';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
-// Interceptor de Debug
-export const DebugInterceptor: HttpInterceptorFn = (req, next) => {
-  console.log('Request URL:', req.url);
-  console.log('Request Headers:', req.headers);
-  console.log('Request Body:', req.body);
-
-  return next(req);
-};
-
-// Interceptor de Erro HTTP
 export const HttpErrorInterceptor: HttpInterceptorFn = (req, next) => {
   const snackBar = inject(MatSnackBar);
 

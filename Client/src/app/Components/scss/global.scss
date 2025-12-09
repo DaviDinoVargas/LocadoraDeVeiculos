@@ -1,0 +1,208 @@
+:host {
+  display: block;
+  padding: 24px 16px;
+  background: #fbfcfd;
+  min-height: 100%;
+  color: #1f2937;
+}
+
+/* container geral */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* títulos */
+h3, h4 {
+  margin: 0 0 16px 0;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+h4 { font-size: 1.5rem; }
+h3 { font-size: 1.25rem; }
+
+/* formulário */
+form {
+  background: #fff;
+  padding: 24px 32px;
+  border-radius: 10px;
+  box-shadow: 0 1px 6px rgba(16,24,40,0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.form-label {
+  font-weight: 600;
+  margin-bottom: 4px;
+  display: block;
+}
+
+input.form-control,
+select.form-select {
+  width: 100%;
+  max-width: 520px; /* igual aos inputs datetime-local */
+  padding: 8px 12px; /* igual aos inputs */
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  font-size: 0.95rem;
+  background-color: #fff;
+  color: #1f2937;
+  box-sizing: border-box;
+}
+
+input.form-control:focus,
+select.form-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
+}
+
+.text-danger {
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
+
+/* botões */
+.d-flex.gap-2 { display: flex; gap: 10px; }
+
+button.btn {
+  border-radius: 6px;
+  font-size: 0.875rem;
+  padding: 6px 14px;
+  transition: all 0.2s;
+}
+
+button.btn-primary {
+  background-color: #3b82f6;
+  color: #fff;
+  border: none;
+}
+
+button.btn-primary:hover { background-color: #2563eb; }
+
+button.btn-secondary {
+  background-color: #e5e7eb;
+  color: #1f2937;
+  border: none;
+}
+
+button.btn-secondary:hover { background-color: #d1d5db; }
+
+button.btn-outline-secondary {
+  border: 1px solid #6b7280;
+  background: transparent;
+  color: #6b7280;
+}
+
+button.btn-outline-secondary:hover { background-color: #f3f4f6; }
+
+/* alert info */
+.alert-info {
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #1e3a8a;
+  padding: 12px 16px;
+  font-size: 0.9rem;
+}
+
+/* top row com botões */
+.top-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.top-actions h3 { margin: 0; }
+.top-actions button { margin-left: 8px; }
+
+/* listagem de médicos */
+.medicos-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  .medico-header {
+    display: flex;
+    font-weight: 600;
+    padding: 10px 12px;
+    background: #f3f4f6;
+    border-radius: 6px;
+
+    .col { flex: 1; &.acoes { flex: 0 0 150px; } }
+  }
+
+  .medico-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    gap: 8px;
+
+    .col { flex: 1; &.acoes { flex: 0 0 auto; display: flex; gap: 6px; } }
+
+    .btn-edit {
+      background-color: #3b82f6;
+      color: #fff;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      transition: background 0.2s;
+    }
+    .btn-edit:hover { background-color: #2563eb; }
+
+    .btn-delete {
+      background-color: #dc2626;
+      color: #fff;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      transition: background 0.2s;
+    }
+    .btn-delete:hover { background-color: #b91c1c; }
+  }
+}
+
+/* responsividade */
+@media (max-width: 991.98px) { .container { padding: 16px; } }
+@media (max-width: 575.98px) {
+  h4 { font-size: 1.25rem; }
+  h3 { font-size: 1.1rem; }
+  button.btn { font-size: 0.8rem; padding: 5px 10px; }
+}
+
+/* dropdowns padronizados */
+.form-select {
+  width: 100%;
+  max-width: 480px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  font-size: 0.95rem;
+  background-color: #fff;
+  color: #1f2937;
+  appearance: none;
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
+}
+
+/* Responsividade mobile lista médicos */
+@media (max-width: 767.98px) {
+  .desktop-only { display: none; }
+  .medico-item { flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px; }
+  .medico-item .col.acoes { margin-top: 6px; }
+}
