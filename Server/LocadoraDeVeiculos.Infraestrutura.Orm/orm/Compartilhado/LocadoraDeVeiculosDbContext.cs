@@ -6,6 +6,7 @@ using LocadoraDeVeiculos.Core.Dominio.ModuloCondutor;
 using LocadoraDeVeiculos.Core.Dominio.ModuloFuncionario;
 using LocadoraDeVeiculos.Core.Dominio.ModuloGrupoAutomovel;
 using LocadoraDeVeiculos.Core.Dominio.ModuloPlanoCobranca;
+using LocadoraDeVeiculos.Core.Dominio.ModuloTaxaServico;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,6 +24,7 @@ public class LocadoraDeVeiculosDbContext(
     public DbSet<Automovel> Automoveis { get; set; }
     public DbSet<Cliente> Clientes { get; set; }
     public DbSet<Condutor> Condutores { get; set; }
+    public DbSet<TaxaServico> TaxasServico { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // Se tiver filtros multi-tenant no futuro, colocar aqui
