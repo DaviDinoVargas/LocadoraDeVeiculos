@@ -1,0 +1,38 @@
+.logout-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end; /* alinha o conteúdo à direita */
+  padding: 8px 16px 0 16px;
+  box-sizing: border-box;
+}
+
+.logout-widget {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  text-align: right;
+}
+
+.user-label {
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.user-name {
+  font-weight: 600;
+}
+
+.logout-divider {
+  width: 100%;
+  height: 1px;
+  background-color: #ccc;
+  opacity: 0.6;
+}
