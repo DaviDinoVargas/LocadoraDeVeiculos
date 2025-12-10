@@ -1,0 +1,89 @@
+<nav class="sidebar"
+     [class.collapsed]="collapsed && !isMobile"
+     [class.mobile-open]="mobileOpen">
+  <div class="sidebar-inner">
+    <!-- Cabeçalho/Brand -->
+    <div class="brand" (click)="toggleMobile()" title="Alternar menu">
+      <div class="brand-icon">
+        <mat-icon>directions_car</mat-icon>
+      </div>
+      <div class="brand-label" *ngIf="!collapsed || isMobile">
+        <span class="brand-title">Locadora</span>
+        <span class="brand-subtitle">Veículos</span>
+      </div>
+    </div>
+
+    <!-- Área de conteúdo com scroll -->
+    <div class="sidebar-content">
+      <!-- Lista de Navegação -->
+      <ul class="nav-list">
+        <ng-container *ngFor="let item of menuItems">
+          <!-- Agrupador por módulo -->
+          <li class="module-divider" *ngIf="item.module && (!collapsed || isMobile)">
+            <span class="module-label">{{ item.module }}</span>
+          </li>
+
+          <!-- Item do menu -->
+          <li [class.active]="isActive(item.path) || isChildActive(item)"
+              [class.has-children]="hasChildren(item)"
+              [class.expanded]="item.expanded">
+            <a (click)="navigateParent($event, item)" [title]="item.label">
+              <span class="icon">
+                <mat-icon>{{ item.icon }}</mat-icon>
+              </span>
+              <span class="label" *ngIf="!collapsed || isMobile">{{ item.label }}</span>
+              <span class="chevron" *ngIf="hasChildren(item) && (!collapsed || isMobile)">
+                <mat-icon>expand_more</mat-icon>
+              </span>
+            </a>
+
+            <!-- Subitens -->
+            <ul class="submenu" [class.expanded]="item.expanded"
+                *ngIf="hasChildren(item) && (!collapsed || isMobile)">
+              <li *ngFor="let child of item.children" [class.active]="isActive(child.path)">
+                <a (click)="navigate(child.path, $event)" [title]="child.label">
+                  <span class="submenu-icon">
+                    <mat-icon>{{ child.icon }}</mat-icon>
+                  </span>
+                  <span class="submenu-label">{{ child.label }}</span>
+                </a>
+              </li>
+            </ul>
+          </li>
+        </ng-container>
+      </ul>
+    </div>
+
+    <!-- Rodapé FIXO NO FINAL -->
+    <div class="sidebar-footer">
+      <div class="collapse-section"
+           (click)="toggleMobile()"
+           [title]="isMobile ? (mobileOpen ? 'Fechar menu' : 'Abrir menu') : (collapsed ? 'Expandir menu' : 'Recolher menu')">
+        <div class="collapse-icon">
+          <mat-icon *ngIf="isMobile">
+            {{ mobileOpen ? 'close' : 'menu' }}
+          </mat-icon>
+          <mat-icon *ngIf="!isMobile">
+            {{ collapsed ? 'chevron_right' : 'chevron_left' }}
+          </mat-icon>
+        </div>
+        <span class="collapse-text" *ngIf="(!collapsed || isMobile)">
+          {{ isMobile ? (mobileOpen ? 'Fechar' : 'Menu') : (collapsed ? 'Expandir' : 'Recolher') }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overlay para mobile -->
+  <div class="mobile-backdrop"
+       (click)="closeMobile()"
+       *ngIf="isMobile && mobileOpen"></div>
+</nav>
+
+<!-- Botão hambúrguer para mobile -->
+<button class="hamburger"
+        *ngIf="isMobile && !mobileOpen"
+        (click)="openMobile()"
+        aria-label="Abrir menu">
+  <mat-icon>menu</mat-icon>
+</button>

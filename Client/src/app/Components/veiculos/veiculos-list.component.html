@@ -1,0 +1,79 @@
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Veículos</h3>
+    <button class="btn btn-primary" (click)="novo()">
+      <i class="bi bi-plus-circle me-1"></i>
+      Novo Veículo
+    </button>
+  </div>
+
+  <!-- Filtro por Grupo -->
+  <div class="row mb-3">
+    <div class="col-md-4">
+      <label class="form-label">Filtrar por Grupo:</label>
+      <select class="form-select" (change)="filtrarPorGrupo($event)">
+        <option value="">Todos os grupos</option>
+        <option *ngFor="let grupo of grupos" [value]="grupo.id">{{ grupo.nome }}</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="text-center py-4">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Carregando...</span>
+    </div>
+    <p class="mt-2">Carregando veículos...</p>
+  </div>
+
+  <!-- Lista de veículos -->
+  <div *ngIf="!loading && veiculos.length > 0" class="table-responsive">
+    <table class="table table-hover">
+      <thead class="table-light">
+        <tr>
+          <th>Placa</th>
+          <th>Marca</th>
+          <th>Modelo</th>
+          <th>Cor</th>
+          <th>Ano</th>
+          <th>Tipo Combustível</th>
+          <th>Capacidade Tanque (L)</th>
+          <th>Grupo</th>
+          <th class="text-end">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let v of veiculos">
+          <td>{{ formatarPlaca(v.placa) }}</td>
+          <td>{{ v.marca }}</td>
+          <td>{{ v.modelo }}</td>
+          <td>{{ v.cor }}</td>
+          <td>{{ v.ano }}</td>
+          <td>{{ v.tipoCombustivel }}</td>
+          <td>{{ v.capacidadeTanque }}</td>
+          <td>{{ obterNomeGrupo(v.grupoAutomovelId) }}</td>
+          <td class="text-end">
+            <div class="btn-group btn-group-sm">
+              <button class="btn btn-outline-primary"
+                      (click)="editar(v.id)"
+                      title="Editar">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button class="btn btn-outline-danger"
+                      (click)="excluir(v.id)"
+                      title="Excluir">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Mensagem quando não há veículos -->
+  <div *ngIf="!loading && veiculos.length === 0" class="alert alert-info">
+    <i class="bi bi-info-circle me-2"></i>
+    Nenhum veículo encontrado. Clique em "Novo Veículo" para adicionar.
+  </div>
+</div>

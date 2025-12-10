@@ -1,0 +1,45 @@
+<div class="container mt-3">
+  <h4 *ngIf="!editMode">Novo Grupo de Veículo</h4>
+  <h4 *ngIf="editMode">Editar Grupo de Veículo</h4>
+
+  <form [formGroup]="form" (ngSubmit)="salvar()">
+    <!-- Nome -->
+    <div class="mb-3">
+      <label class="form-label">Nome do Grupo</label>
+      <input class="form-control" formControlName="nome"/>
+      <div *ngIf="form.controls['nome'].invalid && form.controls['nome'].touched"
+           class="text-danger small">
+        Nome é obrigatório.
+      </div>
+    </div>
+
+    <!-- Descrição -->
+    <div class="mb-3">
+      <label class="form-label">Descrição</label>
+      <textarea class="form-control" formControlName="descricao" rows="3"></textarea>
+    </div>
+
+    <!-- Botões -->
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary"
+              type="submit"
+              [disabled]="loading">
+        <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
+        {{ editMode ? 'Salvar' : 'Criar' }}
+      </button>
+      <button class="btn btn-secondary"
+              type="button"
+              (click)="cancelar()"
+              [disabled]="loading">
+        Cancelar
+      </button>
+    </div>
+
+    <!-- Erros do servidor -->
+    <div *ngIf="serverErrors.length > 0" class="alert alert-danger mt-3">
+      <ul class="mb-0">
+        <li *ngFor="let error of serverErrors">{{ error }}</li>
+      </ul>
+    </div>
+  </form>
+</div>

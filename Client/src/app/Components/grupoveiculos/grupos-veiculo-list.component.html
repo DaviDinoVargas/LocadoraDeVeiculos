@@ -1,0 +1,56 @@
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Grupos de Veículo</h3>
+    <button class="btn btn-primary" (click)="novo()">
+      <i class="bi bi-plus-circle me-1"></i>
+      Novo Grupo de Veículo
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="text-center py-4">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Carregando...</span>
+    </div>
+    <p class="mt-2">Carregando grupos de veículo...</p>
+  </div>
+
+  <!-- Lista de grupos de veículo -->
+  <div *ngIf="!loading && grupos.length > 0" class="table-responsive">
+    <table class="table table-hover">
+      <thead class="table-light">
+        <tr>
+          <th>Nome</th>
+          <th>Descrição</th>
+          <th class="text-end">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let g of grupos">
+          <td>{{ g.nome }}</td>
+          <td>{{ g.descricao || '-' }}</td>
+          <td class="text-end">
+            <div class="btn-group btn-group-sm">
+              <button class="btn btn-outline-primary"
+                      (click)="editar(g.id)"
+                      title="Editar">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button class="btn btn-outline-danger"
+                      (click)="excluir(g.id)"
+                      title="Excluir">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Mensagem quando não há grupos -->
+  <div *ngIf="!loading && grupos.length === 0" class="alert alert-info">
+    <i class="bi bi-info-circle me-2"></i>
+    Nenhum grupo de veículo encontrado. Clique em "Novo Grupo de Veículo" para adicionar.
+  </div>
+</div>
