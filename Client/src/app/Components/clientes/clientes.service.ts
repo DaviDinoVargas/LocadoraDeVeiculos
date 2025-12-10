@@ -51,4 +51,28 @@ export class ClientesService {
   excluir(id: string): Observable<void> {
     return this.http.delete<any>(`${this.base}/${id}`).pipe(map(raw => this.extractData<void>(raw)));
   }
+
+  private limparPayloadClientePF(payload: ClientePessoaFisicaDto): any {
+  const cleaned: any = {
+    nome: payload.nome,
+    cpf: payload.cpf.replace(/\D/g, ''),
+    telefone: payload.telefone
+  };
+
+  // Adicionar campos apenas se tiverem valor
+  if (payload.rg && payload.rg.trim() !== '') cleaned.rg = payload.rg;
+  if (payload.cnh && payload.cnh.trim() !== '') cleaned.cnh = payload.cnh;
+  if (payload.validadeCnh && payload.validadeCnh.trim() !== '') cleaned.validadeCnh = payload.validadeCnh;
+  if (payload.email && payload.email.trim() !== '') cleaned.email = payload.email;
+  if (payload.endereco && payload.endereco.trim() !== '') cleaned.endereco = payload.endereco;
+
+  // Enviar null se não houver vínculo
+  if (payload.clientePessoaJuridicaId) {
+    cleaned.clientePessoaJuridicaId = payload.clientePessoaJuridicaId;
+  } else {
+    cleaned.clientePessoaJuridicaId = null; // Explicitamente null
+  }
+
+  return cleaned;
+}
 }

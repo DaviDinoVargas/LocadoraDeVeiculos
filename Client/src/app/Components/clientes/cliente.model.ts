@@ -18,15 +18,14 @@ export interface ClienteDto {
 export interface ClientePessoaFisicaDto {
   id?: string;
   nome: string;
-  cpf: string;
+  cpf: string; // Formato: 000.000.000-00
   rg?: string;
   cnh?: string;
   validadeCnh?: string;
-  telefone: string;
+  telefone: string; // Formato: (00) 00000-0000
   email?: string;
   endereco?: string;
-  clientePessoaJuridicaId?: string;
-  clientePessoaJuridicaNome?: string;
+  clientePessoaJuridicaId?: string | null;
 }
 
 export interface ClientePessoaJuridicaDto {
