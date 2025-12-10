@@ -1,0 +1,13 @@
+{
+  "name": "locadora-de-veiculos",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node start-dev.js",
+    "start:angular": "cd Client && npm start",
+    "start:python": "cd \"machine learning\" && python main.py",
+    "install:all": "cd Client && npm install && cd ../\"machine learning\" && pip install -r requirements.txt"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}

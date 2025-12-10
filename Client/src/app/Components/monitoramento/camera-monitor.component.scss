@@ -1,0 +1,68 @@
+.camera-preview {
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000;
+
+  img {
+    object-fit: contain;
+    transition: transform 0.3s ease;
+
+    &:hover {
+      cursor: pointer;
+      transform: scale(1.02);
+    }
+  }
+
+  .ratio {
+    background: linear-gradient(45deg, #1a1a1a, #2d2d2d);
+  }
+}
+
+// Animações para novas placas detectadas
+@keyframes highlightNew {
+  0% {
+    background-color: rgba(25, 135, 84, 0.1);
+    box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(25, 135, 84, 0);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: 0 0 0 0 rgba(25, 135, 84, 0);
+  }
+}
+
+.card-body > .row > div {
+  &:has(.bg-success) {
+    animation: highlightNew 2s ease;
+  }
+}
+
+// Indicador de câmera ativa
+.badge {
+  &.bg-success {
+    animation: pulse 2s infinite;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+// Responsividade
+@media (max-width: 768px) {
+  .camera-preview {
+    .ratio {
+      --bs-aspect-ratio: 56.25%; // 16:9
+    }
+  }
+}

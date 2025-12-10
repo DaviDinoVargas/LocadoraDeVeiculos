@@ -190,7 +190,15 @@ export class SidebarComponent implements OnInit, OnDestroy {
         children: [
           { label: 'Preço Combustível', icon: 'local_gas_station', path: '/configuracoes/combustivel', roles: ['Empresa'] }
         ]
-      }
+      },
+
+      {
+  label: 'Monitoramento',
+  icon: 'videocam',
+  path: '/camera-monitor',
+  roles: ['Empresa', 'Funcionario'],
+  module: this.modules.operacional
+}
     ];
 
     this.menuItems = allMenuItems.filter(item =>

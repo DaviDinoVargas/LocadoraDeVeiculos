@@ -83,7 +83,8 @@
               "buildTarget": "client-app:build:production"
             },
             "development": {
-              "buildTarget": "client-app:build:development"
+              "buildTarget": "client-app:build:development",
+              "proxyConfig": "proxy.conf.json"
             }
           },
           "defaultConfiguration": "development"

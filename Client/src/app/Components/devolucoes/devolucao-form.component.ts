@@ -6,7 +6,7 @@ import { DevolucoesService } from './devolucoes.service';
 import { AlugueisService } from '../alugueis/alugueis.service';
 import { ConfiguracoesService } from '../configuracoes/configuracoes.service';
 import { DevolucaoDto, NIVEL_COMBUSTIVEL_OPTIONS } from './devolucao.model';
-import { AluguelCompletoDto } from '../alugueis/aluguel.model';
+import { AluguelCompletoDto, SelecionarAlugueisDto, TaxaServicoAluguelDto } from '../alugueis/aluguel.model';
 import { ConfiguracaoDto } from '../configuracoes/configuracao.model';
 import { CommonModule } from '@angular/common';
 
@@ -48,12 +48,18 @@ export class DevolucaoFormComponent implements OnInit {
       combustivelNoTanque: [0, [Validators.required, Validators.min(0)]]
     });
 
-    // Data atual para validação
     const hoje = new Date();
     this.dataAtual = hoje.toISOString().split('T')[0];
   }
 
   ngOnInit() {
+    this.route.queryParams.subscribe(params => {
+      const placa = params['placa'];
+      if (placa) {
+        this.buscarAluguelPorPlaca(placa);
+      }
+    });
+
     this.aluguelId = this.route.snapshot.paramMap.get('id');
     if (this.aluguelId) {
       this.carregarAluguel(this.aluguelId);
@@ -61,12 +67,31 @@ export class DevolucaoFormComponent implements OnInit {
     }
   }
 
+  buscarAluguelPorPlaca(placa: string) {
+    this.aluguelSvc.selecionarEmAberto().subscribe({
+      next: (alugueis: SelecionarAlugueisDto[]) => {
+        const aluguel = alugueis.find(a =>
+          a.automovelPlaca && a.automovelPlaca.toUpperCase() === placa.toUpperCase()
+        );
+        if (aluguel) {
+          this.aluguelId = aluguel.id;
+          this.carregarAluguel(aluguel.id);
+        } else {
+          this.snack.open(`Nenhum aluguel em aberto encontrado para a placa ${placa}`, 'Fechar', { duration: 4000 });
+        }
+      },
+      error: () => {
+        this.snack.open('Erro ao buscar aluguel pela placa', 'Fechar', { duration: 4000 });
+      }
+    });
+  }
+
   carregarAluguel(id: string) {
     this.loadingAluguel = true;
     this.aluguelSvc.obter(id).subscribe({
-      next: (a: any) => {
+      next: (a: AluguelCompletoDto) => {
         this.aluguel = a;
-        this.valorTaxas = a.taxasServicos?.reduce((total: number, taxa: any) => total + taxa.preco, 0) || 0;
+        this.valorTaxas = a.taxasServicos?.reduce((total: number, taxa: TaxaServicoAluguelDto) => total + taxa.preco, 0) || 0;
         this.loadingAluguel = false;
       },
       error: () => {
@@ -79,7 +104,7 @@ export class DevolucaoFormComponent implements OnInit {
 
   carregarConfiguracao() {
     this.configSvc.obter().subscribe({
-      next: config => this.configuracao = config,
+      next: (config: ConfiguracaoDto) => this.configuracao = config,
       error: () => this.snack.open('Erro ao carregar configurações', 'Fechar', { duration: 4000 })
     });
   }
@@ -91,7 +116,6 @@ export class DevolucaoFormComponent implements OnInit {
     const dataDevolucao = new Date(this.form.get('dataDevolucao')?.value);
 
     if (dataDevolucao > dataRetornoPrevisto) {
-      // 10% do valor do aluguel como multa por atraso
       return this.aluguel.valorPrevisto * 0.1;
     }
 
@@ -101,8 +125,6 @@ export class DevolucaoFormComponent implements OnInit {
   calcularValorCombustivel(): number {
     if (!this.aluguel || !this.configuracao || !this.form.get('combustivelNoTanque')?.value) return 0;
 
-    // Assumindo que o veículo tenha uma capacidade de tanque (precisamos obter do veículo)
-    // Por enquanto, vamos calcular com base no nível de combustível
     const nivel = this.form.get('nivelCombustivel')?.value;
     let percentualEsperado = 100;
 
@@ -114,9 +136,8 @@ export class DevolucaoFormComponent implements OnInit {
       case 'Vazio': percentualEsperado = 0; break;
     }
 
-    // Cálculo simplificado - em produção, precisaria da capacidade do tanque do veículo
     const combustivelAtual = this.form.get('combustivelNoTanque')?.value;
-    const combustivelEsperado = 50 * (percentualEsperado / 100); // Assumindo tanque de 50L
+    const combustivelEsperado = 50 * (percentualEsperado / 100);
 
     if (combustivelAtual < combustivelEsperado) {
       const litrosFaltantes = combustivelEsperado - combustivelAtual;

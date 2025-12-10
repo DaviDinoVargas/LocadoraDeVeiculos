@@ -1,0 +1,245 @@
+<div class="container-fluid py-3">
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <h2 class="mb-0">
+          <i class="bi bi-camera-video me-2"></i>
+          Monitoramento de Câmeras
+        </h2>
+        <div class="btn-group">
+          <button class="btn btn-outline-primary"
+                  [class.active]="modoExibicao === 'multiplas'"
+                  (click)="modoExibicao = 'multiplas'">
+            <i class="bi bi-grid-3x3-gap me-1"></i>
+            Múltiplas Câmeras
+          </button>
+          <button class="btn btn-outline-primary"
+                  [class.active]="modoExibicao === 'unica'"
+                  (click)="modoExibicao = 'unica'">
+            <i class="bi bi-camera me-1"></i>
+            Câmera Única
+          </button>
+        </div>
+      </div>
+      <p class="text-muted mb-0">
+        Monitoramento em tempo real de veículos e detecção automática de placas
+      </p>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="row mb-3">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body py-2">
+          <div class="row g-2 align-items-center">
+            <div class="col-md-3">
+              <input type="text"
+                     class="form-control form-control-sm"
+                     placeholder="Filtrar por placa..."
+                     [(ngModel)]="filtroPlaca"
+                     (ngModelChange)="onFiltroChange()">
+            </div>
+            <div class="col-md-3">
+              <select class="form-select form-select-sm"
+                      [(ngModel)]="filtroCamera"
+                      (ngModelChange)="onFiltroChange()">
+                <option [ngValue]="null">Todas as câmeras</option>
+                <option *ngFor="let cam of cameras" [value]="cam">
+                  Câmera {{ cam }}
+                </option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <div class="form-check form-switch">
+                <input class="form-check-input"
+                       type="checkbox"
+                       id="apenasNaoProcessadas"
+                       [(ngModel)]="apenasNaoProcessadas"
+                       (ngModelChange)="onFiltroChange()">
+                <label class="form-check-label" for="apenasNaoProcessadas">
+                  Apenas placas sem devolução pendente
+                </label>
+              </div>
+            </div>
+            <div class="col-md-2 text-end">
+              <button class="btn btn-sm btn-outline-danger"
+                      (click)="limparPlacas()">
+                <i class="bi bi-trash me-1"></i>
+                Limpar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Câmeras -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">
+            <i class="bi bi-camera me-1"></i>
+            Câmeras {{ modoExibicao === 'unica' ? 'Selecionada' : 'Disponíveis' }}
+          </h5>
+          <!-- Atualize o contador de câmeras ativas -->
+          <div class="small text-muted">
+            {{ getActiveCamerasCount() }} de {{ cameras.length }} ativas
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <div *ngIf="modoExibicao === 'multiplas'" class="row g-0">
+            <div *ngFor="let cam of cameras"
+                 class="col-12 col-md-6 col-lg-4 col-xl-3 border">
+              <div class="p-2">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h6 class="mb-0">Câmera {{ cam }}</h6>
+                  <!-- No botão de toggle, adicione indicação de loading -->
+                  <button class="btn btn-sm"
+                          [class.btn-success]="!camerasAtivas.get(cam) && !isCameraLoading(cam)"
+                          [class.btn-danger]="camerasAtivas.get(cam) && !isCameraLoading(cam)"
+                          [class.btn-secondary]="isCameraLoading(cam)"
+                          [disabled]="isCameraLoading(cam)"
+                          (click)="toggleCamera(cam)">
+                    <i class="bi"
+                       [class.bi-play-fill]="!camerasAtivas.get(cam) && !isCameraLoading(cam)"
+                       [class.bi-stop-fill]="camerasAtivas.get(cam) && !isCameraLoading(cam)"
+                       [class.bi-hourglass-split]="isCameraLoading(cam)"></i>
+                    {{ isCameraLoading(cam) ? 'Processando...' : (camerasAtivas.get(cam) ? 'Parar' : 'Iniciar') }}
+                  </button>
+                </div>
+                <div class="camera-preview position-relative">
+                  <div *ngIf="camerasAtivas.get(cam); else cameraInativa"
+                       class="ratio ratio-16x9">
+                    <img [src]="getStreamUrl(cam)"
+                         alt="Câmera {{ cam }}"
+                         class="img-fluid bg-dark"
+                         (click)="selecionarCamera(cam)">
+                  </div>
+                  <ng-template #cameraInativa>
+                    <div class="ratio ratio-16x9 bg-dark d-flex align-items-center justify-content-center">
+                      <div class="text-center text-light">
+                        <i class="bi bi-camera-off display-6"></i>
+                        <p class="mt-2 mb-0">Câmera inativa</p>
+                      </div>
+                    </div>
+                  </ng-template>
+                  <div class="position-absolute top-0 end-0 m-2">
+                    <span class="badge"
+                          [class.bg-success]="camerasAtivas.get(cam)"
+                          [class.bg-secondary]="!camerasAtivas.get(cam)">
+                      {{ camerasAtivas.get(cam) ? 'LIVE' : 'OFF' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="modoExibicao === 'unica' && cameraSelecionada !== null"
+               class="p-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="mb-0">Câmera {{ cameraSelecionada }} - Visão Detalhada</h5>
+              <button class="btn btn-sm btn-outline-secondary"
+                      (click)="cameraSelecionada = null">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <div class="ratio ratio-16x9">
+              <img [src]="getStreamUrl(cameraSelecionada)"
+                   alt="Câmera {{ cameraSelecionada }}"
+                   class="img-fluid bg-dark">
+            </div>
+          </div>
+
+          <div *ngIf="modoExibicao === 'unica' && cameraSelecionada === null"
+               class="text-center py-5">
+            <i class="bi bi-camera display-1 text-muted"></i>
+            <p class="mt-3">Selecione uma câmera para visualização detalhada</p>
+            <div class="d-flex flex-wrap gap-2 justify-content-center">
+              <button *ngFor="let cam of cameras"
+                      class="btn btn-outline-primary"
+                      (click)="selecionarCamera(cam)">
+                <i class="bi bi-camera me-1"></i>
+                Câmera {{ cam }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Placas Detectadas -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">
+            <i class="bi bi-car-front me-1"></i>
+            Placas Detectadas
+            <span class="badge bg-primary ms-2">{{ placasFiltradas.length }}</span>
+          </h5>
+          <div class="text-muted small">
+            Clique em uma placa para registrar devolução
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <div *ngIf="placasFiltradas.length === 0" class="text-center py-4">
+            <i class="bi bi-car-front display-4 text-muted"></i>
+            <p class="mt-3 mb-0">Nenhuma placa detectada ainda</p>
+            <p class="text-muted small">As placas aparecerão aqui automaticamente</p>
+          </div>
+
+          <div *ngIf="placasFiltradas.length > 0" class="row g-0">
+            <div *ngFor="let placa of placasFiltradas"
+                 class="col-12 col-md-6 col-lg-4 col-xl-3 border">
+              <div class="p-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <div>
+                    <h5 class="mb-0">
+                      <span class="badge bg-dark me-2">CAM {{ placa.camera }}</span>
+                      {{ placa.plate }}
+                    </h5>
+                    <small class="text-muted">
+                      {{ formatarData(placa.timestamp) }}
+                    </small>
+                  </div>
+                  <div>
+                    <span class="badge"
+                          [class.bg-success]="!temAluguelEmAberto(placa.plate)"
+                          [class.bg-warning]="temAluguelEmAberto(placa.plate)">
+                      {{ temAluguelEmAberto(placa.plate) ? 'COM ALUGUEL' : 'NOVA' }}
+                    </span>
+                  </div>
+                </div>
+
+                <div *ngIf="temAluguelEmAberto(placa.plate)" class="mb-3">
+                  <div class="alert alert-sm alert-info mb-2">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Aluguel em aberto encontrado
+                  </div>
+                  <div class="small">
+                    <div><strong>Cliente:</strong> {{ getAluguelInfo(placa.plate)?.clienteNome || 'N/A' }}</div>
+                    <div><strong>Condutor:</strong> {{ getAluguelInfo(placa.plate)?.condutorNome || 'N/A' }}</div>
+                    <div><strong>Previsto:</strong> {{ formatarDataString(getAluguelInfo(placa.plate)?.dataRetornoPrevisto || '') }}</div>
+                  </div>
+                </div>
+
+                <div class="d-grid gap-2">
+                  <button class="btn btn-sm btn-primary"
+                          (click)="navegarParaDevolucao(placa.plate)">
+                    <i class="bi bi-check-circle me-1"></i>
+                    Registrar Devolução
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

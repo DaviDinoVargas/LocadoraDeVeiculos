@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { AluguelDto, AluguelCompletoDto, SelecionarAlugueisDto } from './aluguel.model';
 
+
 @Injectable({ providedIn: 'root' })
 export class AlugueisService {
   private base = 'https://localhost:7064/api/alugueis';
@@ -28,6 +29,12 @@ export class AlugueisService {
     return this.http.get<any>(`${this.base}/em-aberto`).pipe(map(raw => this.extractData<SelecionarAlugueisDto[]>(raw)));
   }
 
+    selecionarEmAberto(): Observable<SelecionarAlugueisDto[]> {
+    return this.http.get<any>(`${this.base}/em-aberto`).pipe(
+      map(raw => this.extractData<SelecionarAlugueisDto[]>(raw))
+    );
+  }
+
   obter(id: string): Observable<AluguelCompletoDto> {
     return this.http.get<any>(`${this.base}/${id}`).pipe(map(raw => this.extractData<AluguelCompletoDto>(raw)));
   }
@@ -51,4 +58,14 @@ export class AlugueisService {
   excluir(id: string): Observable<void> {
     return this.http.delete<any>(`${this.base}/${id}`).pipe(map(raw => this.extractData<void>(raw)));
   }
+
+  buscarPorPlaca(placa: string): Observable<SelecionarAlugueisDto[]> {
+    return this.http.get<any>(`${this.base}/em-aberto`).pipe(
+      map(raw => this.extractData<SelecionarAlugueisDto[]>(raw)),
+      map(alugueis => alugueis.filter(a =>
+        a.automovelPlaca && a.automovelPlaca.toUpperCase().includes(placa.toUpperCase())
+      ))
+    );
+  }
 }
+

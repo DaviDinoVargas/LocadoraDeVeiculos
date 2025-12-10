@@ -1,0 +1,16 @@
+{
+  "/api/cameras/*": {
+    "target": "http://localhost:8000",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": {
+      "^/api/cameras": ""
+    }
+  },
+  "/stream/*": {
+    "target": "http://localhost:8000",
+    "secure": false,
+    "changeOrigin": true,
+    "ws": true
+  }
+}
