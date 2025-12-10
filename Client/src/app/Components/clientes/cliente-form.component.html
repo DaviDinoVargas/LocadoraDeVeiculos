@@ -1,0 +1,98 @@
+<div class="container mt-3">
+  <h4 *ngIf="!editMode">Nova Pessoa Física</h4>
+  <h4 *ngIf="editMode">Editar Pessoa Física</h4>
+
+  <form [formGroup]="form" (ngSubmit)="salvar()">
+    <!-- Nome -->
+    <div class="mb-3">
+      <label class="form-label">Nome Completo</label>
+      <input class="form-control" formControlName="nome"/>
+      <div *ngIf="form.controls['nome'].invalid && form.controls['nome'].touched"
+           class="text-danger small">
+        Nome é obrigatório.
+      </div>
+    </div>
+
+    <!-- CPF -->
+    <div class="mb-3">
+      <label class="form-label">CPF</label>
+      <input class="form-control" formControlName="cpf" placeholder="000.000.000-00"/>
+      <div *ngIf="form.controls['cpf'].invalid && form.controls['cpf'].touched"
+           class="text-danger small">
+        CPF inválido.
+      </div>
+    </div>
+
+    <!-- RG -->
+    <div class="mb-3">
+      <label class="form-label">RG</label>
+      <input class="form-control" formControlName="rg"/>
+    </div>
+
+    <!-- CNH -->
+    <div class="row mb-3">
+      <div class="col-md-6">
+        <label class="form-label">CNH</label>
+        <input class="form-control" formControlName="cnh"/>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Validade da CNH</label>
+        <input type="date" class="form-control" formControlName="validadeCnh"/>
+      </div>
+    </div>
+
+    <!-- Telefone -->
+    <div class="mb-3">
+      <label class="form-label">Telefone</label>
+      <input class="form-control" formControlName="telefone" placeholder="(00) 00000-0000"/>
+      <div *ngIf="form.controls['telefone'].invalid && form.controls['telefone'].touched"
+           class="text-danger small">
+        Telefone é obrigatório.
+      </div>
+    </div>
+
+    <!-- Email -->
+    <div class="mb-3">
+      <label class="form-label">Email</label>
+      <input type="email" class="form-control" formControlName="email"/>
+    </div>
+
+    <!-- Endereço -->
+    <div class="mb-3">
+      <label class="form-label">Endereço</label>
+      <textarea class="form-control" formControlName="endereco" rows="3"></textarea>
+    </div>
+
+    <!-- Cliente Pessoa Jurídica (opcional) -->
+    <div class="mb-3">
+      <label class="form-label">Vincular a Pessoa Jurídica (opcional)</label>
+      <select class="form-select" formControlName="clientePessoaJuridicaId">
+        <option value="">Nenhuma</option>
+        <option *ngFor="let pj of pessoasJuridicas" [value]="pj.id">{{ pj.nome }} ({{ formatarCNPJ(pj.cnpj) }})</option>
+      </select>
+    </div>
+
+    <!-- Botões -->
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary"
+              type="submit"
+              [disabled]="loading">
+        <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
+        {{ editMode ? 'Salvar' : 'Criar' }}
+      </button>
+      <button class="btn btn-secondary"
+              type="button"
+              (click)="cancelar()"
+              [disabled]="loading">
+        Cancelar
+      </button>
+    </div>
+
+    <!-- Erros do servidor -->
+    <div *ngIf="serverErrors.length > 0" class="alert alert-danger mt-3">
+      <ul class="mb-0">
+        <li *ngFor="let error of serverErrors">{{ error }}</li>
+      </ul>
+    </div>
+  </form>
+</div>

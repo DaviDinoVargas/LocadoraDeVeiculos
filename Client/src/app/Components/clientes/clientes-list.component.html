@@ -1,0 +1,84 @@
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Clientes</h3>
+    <div class="btn-group">
+      <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="bi bi-plus-circle me-1"></i>
+        Novo Cliente
+      </button>
+      <ul class="dropdown-menu">
+        <li><a class="dropdown-item" (click)="novo('PessoaFisica')">Pessoa Física</a></li>
+        <li><a class="dropdown-item" (click)="novo('PessoaJuridica')">Pessoa Jurídica</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Abas para filtrar por tipo -->
+  <ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+      <a class="nav-link" [class.active]="filtroTipo === 'todos'" (click)="filtrarPorTipo('todos')">Todos</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" [class.active]="filtroTipo === 'PessoaFisica'" (click)="filtrarPorTipo('PessoaFisica')">Pessoas Físicas</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" [class.active]="filtroTipo === 'PessoaJuridica'" (click)="filtrarPorTipo('PessoaJuridica')">Pessoas Jurídicas</a>
+    </li>
+  </ul>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="text-center py-4">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Carregando...</span>
+    </div>
+    <p class="mt-2">Carregando clientes...</p>
+  </div>
+
+  <!-- Lista de clientes -->
+  <div *ngIf="!loading && clientesFiltrados.length > 0" class="table-responsive">
+    <table class="table table-hover">
+      <thead class="table-light">
+        <tr>
+          <th>Nome</th>
+          <th>Documento</th>
+          <th>Telefone</th>
+          <th>Email</th>
+          <th>Tipo</th>
+          <th class="text-end">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let c of clientesFiltrados">
+          <td>{{ c.nome }}</td>
+          <td>{{ obterDocumentoPrincipal(c) }}</td>
+          <td>{{ c.telefone }}</td>
+          <td>{{ c.email || '-' }}</td>
+          <td>
+            <span class="badge" [ngClass]="c.tipoCliente === 'PessoaFisica' ? 'bg-info' : 'bg-warning'">
+              {{ c.tipoCliente === 'PessoaFisica' ? 'Pessoa Física' : 'Pessoa Jurídica' }}
+            </span>
+          </td>
+          <td class="text-end">
+            <div class="btn-group btn-group-sm">
+              <button class="btn btn-outline-primary"
+                      (click)="editar(c)"
+                      title="Editar">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button class="btn btn-outline-danger"
+                      (click)="excluir(c.id)"
+                      title="Excluir">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div *ngIf="!loading && clientesFiltrados.length === 0" class="alert alert-info">
+    <i class="bi bi-info-circle me-2"></i>
+    Nenhum cliente encontrado. Clique em "Novo Cliente" para adicionar.
+  </div>
+</div>

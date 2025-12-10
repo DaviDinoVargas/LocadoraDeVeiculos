@@ -1,0 +1,77 @@
+<div class="container mt-3">
+  <h4 *ngIf="!editMode">Nova Pessoa Jurídica</h4>
+  <h4 *ngIf="editMode">Editar Pessoa Jurídica</h4>
+
+  <form [formGroup]="form" (ngSubmit)="salvar()">
+    <!-- Nome -->
+    <div class="mb-3">
+      <label class="form-label">Razão Social</label>
+      <input class="form-control" formControlName="nome"/>
+      <div *ngIf="form.controls['nome'].invalid && form.controls['nome'].touched"
+           class="text-danger small">
+        Razão Social é obrigatória.
+      </div>
+    </div>
+
+    <!-- Nome Fantasia -->
+    <div class="mb-3">
+      <label class="form-label">Nome Fantasia</label>
+      <input class="form-control" formControlName="nomeFantasia"/>
+    </div>
+
+    <!-- CNPJ -->
+    <div class="mb-3">
+      <label class="form-label">CNPJ</label>
+      <input class="form-control" formControlName="cnpj" placeholder="00.000.000/0000-00"/>
+      <div *ngIf="form.controls['cnpj'].invalid && form.controls['cnpj'].touched"
+           class="text-danger small">
+        CNPJ inválido.
+      </div>
+    </div>
+
+    <!-- Telefone -->
+    <div class="mb-3">
+      <label class="form-label">Telefone</label>
+      <input class="form-control" formControlName="telefone" placeholder="(00) 00000-0000"/>
+      <div *ngIf="form.controls['telefone'].invalid && form.controls['telefone'].touched"
+           class="text-danger small">
+        Telefone é obrigatório.
+      </div>
+    </div>
+
+    <!-- Email -->
+    <div class="mb-3">
+      <label class="form-label">Email</label>
+      <input type="email" class="form-control" formControlName="email"/>
+    </div>
+
+    <!-- Endereço -->
+    <div class="mb-3">
+      <label class="form-label">Endereço</label>
+      <textarea class="form-control" formControlName="endereco" rows="3"></textarea>
+    </div>
+
+    <!-- Botões -->
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary"
+              type="submit"
+              [disabled]="loading">
+        <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
+        {{ editMode ? 'Salvar' : 'Criar' }}
+      </button>
+      <button class="btn btn-secondary"
+              type="button"
+              (click)="cancelar()"
+              [disabled]="loading">
+        Cancelar
+      </button>
+    </div>
+
+    <!-- Erros do servidor -->
+    <div *ngIf="serverErrors.length > 0" class="alert alert-danger mt-3">
+      <ul class="mb-0">
+        <li *ngFor="let error of serverErrors">{{ error }}</li>
+      </ul>
+    </div>
+  </form>
+</div>
