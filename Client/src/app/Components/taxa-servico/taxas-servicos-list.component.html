@@ -1,0 +1,74 @@
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Taxas e Serviços</h3>
+    <button class="btn btn-primary" (click)="novo()">
+      <i class="bi bi-plus-circle me-1"></i>
+      Nova Taxa/Serviço
+    </button>
+  </div>
+
+  <!-- Filtro por Tipo -->
+  <div class="row mb-3">
+    <div class="col-md-4">
+      <label class="form-label">Filtrar por Tipo de Cálculo:</label>
+      <select class="form-select" (change)="filtrarPorTipo($event)">
+        <option value="">Todos os tipos</option>
+        <option value="Fixo">Fixo</option>
+        <option value="Diario">Diário</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="text-center py-4">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Carregando...</span>
+    </div>
+    <p class="mt-2">Carregando taxas e serviços...</p>
+  </div>
+
+  <!-- Lista de taxas e serviços -->
+  <div *ngIf="!loading && taxasFiltradas.length > 0" class="table-responsive">
+    <table class="table table-hover">
+      <thead class="table-light">
+        <tr>
+          <th>Nome</th>
+          <th>Preço</th>
+          <th>Tipo de Cálculo</th>
+          <th class="text-end">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let t of taxasFiltradas">
+          <td>{{ t.nome }}</td>
+          <td>{{ formatarMoeda(t.preco) }}</td>
+          <td>
+            <span class="badge" [ngClass]="t.tipoCalculo === 'Fixo' ? 'bg-primary' : 'bg-success'">
+              {{ t.tipoCalculo === 'Fixo' ? 'Fixo' : 'Diário' }}
+            </span>
+          </td>
+          <td class="text-end">
+            <div class="btn-group btn-group-sm">
+              <button class="btn btn-outline-primary"
+                      (click)="editar(t.id)"
+                      title="Editar">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button class="btn btn-outline-danger"
+                      (click)="excluir(t.id)"
+                      title="Excluir">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Mensagem quando não há taxas -->
+  <div *ngIf="!loading && taxasFiltradas.length === 0" class="alert alert-info">
+    <i class="bi bi-info-circle me-2"></i>
+    Nenhuma taxa ou serviço encontrado. Clique em "Nova Taxa/Serviço" para adicionar.
+  </div>
+</div>

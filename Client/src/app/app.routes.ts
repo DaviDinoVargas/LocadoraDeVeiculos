@@ -11,6 +11,14 @@ import { GruposVeiculoListComponent } from './Components/grupoveiculos/grupos-ve
 import { GrupoVeiculoFormComponent } from './Components/grupoveiculos/grupo-veiculo-form.component';
 import { VeiculosListComponent } from './Components/veiculos/veiculos-list.component';
 import { VeiculoFormComponent } from './Components/veiculos/veiculo-form.component';
+import { ClientesListComponent } from './Components/clientes/clientes-list.component';
+import { CondutoresListComponent } from './Components/condutor/condutores-list.component';
+import { CondutorFormComponent } from './Components/condutor/condutor-form.component';
+import { TaxasServicosListComponent } from './Components/taxa-servico/taxas-servicos-list.component';
+import { TaxaServicoFormComponent } from './Components/taxa-servico/taxa-servico-form.component';
+import { ClientePessoaFisicaFormComponent } from './Components/clientes/ClientePessoaFisicaFormComponent';
+import { ClientePessoaJuridicaFormComponent } from './Components/clientes/ClientePessoaJuridicaFormComponent';
+
 
 export const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
@@ -37,6 +45,24 @@ export const routes: Routes = [
   { path: 'veiculos', component: VeiculosListComponent },
   { path: 'veiculos/new', component: VeiculoFormComponent },
   { path: 'veiculos/:id/edit', component: VeiculoFormComponent },
+
+ { path: 'clientes', component: ClientesListComponent, canActivate: [AuthGuard] },
+  { path: 'clientes/pf', component: ClientesListComponent, canActivate: [AuthGuard] },
+  { path: 'clientes/pj', component: ClientesListComponent, canActivate: [AuthGuard] },
+  { path: 'clientes/new/pf', component: ClientePessoaFisicaFormComponent, canActivate: [AuthGuard] },
+  { path: 'clientes/new/pj', component: ClientePessoaJuridicaFormComponent, canActivate: [AuthGuard] },
+  { path: 'clientes/:id/edit/pessoa-fisica', component: ClientePessoaFisicaFormComponent, canActivate: [AuthGuard] },
+  { path: 'clientes/:id/edit/pessoa-juridica', component: ClientePessoaJuridicaFormComponent, canActivate: [AuthGuard] },
+
+  // Rotas para Condutores
+  { path: 'condutores', component: CondutoresListComponent },
+  { path: 'condutores/new', component: CondutorFormComponent },
+  { path: 'condutores/:id/edit', component: CondutorFormComponent },
+
+  // Rotas para Taxas e Serviços
+  { path: 'taxas-servicos', component: TaxasServicosListComponent },
+  { path: 'taxas-servicos/new', component: TaxaServicoFormComponent },
+  { path: 'taxas-servicos/:id/edit', component: TaxaServicoFormComponent },
 
     { path: '**', redirectTo: 'home' }
 ];

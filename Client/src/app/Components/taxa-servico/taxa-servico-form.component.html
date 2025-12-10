@@ -1,0 +1,67 @@
+<div class="container mt-3">
+  <h4 *ngIf="!editMode">Nova Taxa/Serviço</h4>
+  <h4 *ngIf="editMode">Editar Taxa/Serviço</h4>
+
+  <form [formGroup]="form" (ngSubmit)="salvar()">
+    <!-- Nome -->
+    <div class="mb-3">
+      <label class="form-label">Nome</label>
+      <input class="form-control" formControlName="nome"/>
+      <div *ngIf="form.controls['nome'].invalid && form.controls['nome'].touched"
+           class="text-danger small">
+        Nome é obrigatório.
+      </div>
+    </div>
+
+    <!-- Preço -->
+    <div class="mb-3">
+      <label class="form-label">Preço (R$)</label>
+      <input type="number"
+             step="0.01"
+             min="0"
+             class="form-control"
+             formControlName="preco"/>
+      <div *ngIf="form.controls['preco'].invalid && form.controls['preco'].touched"
+           class="text-danger small">
+        Preço deve ser maior ou igual a 0.
+      </div>
+    </div>
+
+    <!-- Tipo de Cálculo -->
+    <div class="mb-3">
+      <label class="form-label">Tipo de Cálculo</label>
+      <select class="form-select" formControlName="tipoCalculo">
+        <option value="">Selecione o tipo de cálculo</option>
+        <option value="Fixo">Fixo</option>
+        <option value="Diario">Diário</option>
+      </select>
+      <div *ngIf="form.controls['tipoCalculo'].invalid && form.controls['tipoCalculo'].touched"
+           class="text-danger small">
+        Tipo de cálculo é obrigatório.
+      </div>
+    </div>
+
+    <!-- Botões -->
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary"
+              type="submit"
+              [disabled]="loading">
+        <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
+        {{ editMode ? 'Salvar' : 'Criar' }}
+      </button>
+      <button class="btn btn-secondary"
+              type="button"
+              (click)="cancelar()"
+              [disabled]="loading">
+        Cancelar
+      </button>
+    </div>
+
+    <!-- Erros do servidor -->
+    <div *ngIf="serverErrors.length > 0" class="alert alert-danger mt-3">
+      <ul class="mb-0">
+        <li *ngFor="let error of serverErrors">{{ error }}</li>
+      </ul>
+    </div>
+  </form>
+</div>

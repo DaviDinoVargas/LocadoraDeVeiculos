@@ -12,7 +12,7 @@ interface MenuItem {
   roles: string[];
   module?: string;
   children?: MenuItem[];
-  expanded?: boolean; // Para controlar expansão
+  expanded?: boolean;
 }
 
 @Component({
@@ -120,6 +120,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
         module: this.modules.gestao,
         expanded: false,
         children: [
+          { label: 'Todos os Clientes', icon: 'people_outline', path: '/clientes', roles: ['Empresa', 'Funcionario'] },
           { label: 'Pessoas Físicas', icon: 'person_outline', path: '/clientes/pf', roles: ['Empresa', 'Funcionario'] },
           { label: 'Pessoas Jurídicas', icon: 'business', path: '/clientes/pj', roles: ['Empresa', 'Funcionario'] }
         ]
@@ -231,12 +232,17 @@ export class SidebarComponent implements OnInit, OnDestroy {
       event.preventDefault();
       event.stopPropagation();
     }
+
     this.router.navigate([path]).then(() => {
       this.onNavigateMobile();
+    }).catch(error => {
+      console.error('Erro na navegação:', error);
     });
   }
 
   isActive(path: string): boolean {
+    // Verifica se a rota atual começa com o path fornecido
+    // Para lidar com /clientes, /clientes/pf, /clientes/pj
     return this.router.url.startsWith(path);
   }
 
