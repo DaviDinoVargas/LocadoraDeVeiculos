@@ -1,0 +1,112 @@
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Aluguéis</h3>
+    <button class="btn btn-primary" (click)="novo()">
+      <i class="bi bi-plus-circle me-1"></i>
+      Novo Aluguel
+    </button>
+  </div>
+
+  <!-- Abas para filtrar por status -->
+  <ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+      <a class="nav-link" [class.active]="filtroStatus === 'todos'" (click)="filtrarPorStatus('todos')">Todos</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" [class.active]="filtroStatus === 'Reservado'" (click)="filtrarPorStatus('Reservado')">Reservados</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" [class.active]="filtroStatus === 'EmAndamento'" (click)="filtrarPorStatus('EmAndamento')">Em Andamento</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" [class.active]="filtroStatus === 'Concluido'" (click)="filtrarPorStatus('Concluido')">Concluídos</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" [class.active]="filtroStatus === 'Cancelado'" (click)="filtrarPorStatus('Cancelado')">Cancelados</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" [class.active]="filtroStatus === 'em-aberto'" (click)="filtrarPorStatus('em-aberto')">Em Aberto</a>
+    </li>
+  </ul>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="text-center py-4">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Carregando...</span>
+    </div>
+    <p class="mt-2">Carregando aluguéis...</p>
+  </div>
+
+  <!-- Lista de aluguéis -->
+  <div *ngIf="!loading && alugueisFiltrados.length > 0" class="table-responsive">
+    <table class="table table-hover">
+      <thead class="table-light">
+        <tr>
+          <th>Condutor</th>
+          <th>Veículo</th>
+          <th>Cliente</th>
+          <th>Data Saída</th>
+          <th>Data Retorno Previsto</th>
+          <th>Valor Previsto</th>
+          <th>Status</th>
+          <th class="text-end">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let a of alugueisFiltrados">
+          <td>{{ a.condutorNome }}</td>
+          <td>{{ a.automovelPlaca }}</td>
+          <td>{{ a.clienteNome }}</td>
+          <td>{{ formatarData(a.dataSaida) }}</td>
+          <td>{{ formatarData(a.dataRetornoPrevisto) }}</td>
+          <td>{{ formatarMoeda(a.valorPrevisto) }}</td>
+          <td>
+            <span class="badge" [ngClass]="getStatusBadgeClass(a.status)">
+              {{ getStatusText(a.status) }}
+            </span>
+          </td>
+          <td class="text-end">
+            <div class="btn-group btn-group-sm">
+              <button class="btn btn-outline-primary"
+                      (click)="editar(a.id)"
+                      title="Editar"
+                      *ngIf="a.status !== 'Concluido'">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button class="btn btn-outline-success"
+                      (click)="iniciar(a.id)"
+                      title="Iniciar Aluguel"
+                      *ngIf="a.status === 'Reservado'">
+                <i class="bi bi-play-circle"></i>
+              </button>
+              <button class="btn btn-outline-warning"
+                      (click)="cancelar(a.id)"
+                      title="Cancelar"
+                      *ngIf="a.status === 'Reservado' || a.status === 'EmAndamento'">
+                <i class="bi bi-x-circle"></i>
+              </button>
+              <button class="btn btn-outline-danger"
+                      (click)="excluir(a.id)"
+                      title="Excluir"
+                      *ngIf="a.status === 'Reservado' || a.status === 'Cancelado'">
+                <i class="bi bi-trash"></i>
+              </button>
+              <button class="btn btn-outline-info"
+                      (click)="devolver(a.id)"
+                      title="Devolver"
+                      *ngIf="a.status === 'EmAndamento'">
+                <i class="bi bi-check-circle"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Mensagem quando não há aluguéis -->
+  <div *ngIf="!loading && alugueisFiltrados.length === 0" class="alert alert-info">
+    <i class="bi bi-info-circle me-2"></i>
+    Nenhum aluguel encontrado. Clique em "Novo Aluguel" para adicionar.
+  </div>
+</div>

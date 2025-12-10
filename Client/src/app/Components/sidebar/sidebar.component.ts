@@ -163,12 +163,12 @@ export class SidebarComponent implements OnInit, OnDestroy {
         ]
       },
       {
-        label: 'Devoluções',
-        icon: 'assignment_returned',
-        path: '/devolucoes',
-        roles: ['Empresa', 'Funcionario'],
-        module: this.modules.operacional
-      },
+  label: 'Devoluções',
+  icon: 'assignment_returned',
+  path: '/devolucoes',
+  roles: ['Empresa', 'Funcionario'],
+  module: this.modules.operacional
+},
 
       // Financeiro
       {

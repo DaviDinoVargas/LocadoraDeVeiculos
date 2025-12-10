@@ -1,0 +1,127 @@
+<div class="container mt-3">
+  <h4 *ngIf="!editMode">Novo Aluguel</h4>
+  <h4 *ngIf="editMode">Editar Aluguel</h4>
+
+  <form [formGroup]="form" (ngSubmit)="salvar()">
+    <!-- Cliente -->
+    <div class="mb-3">
+      <label class="form-label">Cliente</label>
+      <select class="form-select" formControlName="clienteId" (change)="onClienteChange($event)">
+        <option value="">Selecione um cliente</option>
+        <option *ngFor="let cliente of clientes" [value]="cliente.id">{{ cliente.nome }}</option>
+      </select>
+      <div *ngIf="form.controls['clienteId'].invalid && form.controls['clienteId'].touched"
+           class="text-danger small">
+        Cliente é obrigatório.
+      </div>
+    </div>
+
+    <!-- Condutor -->
+    <div class="mb-3">
+      <label class="form-label">Condutor</label>
+      <select class="form-select" formControlName="condutorId">
+        <option value="">Selecione um condutor</option>
+        <option *ngFor="let condutor of condutoresFiltrados" [value]="condutor.id">{{ condutor.nome }} ({{ condutor.cpf }})</option>
+      </select>
+      <div *ngIf="form.controls['condutorId'].invalid && form.controls['condutorId'].touched"
+           class="text-danger small">
+        Condutor é obrigatório.
+      </div>
+    </div>
+
+    <!-- Veículo -->
+    <div class="mb-3">
+      <label class="form-label">Veículo</label>
+      <select class="form-select" formControlName="automovelId">
+        <option value="">Selecione um veículo</option>
+        <option *ngFor="let veiculo of veiculosDisponiveis" [value]="veiculo.id">{{ veiculo.placa }} - {{ veiculo.marca }} {{ veiculo.modelo }}</option>
+      </select>
+      <div *ngIf="form.controls['automovelId'].invalid && form.controls['automovelId'].touched"
+           class="text-danger small">
+        Veículo é obrigatório.
+      </div>
+    </div>
+
+    <!-- Datas -->
+    <div class="row mb-3">
+      <div class="col-md-6">
+        <label class="form-label">Data de Saída</label>
+        <input type="date" class="form-control" formControlName="dataSaida"/>
+        <div *ngIf="form.controls['dataSaida'].invalid && form.controls['dataSaida'].touched"
+             class="text-danger small">
+          Data de saída é obrigatória.
+        </div>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Data de Retorno Previsto</label>
+        <input type="date" class="form-control" formControlName="dataRetornoPrevisto"/>
+        <div *ngIf="form.controls['dataRetornoPrevisto'].invalid && form.controls['dataRetornoPrevisto'].touched"
+             class="text-danger small">
+          Data de retorno previsto é obrigatória.
+        </div>
+      </div>
+    </div>
+
+    <!-- Valor Previsto -->
+    <div class="mb-3">
+      <label class="form-label">Valor Previsto (R$)</label>
+      <input type="number"
+             step="0.01"
+             min="0"
+             class="form-control"
+             formControlName="valorPrevisto"/>
+      <div *ngIf="form.controls['valorPrevisto'].invalid && form.controls['valorPrevisto'].touched"
+           class="text-danger small">
+        Valor previsto deve ser maior que 0.
+      </div>
+    </div>
+
+    <!-- Taxas e Serviços -->
+    <div class="mb-3">
+      <label class="form-label">Taxas e Serviços</label>
+      <div *ngFor="let taxa of taxasServicos" class="form-check">
+        <input class="form-check-input"
+               type="checkbox"
+               [value]="taxa.id"
+               [id]="'taxa-' + taxa.id"
+               (change)="onTaxaChange($event, taxa)">
+        <label class="form-check-label" [for]="'taxa-' + taxa.id">
+          {{ taxa.nome }} - {{ formatarMoeda(taxa.preco) }} ({{ taxa.tipoCalculo === 'Fixo' ? 'Fixo' : 'Diário' }})
+        </label>
+      </div>
+    </div>
+
+    <!-- Valor Total -->
+    <div class="mb-3">
+      <label class="form-label">Valor Total Previsto</label>
+      <div class="input-group">
+        <span class="input-group-text">R$</span>
+        <input type="text" class="form-control" [value]="calcularValorTotal() | currency:'BRL':'symbol':'1.2-2'" readonly>
+      </div>
+      <small class="text-muted">Inclui caução de R$ 1.000,00</small>
+    </div>
+
+    <!-- Botões -->
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary"
+              type="submit"
+              [disabled]="loading">
+        <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
+        {{ editMode ? 'Salvar' : 'Criar' }}
+      </button>
+      <button class="btn btn-secondary"
+              type="button"
+              (click)="cancelar()"
+              [disabled]="loading">
+        Cancelar
+      </button>
+    </div>
+
+    <!-- Erros do servidor -->
+    <div *ngIf="serverErrors.length > 0" class="alert alert-danger mt-3">
+      <ul class="mb-0">
+        <li *ngFor="let error of serverErrors">{{ error }}</li>
+      </ul>
+    </div>
+  </form>
+</div>

@@ -1,0 +1,69 @@
+<div class="container mt-3">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h4>Detalhes da Devolução</h4>
+    <button class="btn btn-secondary" (click)="voltar()">
+      <i class="bi bi-arrow-left me-1"></i>
+      Voltar
+    </button>
+  </div>
+
+  <div *ngIf="loading" class="text-center py-4">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Carregando...</span>
+    </div>
+    <p class="mt-2">Carregando detalhes da devolução...</p>
+  </div>
+
+  <div *ngIf="!loading && devolucao" class="row">
+    <div class="col-md-6">
+      <div class="card mb-4">
+        <div class="card-body">
+          <h5 class="card-title">Informações da Devolução</h5>
+          <p><strong>ID:</strong> {{ devolucao.id }}</p>
+          <p><strong>Data de Devolução:</strong> {{ formatarData(devolucao.dataDevolucao) }}</p>
+          <p><strong>Quilometragem Final:</strong> {{ devolucao.quilometragemFinal }} km</p>
+          <p><strong>Combustível no Tanque:</strong> {{ devolucao.combustivelNoTanque }} L</p>
+          <p><strong>Nível de Combustível:</strong> {{ getNivelCombustivelText(devolucao.nivelCombustivel) }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card mb-4">
+        <div class="card-body">
+          <h5 class="card-title">Cálculos Financeiros</h5>
+          <p><strong>Multas:</strong> {{ formatarMoeda(devolucao.valorMultas) }}</p>
+          <p><strong>Adicional Combustível:</strong> {{ formatarMoeda(devolucao.valorAdicionalCombustivel) }}</p>
+          <p><strong>Valor Total:</strong> {{ formatarMoeda(devolucao.valorTotal) }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">Informações do Aluguel</h5>
+          <div class="row">
+            <div class="col-md-6">
+              <p><strong>Condutor:</strong> {{ devolucao.condutorNome }}</p>
+              <p><strong>Veículo:</strong> {{ devolucao.automovelPlaca }}</p>
+              <p><strong>Cliente:</strong> {{ devolucao.clienteNome }}</p>
+            </div>
+            <div class="col-md-6">
+              <p><strong>Data Saída:</strong> {{ formatarData(devolucao.aluguel?.dataSaida) }}</p>
+              <p><strong>Data Retorno Previsto:</strong> {{ formatarData(devolucao.aluguel?.dataRetornoPrevisto) }}</p>
+              <p><strong>Valor Previsto do Aluguel:</strong> {{ formatarMoeda(devolucao.aluguel?.valorPrevisto) }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 mt-3">
+      <button class="btn btn-danger" (click)="excluir()">
+        <i class="bi bi-trash me-1"></i>
+        Excluir Devolução
+      </button>
+    </div>
+  </div>
+</div>

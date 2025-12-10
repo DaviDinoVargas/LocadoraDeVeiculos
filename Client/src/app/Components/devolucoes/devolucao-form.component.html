@@ -1,0 +1,125 @@
+<div class="container mt-3">
+  <h4>Registrar Devolução</h4>
+
+  <div *ngIf="loadingAluguel" class="text-center py-4">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Carregando...</span>
+    </div>
+    <p class="mt-2">Carregando dados do aluguel...</p>
+  </div>
+
+  <div *ngIf="!loadingAluguel && aluguel">
+    <div class="card mb-4">
+      <div class="card-body">
+        <h5 class="card-title">Informações do Aluguel</h5>
+        <div class="row">
+          <div class="col-md-6">
+            <p><strong>Condutor:</strong> {{ aluguel.condutorNome }}</p>
+            <p><strong>Veículo:</strong> {{ aluguel.automovelPlaca }}</p>
+            <p><strong>Cliente:</strong> {{ aluguel.clienteNome }}</p>
+          </div>
+          <div class="col-md-6">
+            <p><strong>Data Saída:</strong> {{ formatarData(aluguel.dataSaida) }}</p>
+            <p><strong>Data Retorno Previsto:</strong> {{ formatarData(aluguel.dataRetornoPrevisto) }}</p>
+            <p><strong>Valor Previsto:</strong> {{ formatarMoeda(aluguel.valorPrevisto) }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="salvar()">
+      <!-- Data de Devolução -->
+      <div class="mb-3">
+        <label class="form-label">Data de Devolução</label>
+        <input type="date" class="form-control" formControlName="dataDevolucao" [max]="dataAtual"/>
+        <div *ngIf="form.controls['dataDevolucao'].invalid && form.controls['dataDevolucao'].touched"
+             class="text-danger small">
+          Data de devolução é obrigatória e não pode ser futura.
+        </div>
+      </div>
+
+      <!-- Quilometragem Final -->
+      <div class="mb-3">
+        <label class="form-label">Quilometragem Final (Km)</label>
+        <input type="number"
+               step="1"
+               min="0"
+               class="form-control"
+               formControlName="quilometragemFinal"/>
+        <div *ngIf="form.controls['quilometragemFinal'].invalid && form.controls['quilometragemFinal'].touched"
+             class="text-danger small">
+          Quilometragem final deve ser maior ou igual a 0.
+        </div>
+      </div>
+
+      <!-- Nível de Combustível -->
+      <div class="mb-3">
+        <label class="form-label">Nível de Combustível no Tanque</label>
+        <select class="form-select" formControlName="nivelCombustivel">
+          <option value="">Selecione o nível de combustível</option>
+          <option *ngFor="let nivel of nivelCombustivelOptions" [value]="nivel.value">{{ nivel.label }}</option>
+        </select>
+        <div *ngIf="form.controls['nivelCombustivel'].invalid && form.controls['nivelCombustivel'].touched"
+             class="text-danger small">
+          Nível de combustível é obrigatório.
+        </div>
+      </div>
+
+      <!-- Combustível no Tanque (litros) -->
+      <div class="mb-3">
+        <label class="form-label">Combustível no Tanque (Litros)</label>
+        <input type="number"
+               step="0.1"
+               min="0"
+               class="form-control"
+               formControlName="combustivelNoTanque"/>
+        <div *ngIf="form.controls['combustivelNoTanque'].invalid && form.controls['combustivelNoTanque'].touched"
+             class="text-danger small">
+          Combustível no tanque deve ser maior ou igual a 0.
+        </div>
+      </div>
+
+      <!-- Cálculos -->
+      <div class="card mb-3">
+        <div class="card-body">
+          <h5 class="card-title">Cálculos Finais</h5>
+
+          <div class="row">
+            <div class="col-md-6">
+              <p><strong>Valor do Aluguel:</strong> {{ formatarMoeda(aluguel.valorPrevisto) }}</p>
+              <p><strong>Taxas e Serviços:</strong> {{ formatarMoeda(valorTaxas) }}</p>
+              <p *ngIf="multa > 0"><strong>Multa por Atraso:</strong> {{ formatarMoeda(multa) }}</p>
+              <p *ngIf="valorCombustivel > 0"><strong>Adicional Combustível:</strong> {{ formatarMoeda(valorCombustivel) }}</p>
+            </div>
+            <div class="col-md-6">
+              <h5><strong>Valor Total:</strong> {{ formatarMoeda(calcularValorTotal()) }}</h5>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Botões -->
+      <div class="d-flex gap-2">
+        <button class="btn btn-primary"
+                type="submit"
+                [disabled]="loading">
+          <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
+          Registrar Devolução
+        </button>
+        <button class="btn btn-secondary"
+                type="button"
+                (click)="cancelar()"
+                [disabled]="loading">
+          Cancelar
+        </button>
+      </div>
+
+      <!-- Erros do servidor -->
+      <div *ngIf="serverErrors.length > 0" class="alert alert-danger mt-3">
+        <ul class="mb-0">
+          <li *ngFor="let error of serverErrors">{{ error }}</li>
+        </ul>
+      </div>
+    </form>
+  </div>
+</div>

@@ -18,6 +18,13 @@ import { TaxasServicosListComponent } from './Components/taxa-servico/taxas-serv
 import { TaxaServicoFormComponent } from './Components/taxa-servico/taxa-servico-form.component';
 import { ClientePessoaFisicaFormComponent } from './Components/clientes/ClientePessoaFisicaFormComponent';
 import { ClientePessoaJuridicaFormComponent } from './Components/clientes/ClientePessoaJuridicaFormComponent';
+import { AlugueisListComponent } from './Components/alugueis/alugueis-list.component';
+import { AluguelFormComponent } from './Components/alugueis/aluguel-form.component';
+import { AluguelDevolucaoFormComponent } from './Components/alugueis/aluguel-devolucao-form.component';
+import { ConfiguracaoFormComponent } from './Components/configuracoes/configuracao-form.component';
+import { DevolucoesListComponent } from './Components/devolucoes/devolucoes-list.component';
+import { DevolucaoViewComponent } from './Components/devolucoes/devolucao-view.component';
+import { DevolucaoFormComponent } from './Components/devolucoes/devolucao-form.component';
 
 
 export const routes: Routes = [
@@ -54,10 +61,24 @@ export const routes: Routes = [
   { path: 'clientes/:id/edit/pessoa-fisica', component: ClientePessoaFisicaFormComponent, canActivate: [AuthGuard] },
   { path: 'clientes/:id/edit/pessoa-juridica', component: ClientePessoaJuridicaFormComponent, canActivate: [AuthGuard] },
 
+  // Rotas para Aluguéis
+{ path: 'alugueis', component: AlugueisListComponent, canActivate: [AuthGuard] },
+{ path: 'alugueis/new', component: AluguelFormComponent, canActivate: [AuthGuard] },
+{ path: 'alugueis/:id/edit', component: AluguelFormComponent, canActivate: [AuthGuard] },
+{ path: 'alugueis/:id/devolver', component: AluguelDevolucaoFormComponent, canActivate: [AuthGuard] },
+
+// Rotas para Configurações
+{ path: 'configuracoes/combustivel', component: ConfiguracaoFormComponent, canActivate: [AuthGuard] },
+
   // Rotas para Condutores
   { path: 'condutores', component: CondutoresListComponent },
   { path: 'condutores/new', component: CondutorFormComponent },
   { path: 'condutores/:id/edit', component: CondutorFormComponent },
+
+// Rotas para Devoluções
+{ path: 'devolucoes', component: DevolucoesListComponent, canActivate: [AuthGuard] },
+{ path: 'devolucoes/:id', component: DevolucaoViewComponent, canActivate: [AuthGuard] },
+{ path: 'alugueis/:id/devolver', component: DevolucaoFormComponent, canActivate: [AuthGuard] },
 
   // Rotas para Taxas e Serviços
   { path: 'taxas-servicos', component: TaxasServicosListComponent },
