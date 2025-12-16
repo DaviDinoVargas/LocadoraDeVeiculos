@@ -68,3 +68,5 @@ export class CameraService {
     return `http://localhost:8000/stream/${cameraIndex}`;
   }
 }
+
+// ajustar fechar da camera (fica ligada mesmo quando fecha)
