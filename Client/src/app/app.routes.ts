@@ -20,7 +20,6 @@ import { ClientePessoaFisicaFormComponent } from './Components/clientes/ClienteP
 import { ClientePessoaJuridicaFormComponent } from './Components/clientes/ClientePessoaJuridicaFormComponent';
 import { AlugueisListComponent } from './Components/alugueis/alugueis-list.component';
 import { AluguelFormComponent } from './Components/alugueis/aluguel-form.component';
-import { AluguelDevolucaoFormComponent } from './Components/alugueis/aluguel-devolucao-form.component';
 import { ConfiguracaoFormComponent } from './Components/configuracoes/configuracao-form.component';
 import { DevolucoesListComponent } from './Components/devolucoes/devolucoes-list.component';
 import { DevolucaoViewComponent } from './Components/devolucoes/devolucao-view.component';
@@ -67,7 +66,6 @@ export const routes: Routes = [
 { path: 'alugueis', component: AlugueisListComponent, canActivate: [AuthGuard] },
 { path: 'alugueis/new', component: AluguelFormComponent, canActivate: [AuthGuard] },
 { path: 'alugueis/:id/edit', component: AluguelFormComponent, canActivate: [AuthGuard] },
-{ path: 'alugueis/:id/devolver', component: AluguelDevolucaoFormComponent, canActivate: [AuthGuard] },
 
 // Rotas para Configurações
 { path: 'configuracoes/combustivel', component: ConfiguracaoFormComponent, canActivate: [AuthGuard] },

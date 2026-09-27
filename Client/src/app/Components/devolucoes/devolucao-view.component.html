@@ -50,16 +50,20 @@
               <p><strong>Cliente:</strong> {{ devolucao.clienteNome }}</p>
             </div>
             <div class="col-md-6">
-              <p><strong>Data Saída:</strong> {{ formatarData(devolucao.aluguel?.dataSaida) }}</p>
-              <p><strong>Data Retorno Previsto:</strong> {{ formatarData(devolucao.aluguel?.dataRetornoPrevisto) }}</p>
-              <p><strong>Valor Previsto do Aluguel:</strong> {{ formatarMoeda(devolucao.aluguel?.valorPrevisto) }}</p>
+              <p><strong>Data Saída:</strong> {{ formatarData(aluguel?.dataSaida) }}</p>
+              <p><strong>Data Retorno Previsto:</strong> {{ formatarData(aluguel?.dataRetornoPrevisto) }}</p>
+              <p><strong>Valor Previsto do Aluguel:</strong> {{ formatarMoeda(aluguel?.valorPrevisto) }}</p>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="col-12 mt-3">
+    <div class="col-12 mt-3 d-flex gap-2">
+      <button class="btn btn-primary" [disabled]="!aluguel || gerandoPdf" (click)="baixarRecibo()">
+        <i class="bi bi-file-earmark-pdf me-1"></i>
+        Baixar Recibo em PDF
+      </button>
       <button class="btn btn-danger" (click)="excluir()">
         <i class="bi bi-trash me-1"></i>
         Excluir Devolução

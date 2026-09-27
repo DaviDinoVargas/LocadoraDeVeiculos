@@ -14,7 +14,6 @@ export interface DevolucaoCompletoDto extends DevolucaoDto {
   condutorNome?: string;
   automovelPlaca?: string;
   clienteNome?: string;
-  aluguel?: any;
 }
 
 export interface SelecionarDevolucoesDto {

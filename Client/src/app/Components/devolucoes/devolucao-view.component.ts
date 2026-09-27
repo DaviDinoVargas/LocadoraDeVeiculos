@@ -5,6 +5,9 @@ import { DevolucoesService } from './devolucoes.service';
 import { DevolucaoCompletoDto, NIVEL_COMBUSTIVEL } from './devolucao.model';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
+import { AlugueisService } from '../alugueis/alugueis.service';
+import { AluguelCompletoDto } from '../alugueis/aluguel.model';
+import { PdfService } from '../pdf/pdf.service';
 
 @Component({
   selector: 'app-devolucao-view',
@@ -15,10 +18,14 @@ import { ReactiveFormsModule } from '@angular/forms';
 })
 export class DevolucaoViewComponent implements OnInit {
   devolucao?: DevolucaoCompletoDto;
+  aluguel?: AluguelCompletoDto;
   loading = false;
+  gerandoPdf = false;
 
   constructor(
     private svc: DevolucoesService,
+    private aluguelSvc: AlugueisService,
+    private pdfSvc: PdfService,
     private route: ActivatedRoute,
     private router: Router,
     private snack: MatSnackBar
@@ -37,6 +44,10 @@ export class DevolucaoViewComponent implements OnInit {
       next: d => {
         this.devolucao = d;
         this.loading = false;
+        this.aluguelSvc.obter(d.aluguelId).subscribe({
+          next: a => (this.aluguel = a),
+          error: () => {} // recibo ainda funciona sem os dados extras do aluguel
+        });
       },
       error: () => {
         this.loading = false;
@@ -46,21 +57,31 @@ export class DevolucaoViewComponent implements OnInit {
     });
   }
 
+  baixarRecibo() {
+    if (!this.devolucao || !this.aluguel) return;
+    this.gerandoPdf = true;
+    try {
+      this.pdfSvc.gerarReciboDevolucao(this.devolucao, this.aluguel);
+    } finally {
+      this.gerandoPdf = false;
+    }
+  }
+
   getNivelCombustivelText(nivel: string): string {
     return NIVEL_COMBUSTIVEL[nivel as keyof typeof NIVEL_COMBUSTIVEL] || nivel;
   }
 
-  formatarData(dataString: string): string {
+  formatarData(dataString?: string): string {
     if (!dataString) return '';
     const data = new Date(dataString);
     return data.toLocaleDateString('pt-BR');
   }
 
-  formatarMoeda(valor: number): string {
+  formatarMoeda(valor?: number): string {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
-    }).format(valor);
+    }).format(valor ?? 0);
   }
 
   excluir() {

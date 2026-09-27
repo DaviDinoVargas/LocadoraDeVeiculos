@@ -193,10 +193,14 @@ export class DevolucaoFormComponent implements OnInit {
     this.serverErrors = [];
 
     this.svc.registrar(payload).subscribe({
-      next: () => {
+      next: (resp: DevolucaoDto) => {
         this.loading = false;
         this.snack.open('Devolução registrada com sucesso', 'Fechar', { duration: 3000 });
-        this.router.navigate(['/devolucoes']);
+        if (resp.id) {
+          this.router.navigate(['/devolucoes', resp.id]);
+        } else {
+          this.router.navigate(['/devolucoes']);
+        }
       },
       error: (err: any) => {
         this.loading = false;
