@@ -1,7 +1,7 @@
 import pytesseract
 import cv2
 import numpy as np
-from config import OCR_LANG
+from .config import OCR_LANG
 
 def ocr_plate_image(bgr_image):
     # converte para gray, aplica thresholding para melhorar OCR

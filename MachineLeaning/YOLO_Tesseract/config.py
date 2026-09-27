@@ -2,8 +2,7 @@ import os
 
 
 CAMERA_SERVER = os.environ.get('CAMERA_SERVER', None) #camera_server, colocar URL NÃO ESQUECER!!
-YOLO_MODEL = os.environ.get('YOLO_MODEL', 'yolov8n.pt') # path do peso YOLO
-PLATE_CLASSES = ['license_plate', 'car', 'vehicle', 'truck'] # classes usadas para filtrar (ajuste conforme modelo)
+YOLO_MODEL = os.environ.get('YOLO_MODEL', 'yolov8n.pt') # path do peso YOLO (COCO pré-treinado; ver plate_localizer.py)
 MIN_CONFIDENCE = float(os.environ.get('MIN_CONF', 0.35))
 OCR_LANG = os.environ.get('OCR_LANG', 'eng')
 

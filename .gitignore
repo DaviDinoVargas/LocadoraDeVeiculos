@@ -367,3 +367,11 @@ FodyWeavers.xsd
 
 # Segredos de ambiente local (senhas de dev, etc.) — nunca commitar. Veja .env.example.
 .env
+
+# Machine Learning (MachineLeaning/) — pesos de modelo, dados biométricos
+# cadastrados localmente e artefatos que cada máquina gera na hora
+.venv/
+MachineLeaning/**/*.pt
+MachineLeaning/**/*.pth
+MachineLeaning/**/crops/
+MachineLeaning/FaceAuth/data/

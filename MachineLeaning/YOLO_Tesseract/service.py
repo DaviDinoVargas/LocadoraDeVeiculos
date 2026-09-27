@@ -2,8 +2,12 @@ import threading
 import time
 import cv2
 import os
-from utils import log, ensure_dir
-from config import YOLO_MODEL, MIN_CONFIDENCE, SAVE_CROPS, CROPS_DIR, MIN_PLATE_AREA
+from .utils import log, ensure_dir
+from .config import YOLO_MODEL, MIN_CONFIDENCE, SAVE_CROPS, CROPS_DIR, MIN_PLATE_AREA
+from .yolo_detector import YoloDetector
+from .plate_localizer import find_plate_candidates, crop_box, save_crop
+from .tesseract_service import ocr_plate_image
+from .camera_server import list_cameras, open_camera
 
 class YoloTessService:
     def __init__(self, model_path=YOLO_MODEL):
@@ -73,7 +77,7 @@ class YoloTessService:
                     if crop is None or getattr(crop, "size", 0) == 0:
                         continue
                     if SAVE_CROPS:
-                        save_crop(frame=crop, out_dir=CROPS_DIR, prefix=f'cam{cam_index}')
+                        save_crop(crop, CROPS_DIR, prefix=f'cam{cam_index}')
                     # faz OCR
                     text = ocr_plate_image(crop)
                     if text:
@@ -102,29 +106,3 @@ class YoloTessService:
     def list_running(self):
         with self.lock:
             return list(self.running.keys())
-
-def list_cameras(max_probe=8):
-    """Lista câmeras disponíveis"""
-    available = []
-    for i in range(max_probe):
-        cap = cv2.VideoCapture(i)
-        if not cap or not cap.isOpened():
-            try:
-                cap.release()
-            except:
-                pass
-            continue
-        ret, _ = cap.read()
-        if ret:
-            available.append(i)
-        cap.release()
-    return available
-
-def open_camera(idx, width=None, height=None):
-    """Abre uma câmera com configurações opcionais"""
-    cap = cv2.VideoCapture(idx)
-    if width:
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-    if height:
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-    return cap

@@ -33,7 +33,7 @@ app.add_middleware(
 try:
     # Importar camera_server
     try:
-        from camera_server import list_cameras, open_camera
+        from yolo_tesseract.camera_server import list_cameras, open_camera
         print("✅ Módulo camera_server importado com sucesso")
     except ImportError:
         # Fallback se camera_server não existir
@@ -70,6 +70,21 @@ except Exception as e:
     print(f"❌ Erro crítico ao importar módulos: {e}")
     print("💡 Verifique se os arquivos existem e têm as classes/funções corretas")
     HAS_YOLO = False
+
+# Reconhecimento facial (MediaPipe FaceMesh) e chatbot de regras/busca
+try:
+    from FaceAuth.router import router as face_router
+    app.include_router(face_router)
+    print("✅ Módulo FaceAuth importado com sucesso")
+except ImportError as e:
+    print(f"⚠️  Erro ao importar FaceAuth: {e}")
+
+try:
+    from ChatBot.router import router as chat_router
+    app.include_router(chat_router)
+    print("✅ Módulo ChatBot importado com sucesso")
+except ImportError as e:
+    print(f"⚠️  Erro ao importar ChatBot: {e}")
 
 # Dicionário para armazenar capturas de câmera ativas
 active_cameras = {}
