@@ -1,4 +1,17 @@
 # main.py (ÚNICA VERSÃO)
+import sys
+import os
+
+# O console do Windows (cmd/PowerShell) roda por padrão num codepage
+# (ex.: cp1252) que não sabe representar emoji. Os prints deste arquivo
+# usam emoji para deixar o log de inicialização mais legível, e sem isso
+# o processo morre com UnicodeEncodeError assim que o primeiro print
+# roda — antes até de subir o servidor. reconfigure (Python 3.7+) força
+# stdout/stderr para UTF-8 independente do codepage do console.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -6,8 +19,6 @@ from pydantic import BaseModel
 import cv2
 import time
 import threading
-import sys
-import os
 from typing import List, Optional
 import numpy as np
 

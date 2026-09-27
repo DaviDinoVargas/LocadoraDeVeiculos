@@ -1,5 +1,5 @@
 {
-  "/api/cameras/*": {
+  "/api/cameras/**": {
     "target": "http://localhost:8000",
     "secure": false,
     "changeOrigin": true,
@@ -7,7 +7,7 @@
       "^/api/cameras": ""
     }
   },
-  "/api/ml/*": {
+  "/api/ml/**": {
     "target": "http://localhost:8000",
     "secure": false,
     "changeOrigin": true,
@@ -15,7 +15,7 @@
       "^/api/ml": ""
     }
   },
-  "/stream/*": {
+  "/stream/**": {
     "target": "http://localhost:8000",
     "secure": false,
     "changeOrigin": true,
