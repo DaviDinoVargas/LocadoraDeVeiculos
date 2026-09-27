@@ -72,17 +72,9 @@ export class LoginComponent implements OnInit {
     this.loading = true;
     const { email, senha } = this.form.value;
 
-    console.log('Tentando login com:', { email });
-    console.log('Return URL configurada:', this.returnUrl);
-
     this.auth.autenticar(email, senha).subscribe({
-      next: (token) => {
+      next: () => {
         this.loading = false;
-        console.log('Login bem-sucedido!');
-        console.log('Token recebido:', token);
-        console.log('Token no localStorage:', this.auth.getAccessToken());
-        console.log('isLoggedIn():', this.auth.isLoggedIn());
-        console.log('Navegando para:', this.returnUrl);
 
         this.snackBar.open('Login realizado com sucesso!', 'Fechar', {
           duration: 2000,
@@ -93,20 +85,16 @@ export class LoginComponent implements OnInit {
         // Adiciona um pequeno delay para garantir que o token foi salvo
         setTimeout(() => {
           this.router.navigateByUrl(this.returnUrl).then(success => {
-            console.log('Navegação bem-sucedida?', success);
             if (!success) {
-              console.log('Falha na navegação, tentando ir para /home');
               this.router.navigate(['/home']);
             }
-          }).catch(err => {
-            console.error('Erro na navegação:', err);
+          }).catch(() => {
             this.router.navigate(['/home']);
           });
         }, 100);
       },
       error: (err) => {
         this.loading = false;
-        console.error('Erro no login:', err);
 
         let errorMessage = 'Falha na autenticação. Verifique suas credenciais.';
 

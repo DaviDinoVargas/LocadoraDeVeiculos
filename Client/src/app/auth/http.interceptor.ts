@@ -4,15 +4,6 @@ import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
-// Interceptor de Debug
-export const DebugInterceptor: HttpInterceptorFn = (req, next) => {
-  console.log('Request URL:', req.url);
-  console.log('Request Headers:', req.headers);
-  console.log('Request Body:', req.body);
-
-  return next(req);
-};
-
 // Interceptor de Erro HTTP
 export const HttpErrorInterceptor: HttpInterceptorFn = (req, next) => {
   const snackBar = inject(MatSnackBar);

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 
 export interface AccessToken {
@@ -19,9 +19,14 @@ export interface Usuario {
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private baseUrl = 'https://localhost:7064/api/auth';
-  private accessTokenKey = 'locadora_access_token';
-  private expiresKey = 'locadora_expires';
-  private usuarioKey = 'locadora_usuario';
+
+  // Estado de sessão mantido só em memória (nunca em localStorage/sessionStorage):
+  // um XSS que rode no site não consegue mais roubar o token lendo o storage do navegador.
+  // O preço disso é que um F5 apaga o access token — por isso existe tentarRestaurarSessao(),
+  // que usa o refresh token (cookie HttpOnly, inacessível a JS) para obter um novo sem novo login.
+  private accessToken: string | null = null;
+  private expires: string | null = null;
+  private usuario: Usuario | null = null;
 
   constructor(private http: HttpClient) {}
 
@@ -70,20 +75,34 @@ export class AuthService {
     );
   }
 
-  /** SALVA TOKEN NO LOCALSTORAGE */
+  /** GUARDA O TOKEN EM MEMÓRIA (nunca em storage do navegador) */
   private salvarToken(token: AccessToken): void {
     if (!token || !token.accessToken) return;
-    this.limparStorage();
-    localStorage.setItem(this.accessTokenKey, token.accessToken);
-    localStorage.setItem(this.expiresKey, token.expires || new Date(Date.now() + 3600 * 1000).toISOString());
-    if (token.usuario) localStorage.setItem(this.usuarioKey, JSON.stringify(token.usuario));
+    this.accessToken = token.accessToken;
+    this.expires = token.expires || new Date(Date.now() + 3600 * 1000).toISOString();
+    this.usuario = token.usuario ?? null;
   }
 
-  /** LIMPA STORAGE */
+  /** LIMPA A SESSÃO EM MEMÓRIA */
   public limparStorage(): void {
-    localStorage.removeItem(this.accessTokenKey);
-    localStorage.removeItem(this.expiresKey);
-    localStorage.removeItem(this.usuarioKey);
+    this.accessToken = null;
+    this.expires = null;
+    this.usuario = null;
+  }
+
+  /**
+   * Tenta restaurar a sessão após um F5/nova aba, quando o access token em memória já
+   * se perdeu. Usa o refresh token (cookie HttpOnly) para pedir um novo access token
+   * sem precisar pedir login/senha de novo. Retorna false se não havia sessão válida.
+   */
+  tentarRestaurarSessao(): Observable<boolean> {
+    return this.rotacionarToken().pipe(
+      map(() => true),
+      catchError(() => {
+        this.limparStorage();
+        return of(false);
+      })
+    );
   }
 
   /** MAPEAR RESPOSTA DO BACKEND PARA AccessToken */
@@ -102,18 +121,15 @@ export class AuthService {
 
   /** GETTERS */
   getAccessToken(): string | null {
-    return localStorage.getItem(this.accessTokenKey);
+    return this.accessToken;
   }
 
   getUsuario(): Usuario | null {
-    const usuarioStr = localStorage.getItem(this.usuarioKey);
-    if (!usuarioStr) return null;
-    try { return JSON.parse(usuarioStr); }
-    catch { return null; }
+    return this.usuario;
   }
 
   getExpires(): string | null {
-    return localStorage.getItem(this.expiresKey);
+    return this.expires;
   }
 
   /** VALIDAÇÕES */
