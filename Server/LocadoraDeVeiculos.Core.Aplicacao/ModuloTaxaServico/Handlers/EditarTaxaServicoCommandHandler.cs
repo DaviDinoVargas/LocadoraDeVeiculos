@@ -41,9 +41,8 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloTaxaServico.Handlers
             if (taxaExistente is null)
                 return Result.Fail(ResultadosErro.RegistroNaoEncontradoErro(command.Id));
 
-            // Verificar se existe aluguel vinculado
-            //if (await _repositorioTaxaServico.ExisteAluguelVinculadoAsync(command.Id))
-            //    return Result.Fail(ResultadosErro.RegistroVinculadoErro("Não é possível editar uma taxa/serviço vinculada a um aluguel."));
+            if (await _repositorioTaxaServico.ExisteAluguelVinculadoAsync(command.Id))
+                return Result.Fail(ResultadosErro.ExclusaoBloqueadaErro("Não é possível editar uma taxa/serviço vinculada a um aluguel em aberto."));
 
             ValidationResult resultadoValidacao = await _validator.ValidateAsync(command, cancellationToken);
 

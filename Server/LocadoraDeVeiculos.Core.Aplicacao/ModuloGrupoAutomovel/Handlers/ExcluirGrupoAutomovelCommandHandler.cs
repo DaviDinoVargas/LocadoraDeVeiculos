@@ -39,15 +39,13 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloGrupoAutomovel.Handlers
                 if (grupoAutomovel is null)
                     return Result.Fail(ResultadosErro.RegistroNaoEncontradoErro(command.Id));
 
-                //// Verificar se o grupo está sendo usado em automóveis
-                //if (await _repositorioGrupoAutomovel.ExisteAutomovelVinculadoAsync(command.Id))
-                //    return Result.Fail(ResultadosErro.RegistroNaoEncontradoErro(
-                //        "Não é possível excluir o grupo de automóvel pois está sendo utilizado em automóveis."));
+                if (await _repositorioGrupoAutomovel.ExisteAutomovelVinculadoAsync(command.Id))
+                    return Result.Fail(ResultadosErro.ExclusaoBloqueadaErro(
+                        "Não é possível excluir o grupo de automóvel pois está sendo utilizado em automóveis."));
 
-                //// Verificar se o grupo está sendo usado em planos de cobrança
-                //if (await _repositorioGrupoAutomovel.ExistePlanoCobrancaVinculadoAsync(command.Id))
-                //    return Result.Fail(ResultadosErro.RegistroNaoEncontradoErro(
-                //        "Não é possível excluir o grupo de automóvel pois está sendo utilizado em planos de cobrança."));
+                if (await _repositorioGrupoAutomovel.ExistePlanoCobrancaVinculadoAsync(command.Id))
+                    return Result.Fail(ResultadosErro.ExclusaoBloqueadaErro(
+                        "Não é possível excluir o grupo de automóvel pois está sendo utilizado em planos de cobrança."));
 
                 await _repositorioGrupoAutomovel.ExcluirAsync(grupoAutomovel.Id);
 

@@ -41,8 +41,8 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloCondutor.Handlers
             if (condutorExistente is null)
                 return Result.Fail(ResultadosErro.RegistroNaoEncontradoErro(command.Id));
 
-            //if (await _repositorioCondutor.ExisteAluguelEmAbertoAsync(command.Id))
-            //    return Result.Fail(ResultadosErro.RegistroVinculadoErro("Não é possível editar um condutor com aluguel em aberto."));
+            if (await _repositorioCondutor.ExisteAluguelEmAbertoAsync(command.Id))
+                return Result.Fail(ResultadosErro.ExclusaoBloqueadaErro("Não é possível editar um condutor com aluguel em aberto."));
 
             ValidationResult resultadoValidacao = await _validator.ValidateAsync(command, cancellationToken);
 

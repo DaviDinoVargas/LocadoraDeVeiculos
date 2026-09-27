@@ -37,8 +37,8 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloCondutor.Handlers
                 if (condutor is null)
                     return Result.Fail(ResultadosErro.RegistroNaoEncontradoErro(command.Id));
 
-                //if (await _repositorioCondutor.ExisteAluguelEmAbertoAsync(command.Id))
-                //    return Result.Fail(ResultadosErro.RegistroVinculadoErro("Não é possível excluir um condutor com aluguel em aberto."));
+                if (await _repositorioCondutor.ExisteAluguelEmAbertoAsync(command.Id))
+                    return Result.Fail(ResultadosErro.ExclusaoBloqueadaErro("Não é possível excluir um condutor com aluguel em aberto."));
 
                 await _repositorioCondutor.ExcluirAsync(condutor.Id);
                 await _dbContext.SaveChangesAsync(cancellationToken);

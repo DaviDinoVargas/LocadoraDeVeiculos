@@ -43,9 +43,8 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloCliente.Handlers
             if (clienteExistente is null)
                 return Result.Fail(ResultadosErro.RegistroNaoEncontradoErro(command.Id));
 
-            // Verificar se existe aluguel em aberto
-            //if (await _repositorioCliente.ExisteAluguelEmAbertoAsync(command.Id))
-            //    return Result.Fail(ResultadosErro.RegistroVinculadoErro("Não é possível editar um cliente com aluguel em aberto."));
+            if (await _repositorioCliente.ExisteAluguelEmAbertoAsync(command.Id))
+                return Result.Fail(ResultadosErro.ExclusaoBloqueadaErro("Não é possível editar um cliente com aluguel em aberto."));
 
             // Validação do comando
             ValidationResult resultadoValidacao = await _validator.ValidateAsync(command, cancellationToken);

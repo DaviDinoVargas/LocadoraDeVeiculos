@@ -37,9 +37,8 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAutomovel.Handlers
                 if (automovel is null)
                     return Result.Fail(ResultadosErro.RegistroNaoEncontradoErro(command.Id));
 
-                // Verificar se existe aluguel em aberto para este automóvel
-                //if (await _repositorioAutomovel.ExisteAluguelEmAbertoAsync(command.Id))
-                //    return Result.Fail(ResultadosErro.RegistroVinculadoErro("Não é possível excluir um automóvel com aluguel em aberto."));
+                if (await _repositorioAutomovel.ExisteAluguelEmAbertoAsync(command.Id))
+                    return Result.Fail(ResultadosErro.ExclusaoBloqueadaErro("Não é possível excluir um automóvel com aluguel em aberto."));
 
                 await _repositorioAutomovel.ExcluirAsync(automovel.Id);
                 await _dbContext.SaveChangesAsync(cancellationToken);
