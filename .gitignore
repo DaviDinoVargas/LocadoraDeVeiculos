@@ -361,3 +361,9 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Claude Code local tooling config (dev-server launch config for this assistant, not app config)
+.claude/
+
+# Segredos de ambiente local (senhas de dev, etc.) — nunca commitar. Veja .env.example.
+.env
