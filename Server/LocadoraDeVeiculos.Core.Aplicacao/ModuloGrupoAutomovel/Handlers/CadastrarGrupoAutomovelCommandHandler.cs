@@ -44,6 +44,9 @@ public class CadastrarGrupoAutomovelCommandHandler
             return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(erros));
         }
 
+        if (await _repositorioGrupoAutomovel.ExisteGrupoComNomeAsync(command.Nome))
+            return Result.Fail(ResultadosErro.RegistroDuplicadoErro("Já existe um grupo de automóvel com este nome."));
+
         try
         {
             var grupoAutomovel = new GrupoAutomovel(

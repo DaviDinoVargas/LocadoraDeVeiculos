@@ -56,12 +56,11 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloGrupoAutomovel.Handlers
                 return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(erros));
             }
 
-            //// Verificar duplicidade (excluindo o próprio registro)
-            //if (await _repositorioGrupoAutomovel.ExisteGrupoComNomeAsync(command.Nome, command.Id))
-            //{
-            //    return Result.Fail(ResultadosErro.RegistroDuplicadoErro(
-            //        "Um grupo de automóvel com este nome já está cadastrado."));
-            //}
+            if (await _repositorioGrupoAutomovel.ExisteGrupoComNomeAsync(command.Nome, command.Id))
+            {
+                return Result.Fail(ResultadosErro.RegistroDuplicadoErro(
+                    "Um grupo de automóvel com este nome já está cadastrado."));
+            }
 
             try
             {

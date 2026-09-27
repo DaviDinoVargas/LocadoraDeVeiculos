@@ -48,6 +48,8 @@ namespace LocadoraDeVeiculos.Tests.Integracao.Compartilhado
         {
             var services = new ServiceCollection();
 
+            services.AddLogging();
+
             // Configura banco em memória
             services.AddDbContext<LocadoraDeVeiculosDbContext>(opt =>
                 opt.UseInMemoryDatabase(Guid.NewGuid().ToString()));
