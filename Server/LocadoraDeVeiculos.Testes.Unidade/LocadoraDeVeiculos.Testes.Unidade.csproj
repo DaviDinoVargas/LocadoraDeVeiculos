@@ -16,4 +16,9 @@
     <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\LocadoraDeVeiculos.Core.Dominio\LocadoraDeVeiculos.Core.Dominio.csproj" />
+    <ProjectReference Include="..\LocadoraDeVeiculos.Core.Aplicacao\LocadoraDeVeiculos.Core.Aplicacao.csproj" />
+  </ItemGroup>
+
 </Project>

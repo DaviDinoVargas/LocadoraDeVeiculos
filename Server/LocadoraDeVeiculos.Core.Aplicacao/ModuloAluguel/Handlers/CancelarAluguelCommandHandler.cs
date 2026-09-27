@@ -49,11 +49,11 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
             if (aluguel is null)
                 return Result.Fail(ResultadosErro.RegistroNaoEncontradoErro(command.Id));
 
-            //if (aluguel.Status == StatusAluguel.EmAndamento)
-            //    return Result.Fail(ResultadosErro.RegistroInvalidoErro("Não é possível cancelar um aluguel em andamento."));
+            if (aluguel.Status == StatusAluguel.EmAndamento)
+                return Result.Fail(ResultadosErro.EstadoInvalidoErro("Não é possível cancelar um aluguel em andamento."));
 
-            //if (aluguel.Status == StatusAluguel.Concluido)
-            //    return Result.Fail(ResultadosErro.RegistroInvalidoErro("Não é possível cancelar um aluguel já concluído."));
+            if (aluguel.Status == StatusAluguel.Concluido)
+                return Result.Fail(ResultadosErro.EstadoInvalidoErro("Não é possível cancelar um aluguel já concluído."));
 
             try
             {

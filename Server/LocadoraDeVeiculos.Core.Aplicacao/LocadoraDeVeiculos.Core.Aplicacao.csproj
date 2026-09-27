@@ -23,7 +23,6 @@
   <ItemGroup>
     <ProjectReference Include="..\LocadoraDeVeiculos.Core.Dominio\LocadoraDeVeiculos.Core.Dominio.csproj" />
     <ProjectReference Include="..\LocadoraDeVeiculos.Infraestrutura.Orm\LocadoraDeVeiculos.Infraestrutura.Orm.csproj" />
-    <ProjectReference Include="..\LocadoraDeVeiculos.Testes.Unidade\LocadoraDeVeiculos.Testes.Unidade.csproj" />
   </ItemGroup>
 
 </Project>

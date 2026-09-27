@@ -3,8 +3,11 @@ using FluentValidation;
 using FluentValidation.Results;
 using LocadoraDeVeiculos.Core.Aplicacao.Compartilhado;
 using LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Commands;
+using LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Servicos;
 using LocadoraDeVeiculos.Core.Dominio.ModuloAluguel;
 using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
+using LocadoraDeVeiculos.Core.Dominio.ModuloAutomovel;
+using LocadoraDeVeiculos.Core.Dominio.ModuloPlanoCobranca;
 using LocadoraDeVeiculos.Core.Dominio.ModuloTaxaServico;
 using LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
 using LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloTaxaServico;
@@ -22,6 +25,8 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
     {
         private readonly LocadoraDeVeiculosDbContext _appDbContext;
         private readonly IRepositorioAluguel _repositorioAluguel;
+        private readonly IRepositorioAutomovel _repositorioAutomovel;
+        private readonly IRepositorioPlanoCobranca _repositorioPlanoCobranca;
         private readonly IRepositorioTaxaServico _repositorioTaxaServico;
         private readonly ITenantProvider _tenantProvider;
         private readonly IValidator<CadastrarAluguelCommand> _validator;
@@ -30,6 +35,8 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
         public CadastrarAluguelCommandHandler(
             LocadoraDeVeiculosDbContext appDbContext,
             IRepositorioAluguel repositorioAluguel,
+            IRepositorioAutomovel repositorioAutomovel,
+            IRepositorioPlanoCobranca repositorioPlanoCobranca,
             IRepositorioTaxaServico repositorioTaxaServico,
             ITenantProvider tenantProvider,
             IValidator<CadastrarAluguelCommand> validator,
@@ -37,6 +44,8 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
         {
             _appDbContext = appDbContext;
             _repositorioAluguel = repositorioAluguel;
+            _repositorioAutomovel = repositorioAutomovel;
+            _repositorioPlanoCobranca = repositorioPlanoCobranca;
             _repositorioTaxaServico = repositorioTaxaServico;
             _tenantProvider = tenantProvider;
             _validator = validator;
@@ -60,32 +69,47 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
                 return Result.Fail(ResultadosErro.RegistroDuplicadoErro("O automóvel já está reservado para este período."));
             }
 
-            // Verificar documentos do condutor
-            //if (!await _repositorioAluguel.VerificarDocumentosCondutorEmDiaAsync(command.CondutorId))
-            //{
-            //    return Result.Fail(ResultadosErro.RegistroInvalidoErro("Os documentos do condutor não estão em dia."));
-            //}
+            if (!await _repositorioAluguel.VerificarDocumentosCondutorEmDiaAsync(command.CondutorId))
+            {
+                return Result.Fail(ResultadosErro.RequisicaoInvalidaErro("Os documentos do condutor não estão em dia (CNH vencida)."));
+            }
+
+            var automovel = await _repositorioAutomovel.SelecionarPorIdAsync(command.AutomovelId);
+
+            if (automovel is null)
+                return Result.Fail(ResultadosErro.RegistroNaoEncontradoErro(command.AutomovelId));
+
+            var planoCobranca = await _repositorioPlanoCobranca.SelecionarMaisRecentePorGrupoAutomovelAsync(automovel.GrupoAutomovelId);
+
+            if (planoCobranca is null)
+                return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(
+                    "Não há plano de cobrança cadastrado para o grupo deste automóvel."));
 
             try
             {
+                var taxasServicos = command.TaxasServicosIds is { Count: > 0 }
+                    ? await _repositorioTaxaServico.SelecionarPorIdsAsync(command.TaxasServicosIds)
+                    : new System.Collections.Generic.List<TaxaServico>();
+
+                // O valor previsto é sempre calculado no servidor a partir do plano de cobrança
+                // e das taxas selecionadas — o valor enviado pelo cliente (command.ValorPrevisto)
+                // é ignorado de propósito, nunca confiamos nele.
+                var valorPrevisto = CalculoAluguelService.CalcularValorPrevisto(
+                    planoCobranca, command.DataSaida, command.DataRetornoPrevisto, taxasServicos);
+
                 var aluguel = new Aluguel(
                     command.CondutorId,
                     command.AutomovelId,
                     command.ClienteId,
                     command.DataSaida,
                     command.DataRetornoPrevisto,
-                    command.ValorPrevisto
+                    valorPrevisto
                 )
                 {
                     EmpresaId = _tenantProvider.EmpresaId.GetValueOrDefault()
                 };
 
-                // Adicionar taxas e serviços selecionados
-                if (command.TaxasServicosIds != null && command.TaxasServicosIds.Any())
-                {
-                    var taxasServicos = await _repositorioTaxaServico.SelecionarPorIdsAsync(command.TaxasServicosIds);
-                    aluguel.TaxasServicos.AddRange(taxasServicos);
-                }
+                aluguel.TaxasServicos.AddRange(taxasServicos);
 
                 await _repositorioAluguel.CadastrarAsync(aluguel);
                 await _appDbContext.SaveChangesAsync(cancellationToken);

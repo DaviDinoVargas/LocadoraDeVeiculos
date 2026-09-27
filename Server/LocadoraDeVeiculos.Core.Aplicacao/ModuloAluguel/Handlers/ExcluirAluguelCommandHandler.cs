@@ -37,8 +37,8 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
                 if (aluguel is null)
                     return Result.Fail(ResultadosErro.RegistroNaoEncontradoErro(command.Id));
 
-                //if (!aluguel.PodeSerExcluido())
-                //    return Result.Fail(ResultadosErro.RegistroInvalidoErro("Não é possível excluir um aluguel em andamento, concluído ou cancelado."));
+                if (!aluguel.PodeSerExcluido())
+                    return Result.Fail(ResultadosErro.EstadoInvalidoErro("Não é possível excluir um aluguel em andamento ou concluído."));
 
                 await _repositorioAluguel.ExcluirAsync(aluguel.Id);
                 await _dbContext.SaveChangesAsync(cancellationToken);
