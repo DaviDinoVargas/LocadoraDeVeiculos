@@ -21,6 +21,19 @@ public class LocadoraDeVeiculosDbContext(
     ITenantProvider? tenantProvider = null
 ) : IdentityDbContext<Usuario, Cargo, Guid>(options), IContextoPersistencia
 {
+    // Null object pattern: garante que "tenant" NUNCA seja null. Isso importa porque o EF Core
+    // avalia acessos de membro dentro de HasQueryFilter de forma antecipada, fora da ordem de
+    // curto-circuito do C# — "tenantProvider == null || e.EmpresaId == tenantProvider.EmpresaId"
+    // lança NullReferenceException quando tenantProvider é null, mesmo com o "||" na frente.
+    private readonly ITenantProvider tenant = tenantProvider ?? SemTenant.Instancia;
+
+    private sealed class SemTenant : ITenantProvider
+    {
+        public static readonly SemTenant Instancia = new();
+        public Guid? EmpresaId => null;
+        public bool EstaNoCargo(string cargo) => false;
+    }
+
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<Funcionario> Funcionarios { get; set; }
     public DbSet<GrupoAutomovel> GruposAutomovel { get; set; }
@@ -74,7 +87,7 @@ public class LocadoraDeVeiculosDbContext(
         where TEntidade : EntidadeBase<TEntidade>
     {
         modelBuilder.Entity<TEntidade>().HasQueryFilter(e =>
-            !e.Excluido && (tenantProvider == null || e.EmpresaId == tenantProvider.EmpresaId));
+            !e.Excluido && e.EmpresaId == tenant.EmpresaId);
     }
 
     public async Task<int> GravarAsync()
