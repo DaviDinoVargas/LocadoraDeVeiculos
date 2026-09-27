@@ -1,6 +1,7 @@
 import { Component, signal, ViewChild } from '@angular/core';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { LogoutWidgetComponent } from "./auth/logout-widget.component";
+import { ChatbotWidgetComponent } from "./Components/chatbot/chatbot-widget.component";
 
 import { AuthService } from './auth/auth.service';
 import { SidebarComponent } from "./Components/sidebar/sidebar.component";
@@ -28,7 +29,8 @@ import { filter } from 'rxjs';
     MatProgressSpinnerModule,
     MatSnackBarModule,
     LogoutWidgetComponent,
-    SidebarComponent
+    SidebarComponent,
+    ChatbotWidgetComponent
   ],
   template: `
     <app-logout-widget></app-logout-widget>
@@ -39,6 +41,7 @@ import { filter } from 'rxjs';
         <router-outlet></router-outlet>
       </main>
     </div>
+    <app-chatbot-widget></app-chatbot-widget>
   `,
   styles: [`
     .app-container {

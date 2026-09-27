@@ -1,0 +1,45 @@
+<div class="face-page">
+  <h1>Verificação Facial</h1>
+  <p class="subtitulo">
+    Cadastre seu rosto uma vez e use a verificação para confirmar sua identidade
+    antes de operações sensíveis (ex.: retirada de veículo no balcão).
+  </p>
+
+  <div class="face-card">
+    <div class="camera-area">
+      <video #video muted playsinline [class.hidden]="estadoCamera !== 'ativa'"></video>
+      <canvas #canvas class="hidden"></canvas>
+
+      <div class="camera-placeholder" *ngIf="estadoCamera !== 'ativa'">
+        <span *ngIf="estadoCamera === 'parada'">Câmera desligada</span>
+        <span *ngIf="estadoCamera === 'ligando'">Ligando câmera...</span>
+        <span *ngIf="estadoCamera === 'erro'">Erro ao acessar a câmera</span>
+      </div>
+    </div>
+
+    <div class="status-linha">
+      <span class="badge" [class.badge--ok]="cadastrado" [class.badge--pendente]="!cadastrado">
+        {{ cadastrado ? 'Rosto cadastrado' : 'Nenhum rosto cadastrado ainda' }}
+      </span>
+    </div>
+
+    <div class="acoes">
+      <button type="button" *ngIf="estadoCamera !== 'ativa'" (click)="ligarCamera()">
+        Ligar câmera
+      </button>
+      <button type="button" *ngIf="estadoCamera === 'ativa'" (click)="pararCamera()" class="secundario">
+        Desligar câmera
+      </button>
+      <button type="button" [disabled]="estadoCamera !== 'ativa' || processando" (click)="cadastrarRosto()">
+        Cadastrar meu rosto
+      </button>
+      <button type="button" [disabled]="estadoCamera !== 'ativa' || processando || !cadastrado" (click)="verificarIdentidade()">
+        Verificar identidade
+      </button>
+    </div>
+
+    <div class="mensagem" *ngIf="mensagem" [ngClass]="'mensagem--' + mensagemTipo">
+      {{ mensagem }}
+    </div>
+  </div>
+</div>

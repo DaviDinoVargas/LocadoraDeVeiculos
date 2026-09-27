@@ -26,6 +26,7 @@ import { DevolucoesListComponent } from './Components/devolucoes/devolucoes-list
 import { DevolucaoViewComponent } from './Components/devolucoes/devolucao-view.component';
 import { DevolucaoFormComponent } from './Components/devolucoes/devolucao-form.component';
 import { CameraMonitorComponent } from './Components/monitoramento/camera-monitor.component';
+import { VerificacaoFacialComponent } from './Components/verificacao-facial/verificacao-facial.component';
 
 
 export const routes: Routes = [
@@ -90,6 +91,13 @@ export const routes: Routes = [
     path: 'camera-monitor',
     component: CameraMonitorComponent,
     data: { title: 'Monitoramento de Câmeras' }
+  },
+
+  {
+    path: 'verificacao-facial',
+    component: VerificacaoFacialComponent,
+    canActivate: [AuthGuard],
+    data: { title: 'Verificação Facial' }
   },
 
     { path: '**', redirectTo: 'home' }

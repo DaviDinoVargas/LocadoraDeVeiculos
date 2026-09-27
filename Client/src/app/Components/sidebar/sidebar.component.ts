@@ -198,6 +198,14 @@ export class SidebarComponent implements OnInit, OnDestroy {
   path: '/camera-monitor',
   roles: ['Empresa', 'Funcionario'],
   module: this.modules.operacional
+},
+
+      {
+  label: 'Verificação Facial',
+  icon: 'face',
+  path: '/verificacao-facial',
+  roles: ['Empresa', 'Funcionario'],
+  module: this.modules.operacional
 }
     ];
 

@@ -1,0 +1,43 @@
+<ng-container *ngIf="show">
+  <button
+    class="chatbot-fab"
+    type="button"
+    (click)="toggle()"
+    [attr.aria-label]="aberto ? 'Fechar assistente' : 'Abrir assistente'"
+  >
+    <span *ngIf="!aberto">💬</span>
+    <span *ngIf="aberto">✕</span>
+  </button>
+
+  <div class="chatbot-panel" *ngIf="aberto">
+    <div class="chatbot-header">
+      <span>Assistente da Locadora</span>
+    </div>
+
+    <div class="chatbot-historico" #historico>
+      <div
+        *ngFor="let msg of mensagens"
+        class="chatbot-msg"
+        [class.chatbot-msg--usuario]="msg.autor === 'usuario'"
+        [class.chatbot-msg--bot]="msg.autor === 'bot'"
+      >
+        {{ msg.texto }}
+      </div>
+      <div class="chatbot-msg chatbot-msg--bot chatbot-msg--digitando" *ngIf="enviando">
+        digitando...
+      </div>
+    </div>
+
+    <form class="chatbot-input" (ngSubmit)="enviar()">
+      <input
+        type="text"
+        [(ngModel)]="mensagemAtual"
+        name="mensagem"
+        placeholder="Digite sua pergunta..."
+        autocomplete="off"
+        [disabled]="enviando"
+      />
+      <button type="submit" [disabled]="enviando || !mensagemAtual.trim()">Enviar</button>
+    </form>
+  </div>
+</ng-container>

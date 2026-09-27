@@ -7,6 +7,14 @@
       "^/api/cameras": ""
     }
   },
+  "/api/ml/*": {
+    "target": "http://localhost:8000",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": {
+      "^/api/ml": ""
+    }
+  },
   "/stream/*": {
     "target": "http://localhost:8000",
     "secure": false,

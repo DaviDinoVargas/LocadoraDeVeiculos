@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, Subject } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 export interface DeteccaoPlaca {
   camera: number;
@@ -44,7 +45,9 @@ export class CameraService {
 
   // Obter últimas detecções
   obterUltimasDetecoes(): Observable<DeteccaoPlaca[]> {
-    return this.http.get<DeteccaoPlaca[]>(`${this.baseUrl}/last`);
+    return this.http.get<{ detections: DeteccaoPlaca[]; mock: boolean }>(`${this.baseUrl}/last`).pipe(
+      map(resposta => resposta.detections ?? [])
+    );
   }
 
   // Iniciar polling para detecções em tempo real
