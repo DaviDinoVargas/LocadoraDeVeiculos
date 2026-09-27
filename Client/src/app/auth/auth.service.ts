@@ -48,6 +48,23 @@ export class AuthService {
       );
   }
 
+  /** LOGIN VIA RECONHECIMENTO FACIAL */
+  entrarComRosto(email: string, imagemBase64: string): Observable<AccessToken> {
+    return this.http.post<any>(`${this.baseUrl}/entrar-facial`, { email, imagemBase64 }, { withCredentials: true })
+      .pipe(
+        map(response => this.mapTokenResponse(response)),
+        catchError(err => throwError(() => err))
+      );
+  }
+
+  /** CADASTRA O ROSTO DO USUÁRIO JÁ AUTENTICADO */
+  cadastrarRosto(imagemBase64: string): Observable<{ amostras: number }> {
+    const token = this.getAccessToken();
+    return this.http.post<{ amostras: number }>(`${this.baseUrl}/rosto`, { imagemBase64 }, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined
+    });
+  }
+
   /** ROTACIONAR TOKEN */
   rotacionarToken(): Observable<AccessToken> {
     const token = this.getAccessToken();

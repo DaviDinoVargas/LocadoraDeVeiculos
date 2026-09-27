@@ -2,6 +2,7 @@ import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/co
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../auth/auth.service';
 import { FaceAuthService } from './face-auth.service';
+import { WebcamCaptureService } from '../../shared/webcam-capture.service';
 
 type EstadoCamera = 'parada' | 'ligando' | 'ativa' | 'erro';
 
@@ -23,11 +24,10 @@ export class VerificacaoFacialComponent implements OnInit, OnDestroy {
   mensagem = '';
   mensagemTipo: 'sucesso' | 'erro' | 'info' = 'info';
 
-  private stream: MediaStream | null = null;
-
   constructor(
     private auth: AuthService,
-    private faceAuth: FaceAuthService
+    private faceAuth: FaceAuthService,
+    private webcam: WebcamCaptureService
   ) {}
 
   ngOnInit(): void {
@@ -51,10 +51,8 @@ export class VerificacaoFacialComponent implements OnInit, OnDestroy {
     }
     this.estadoCamera = 'ligando';
     try {
-      this.stream = await navigator.mediaDevices.getUserMedia({ video: { width: 480, height: 360 }, audio: false });
       if (this.videoRef) {
-        this.videoRef.nativeElement.srcObject = this.stream;
-        await this.videoRef.nativeElement.play();
+        await this.webcam.ligar(this.videoRef.nativeElement);
       }
       this.estadoCamera = 'ativa';
     } catch (e) {
@@ -64,8 +62,7 @@ export class VerificacaoFacialComponent implements OnInit, OnDestroy {
   }
 
   pararCamera(): void {
-    this.stream?.getTracks().forEach(track => track.stop());
-    this.stream = null;
+    this.webcam.desligar();
     this.estadoCamera = 'parada';
   }
 
@@ -73,16 +70,7 @@ export class VerificacaoFacialComponent implements OnInit, OnDestroy {
     if (!this.videoRef || !this.canvasRef) {
       return null;
     }
-    const video = this.videoRef.nativeElement;
-    const canvas = this.canvasRef.nativeElement;
-    canvas.width = video.videoWidth || 480;
-    canvas.height = video.videoHeight || 360;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      return null;
-    }
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL('image/jpeg', 0.85);
+    return this.webcam.capturarFrameBase64(this.videoRef.nativeElement, this.canvasRef.nativeElement);
   }
 
   cadastrarRosto(): void {
@@ -94,7 +82,7 @@ export class VerificacaoFacialComponent implements OnInit, OnDestroy {
       return;
     }
     this.processando = true;
-    this.faceAuth.cadastrar(this.personId, imagem).subscribe({
+    this.auth.cadastrarRosto(imagem).subscribe({
       next: (resp) => {
         this.processando = false;
         this.cadastrado = true;

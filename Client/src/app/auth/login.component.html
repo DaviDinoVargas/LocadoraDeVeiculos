@@ -26,6 +26,21 @@
           <span *ngIf="!loading">Entrar</span>
         </button>
       </form>
+
+      <button mat-stroked-button type="button" class="full-width facial-toggle" (click)="alternarModoFacial()" [disabled]="loading">
+        <mat-icon>face</mat-icon>
+        {{ modoFacial ? 'Cancelar reconhecimento facial' : 'Entrar com reconhecimento facial' }}
+      </button>
+
+      <div class="facial-login" *ngIf="modoFacial">
+        <video #video muted playsinline [class.hidden]="!cameraAtiva"></video>
+        <canvas #canvas class="hidden"></canvas>
+        <p *ngIf="!cameraAtiva">Ligando câmera...</p>
+        <button mat-raised-button color="accent" type="button" class="full-width" [disabled]="!cameraAtiva || loading" (click)="entrarComRosto()">
+          <mat-spinner diameter="20" *ngIf="loading"></mat-spinner>
+          <span *ngIf="!loading">Capturar e entrar</span>
+        </button>
+      </div>
     </mat-card-content>
     <mat-card-actions>
       <a mat-button routerLink="/registrar">Criar uma conta</a>

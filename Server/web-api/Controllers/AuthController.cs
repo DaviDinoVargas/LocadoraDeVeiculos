@@ -5,8 +5,10 @@ using LocadoraDeVeiculos.WebApi.Compartilhado;
 using LocadoraDeVeiculos.WebApi.Config.Identify;
 using LocadoraDeVeiculos.WebApi.Models.ModuloAutenticacao;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using System.Security.Claims;
 
 namespace LocadoraDeVeiculos.WebApi.Controllers;
 
@@ -38,6 +40,32 @@ public class AutenticacaoController(IMediator mediator) : MainController
         var result = await mediator.Send(command);
 
         return ProcessarResultado(result, ResponderComToken);
+    }
+
+    [HttpPost("entrar-facial")]
+    public async Task<ActionResult<AccessToken>> EntrarFacial(AutenticarComRostoRequest request)
+    {
+        var command = new AutenticarComRostoCommand(request.Email, request.ImagemBase64);
+
+        var result = await mediator.Send(command);
+
+        return ProcessarResultado(result, ResponderComToken);
+    }
+
+    [HttpPost("rosto")]
+    [Authorize]
+    public async Task<ActionResult<CadastrarRostoResponse>> CadastrarRosto(CadastrarRostoRequest request)
+    {
+        var usuarioIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(usuarioIdClaim, out var usuarioId))
+            return Unauthorized();
+
+        var command = new CadastrarRostoCommand(usuarioId, request.ImagemBase64);
+
+        var result = await mediator.Send(command);
+
+        return ProcessarResultado(result, amostras => Ok(new CadastrarRostoResponse(amostras)));
     }
 
     [HttpPost("rotacionar")]

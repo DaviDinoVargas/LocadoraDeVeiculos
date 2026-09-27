@@ -371,7 +371,7 @@ FodyWeavers.xsd
 # Machine Learning (MachineLeaning/) — pesos de modelo, dados biométricos
 # cadastrados localmente e artefatos que cada máquina gera na hora
 .venv/
-MachineLeaning/**/*.pt
-MachineLeaning/**/*.pth
+*.pt
+*.pth
 MachineLeaning/**/crops/
 MachineLeaning/FaceAuth/data/

@@ -58,3 +58,28 @@ mat-progress-spinner { vertical-align: middle; margin-right: 6px; }
   margin-top: 12px;
   color: rgba(0,0,0,0.54);
 }
+
+.facial-toggle {
+  margin-top: 12px;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+}
+
+.facial-login {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.facial-login video {
+  width: 100%;
+  max-width: 320px;
+  border-radius: 8px;
+  background: #202124;
+  margin-bottom: 12px;
+}
+
+.facial-login .hidden {
+  display: none !important;
+}

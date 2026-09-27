@@ -29,6 +29,7 @@ using LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloCupom;
 using LocadoraDeVeiculos.Core.Dominio.ModuloCupom;
 using LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloDesafioCupom;
 using LocadoraDeVeiculos.Core.Dominio.ModuloDesafioCupom;
+using LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Services;
 
 namespace LocadoraDeVeiculos.Core.Aplicacao;
 
@@ -64,6 +65,17 @@ public static class DependencyInjection
         services.AddScoped<IRepositorioParceiro, RepositorioParceiroEmOrm>();
         services.AddScoped<IRepositorioCupom, RepositorioCupomEmOrm>();
         services.AddScoped<IRepositorioDesafioCupom, RepositorioDesafioCupomEmOrm>();
+
+        // Serviço Python de ML (reconhecimento facial, chatbot): roda localmente, sem HTTPS/certificado
+        // válido em desenvolvimento. Timeout curto porque essas chamadas acontecem durante o login,
+        // ninguém deveria ficar esperando o reconhecimento facial por mais que alguns segundos.
+        var mlApiBaseUrl = configuration["MlApi:BaseUrl"] ?? "http://localhost:8000";
+        services.AddHttpClient("MlApi", client =>
+        {
+            client.BaseAddress = new Uri(mlApiBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(10);
+        });
+        services.AddScoped<FacialAuthClient>();
 
         return services;
     }
