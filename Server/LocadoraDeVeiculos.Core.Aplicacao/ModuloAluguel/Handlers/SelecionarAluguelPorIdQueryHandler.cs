@@ -48,7 +48,9 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
                 aluguel.ValorPrevisto,
                 aluguel.ValorCaucao,
                 aluguel.Status.ToString(),
-                taxasServicos
+                taxasServicos,
+                aluguel.ValorDesconto,
+                aluguel.Cupom?.Codigo
             );
 
             return Result.Ok(result);

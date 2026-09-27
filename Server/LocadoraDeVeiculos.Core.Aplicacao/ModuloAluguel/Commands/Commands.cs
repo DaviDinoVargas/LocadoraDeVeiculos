@@ -16,7 +16,8 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Commands
         DateTimeOffset DataSaida,
         DateTimeOffset DataRetornoPrevisto,
         decimal ValorPrevisto,
-        List<Guid> TaxasServicosIds
+        List<Guid> TaxasServicosIds,
+        string? CupomCodigo = null
     ) : IRequest<Result<CadastrarAluguelResult>>;
 
     public record CadastrarAluguelResult(Guid Id);
@@ -29,7 +30,8 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Commands
         DateTimeOffset DataSaida,
         DateTimeOffset DataRetornoPrevisto,
         decimal ValorPrevisto,
-        List<Guid> TaxasServicosIds
+        List<Guid> TaxasServicosIds,
+        string? CupomCodigo = null
     ) : IRequest<Result<EditarAluguelResult>>;
 
     public record EditarAluguelResult(
@@ -39,7 +41,8 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Commands
         Guid ClienteId,
         DateTimeOffset DataSaida,
         DateTimeOffset DataRetornoPrevisto,
-        decimal ValorPrevisto
+        decimal ValorPrevisto,
+        decimal ValorDesconto
     );
 
     public record IniciarAluguelCommand(Guid Id) : IRequest<Result<IniciarAluguelResult>>;
@@ -74,7 +77,9 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Commands
         decimal ValorPrevisto,
         decimal ValorCaucao,
         string Status,
-        List<SelecionarTaxaServicoDto> TaxasServicos
+        List<SelecionarTaxaServicoDto> TaxasServicos,
+        decimal ValorDesconto,
+        string? CupomCodigo
     );
 
     public record SelecionarAlugueisPorStatusQuery(string Status) : IRequest<Result<SelecionarAlugueisPorStatusResult>>;

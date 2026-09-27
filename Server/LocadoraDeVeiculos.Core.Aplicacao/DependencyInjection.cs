@@ -23,6 +23,12 @@ using LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloDevolucao;
 using LocadoraDeVeiculos.Core.Dominio.ModuloDevolucao;
 using LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloConfiguracao;
 using LocadoraDeVeiculos.Core.Dominio.ModuloConfiguracao;
+using LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloParceiro;
+using LocadoraDeVeiculos.Core.Dominio.ModuloParceiro;
+using LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloCupom;
+using LocadoraDeVeiculos.Core.Dominio.ModuloCupom;
+using LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloDesafioCupom;
+using LocadoraDeVeiculos.Core.Dominio.ModuloDesafioCupom;
 
 namespace LocadoraDeVeiculos.Core.Aplicacao;
 
@@ -55,6 +61,9 @@ public static class DependencyInjection
         services.AddScoped<IRepositorioAluguel, RepositorioAluguelEmOrm>();
         services.AddScoped<IRepositorioDevolucao, RepositorioDevolucaoEmOrm>();
         services.AddScoped<IRepositorioConfiguracao, RepositorioConfiguracaoEmOrm>();
+        services.AddScoped<IRepositorioParceiro, RepositorioParceiroEmOrm>();
+        services.AddScoped<IRepositorioCupom, RepositorioCupomEmOrm>();
+        services.AddScoped<IRepositorioDesafioCupom, RepositorioDesafioCupomEmOrm>();
 
         return services;
     }

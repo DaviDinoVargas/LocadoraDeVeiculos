@@ -7,6 +7,7 @@ using LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Servicos;
 using LocadoraDeVeiculos.Core.Dominio.ModuloAluguel;
 using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
 using LocadoraDeVeiculos.Core.Dominio.ModuloAutomovel;
+using LocadoraDeVeiculos.Core.Dominio.ModuloCupom;
 using LocadoraDeVeiculos.Core.Dominio.ModuloPlanoCobranca;
 using LocadoraDeVeiculos.Core.Dominio.ModuloTaxaServico;
 using LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
@@ -28,6 +29,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
         private readonly IRepositorioAutomovel _repositorioAutomovel;
         private readonly IRepositorioPlanoCobranca _repositorioPlanoCobranca;
         private readonly IRepositorioTaxaServico _repositorioTaxaServico;
+        private readonly IRepositorioCupom _repositorioCupom;
         private readonly ITenantProvider _tenantProvider;
         private readonly IValidator<CadastrarAluguelCommand> _validator;
         private readonly ILogger<CadastrarAluguelCommandHandler> _logger;
@@ -38,6 +40,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
             IRepositorioAutomovel repositorioAutomovel,
             IRepositorioPlanoCobranca repositorioPlanoCobranca,
             IRepositorioTaxaServico repositorioTaxaServico,
+            IRepositorioCupom repositorioCupom,
             ITenantProvider tenantProvider,
             IValidator<CadastrarAluguelCommand> validator,
             ILogger<CadastrarAluguelCommandHandler> logger)
@@ -47,6 +50,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
             _repositorioAutomovel = repositorioAutomovel;
             _repositorioPlanoCobranca = repositorioPlanoCobranca;
             _repositorioTaxaServico = repositorioTaxaServico;
+            _repositorioCupom = repositorioCupom;
             _tenantProvider = tenantProvider;
             _validator = validator;
             _logger = logger;
@@ -85,6 +89,16 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
                 return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(
                     "Não há plano de cobrança cadastrado para o grupo deste automóvel."));
 
+            Cupom? cupom = null;
+
+            if (!string.IsNullOrWhiteSpace(command.CupomCodigo))
+            {
+                cupom = await _repositorioCupom.SelecionarPorCodigoAsync(command.CupomCodigo);
+
+                if (cupom is null || !cupom.EstaValido(DateTimeOffset.UtcNow))
+                    return Result.Fail(ResultadosErro.RequisicaoInvalidaErro("Cupom inválido, expirado ou esgotado."));
+            }
+
             try
             {
                 var taxasServicos = command.TaxasServicosIds is { Count: > 0 }
@@ -94,7 +108,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
                 // O valor previsto é sempre calculado no servidor a partir do plano de cobrança
                 // e das taxas selecionadas — o valor enviado pelo cliente (command.ValorPrevisto)
                 // é ignorado de propósito, nunca confiamos nele.
-                var valorPrevisto = CalculoAluguelService.CalcularValorPrevisto(
+                var valorBruto = CalculoAluguelService.CalcularValorPrevisto(
                     planoCobranca, command.DataSaida, command.DataRetornoPrevisto, taxasServicos);
 
                 var aluguel = new Aluguel(
@@ -103,13 +117,19 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
                     command.ClienteId,
                     command.DataSaida,
                     command.DataRetornoPrevisto,
-                    valorPrevisto
+                    valorBruto
                 )
                 {
                     EmpresaId = _tenantProvider.EmpresaId.GetValueOrDefault()
                 };
 
                 aluguel.TaxasServicos.AddRange(taxasServicos);
+
+                if (cupom is not null)
+                {
+                    aluguel.AplicarCupom(cupom, valorBruto);
+                    cupom.RegistrarUso();
+                }
 
                 await _repositorioAluguel.CadastrarAsync(aluguel);
                 await _appDbContext.SaveChangesAsync(cancellationToken);

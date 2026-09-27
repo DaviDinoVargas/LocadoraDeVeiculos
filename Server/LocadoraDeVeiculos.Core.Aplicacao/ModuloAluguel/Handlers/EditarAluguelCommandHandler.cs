@@ -6,6 +6,7 @@ using LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Commands;
 using LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Servicos;
 using LocadoraDeVeiculos.Core.Dominio.ModuloAluguel;
 using LocadoraDeVeiculos.Core.Dominio.ModuloAutomovel;
+using LocadoraDeVeiculos.Core.Dominio.ModuloCupom;
 using LocadoraDeVeiculos.Core.Dominio.ModuloPlanoCobranca;
 using LocadoraDeVeiculos.Core.Dominio.ModuloTaxaServico;
 using LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
@@ -26,6 +27,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
         private readonly IRepositorioAutomovel _repositorioAutomovel;
         private readonly IRepositorioPlanoCobranca _repositorioPlanoCobranca;
         private readonly IRepositorioTaxaServico _repositorioTaxaServico;
+        private readonly IRepositorioCupom _repositorioCupom;
         private readonly IValidator<EditarAluguelCommand> _validator;
         private readonly ILogger<EditarAluguelCommandHandler> _logger;
 
@@ -35,6 +37,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
             IRepositorioAutomovel repositorioAutomovel,
             IRepositorioPlanoCobranca repositorioPlanoCobranca,
             IRepositorioTaxaServico repositorioTaxaServico,
+            IRepositorioCupom repositorioCupom,
             IValidator<EditarAluguelCommand> validator,
             ILogger<EditarAluguelCommandHandler> logger)
         {
@@ -43,6 +46,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
             _repositorioAutomovel = repositorioAutomovel;
             _repositorioPlanoCobranca = repositorioPlanoCobranca;
             _repositorioTaxaServico = repositorioTaxaServico;
+            _repositorioCupom = repositorioCupom;
             _validator = validator;
             _logger = logger;
         }
@@ -88,6 +92,16 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
                 return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(
                     "Não há plano de cobrança cadastrado para o grupo deste automóvel."));
 
+            Cupom? cupom = null;
+
+            if (!string.IsNullOrWhiteSpace(command.CupomCodigo))
+            {
+                cupom = await _repositorioCupom.SelecionarPorCodigoAsync(command.CupomCodigo);
+
+                if (cupom is null || !cupom.EstaValido(DateTimeOffset.UtcNow))
+                    return Result.Fail(ResultadosErro.RequisicaoInvalidaErro("Cupom inválido, expirado ou esgotado."));
+            }
+
             try
             {
                 var taxasServicos = command.TaxasServicosIds is { Count: > 0 }
@@ -96,7 +110,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
 
                 // O valor previsto é sempre recalculado no servidor — o valor enviado pelo
                 // cliente (command.ValorPrevisto) é ignorado de propósito.
-                var valorPrevisto = CalculoAluguelService.CalcularValorPrevisto(
+                var valorBruto = CalculoAluguelService.CalcularValorPrevisto(
                     planoCobranca, command.DataSaida, command.DataRetornoPrevisto, taxasServicos);
 
                 var aluguelEditado = new Aluguel(
@@ -105,7 +119,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
                     command.ClienteId,
                     command.DataSaida,
                     command.DataRetornoPrevisto,
-                    valorPrevisto
+                    valorBruto
                 )
                 {
                     Status = aluguelExistente.Status
@@ -113,6 +127,16 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
 
                 aluguelEditado.TaxasServicos.Clear();
                 aluguelEditado.TaxasServicos.AddRange(taxasServicos);
+
+                if (cupom is not null)
+                {
+                    aluguelEditado.AplicarCupom(cupom, valorBruto);
+
+                    // Só registra um novo uso se for um cupom diferente do que já estava
+                    // aplicado — evita contar uso duplicado ao simplesmente re-salvar o mesmo aluguel.
+                    if (aluguelExistente.CupomId != cupom.Id)
+                        cupom.RegistrarUso();
+                }
 
                 await _repositorioAluguel.EditarAsync(command.Id, aluguelEditado);
                 await _appDbContext.SaveChangesAsync(cancellationToken);
@@ -124,7 +148,8 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
                     command.ClienteId,
                     command.DataSaida,
                     command.DataRetornoPrevisto,
-                    valorPrevisto
+                    aluguelEditado.ValorPrevisto,
+                    aluguelEditado.ValorDesconto
                 ));
             }
             catch (Exception ex)
