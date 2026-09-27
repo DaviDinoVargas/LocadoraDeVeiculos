@@ -27,6 +27,12 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloAluguel
                    .HasForeignKey(a => a.ClienteId)
                    .OnDelete(DeleteBehavior.Restrict);
 
+            builder.HasOne(a => a.Cupom)
+                   .WithMany()
+                   .HasForeignKey(a => a.CupomId)
+                   .OnDelete(DeleteBehavior.Restrict)
+                   .IsRequired(false);
+
             // Propriedades
             builder.Property(a => a.DataSaida)
                    .HasColumnType("datetimeoffset")
@@ -51,6 +57,10 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloAluguel
             builder.Property(a => a.QuilometragemInicial)
               .HasColumnType("decimal(10,2)")
               .IsRequired(false);
+
+            builder.Property(a => a.ValorDesconto)
+                   .HasColumnType("decimal(18,2)")
+                   .IsRequired();
 
             // Relacionamento Many-to-Many
 

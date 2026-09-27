@@ -2,6 +2,7 @@
 using LocadoraDeVeiculos.Core.Dominio.ModuloAutomovel;
 using LocadoraDeVeiculos.Core.Dominio.ModuloCliente;
 using LocadoraDeVeiculos.Core.Dominio.ModuloCondutor;
+using LocadoraDeVeiculos.Core.Dominio.ModuloCupom;
 using LocadoraDeVeiculos.Core.Dominio.ModuloTaxaServico;
 using System;
 using System.Collections.Generic;
@@ -35,6 +36,11 @@ namespace LocadoraDeVeiculos.Core.Dominio.ModuloAluguel
         public List<TaxaServico> TaxasServicos { get; set; } = new();
         public decimal? QuilometragemInicial { get; set; }
 
+        // Cupom de desconto aplicado (opcional)
+        public Guid? CupomId { get; set; }
+        public Cupom? Cupom { get; set; }
+        public decimal ValorDesconto { get; set; }
+
         protected Aluguel() { }
 
         public Aluguel(
@@ -63,6 +69,19 @@ namespace LocadoraDeVeiculos.Core.Dominio.ModuloAluguel
             ValorPrevisto = registroEditado.ValorPrevisto;
             Status = registroEditado.Status;
             TaxasServicos = registroEditado.TaxasServicos;
+            CupomId = registroEditado.CupomId;
+            ValorDesconto = registroEditado.ValorDesconto;
+        }
+
+        /// <summary>
+        /// Aplica o desconto de um cupom já validado sobre o valor bruto calculado
+        /// (diárias + taxas), deixando registrado quanto foi descontado e por qual cupom.
+        /// </summary>
+        public void AplicarCupom(Cupom cupom, decimal valorBrutoPrevisto)
+        {
+            CupomId = cupom.Id;
+            ValorDesconto = cupom.CalcularDesconto(valorBrutoPrevisto);
+            ValorPrevisto = valorBrutoPrevisto - ValorDesconto;
         }
 
         public void IniciarAluguel()

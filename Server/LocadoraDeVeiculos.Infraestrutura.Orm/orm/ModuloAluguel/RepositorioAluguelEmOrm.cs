@@ -25,6 +25,7 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloAluguel
                 .ThenInclude(auto => auto!.GrupoAutomovel)
                 .Include(a => a.Cliente)
                 .Include(a => a.TaxasServicos)
+                .Include(a => a.Cupom)
                 .FirstOrDefaultAsync(a => a.Id == id);
         }
 

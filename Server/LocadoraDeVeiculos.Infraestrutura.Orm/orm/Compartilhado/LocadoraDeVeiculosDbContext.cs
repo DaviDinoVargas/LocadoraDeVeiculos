@@ -5,9 +5,12 @@ using LocadoraDeVeiculos.Core.Dominio.ModuloAutomovel;
 using LocadoraDeVeiculos.Core.Dominio.ModuloCliente;
 using LocadoraDeVeiculos.Core.Dominio.ModuloCondutor;
 using LocadoraDeVeiculos.Core.Dominio.ModuloConfiguracao;
+using LocadoraDeVeiculos.Core.Dominio.ModuloCupom;
+using LocadoraDeVeiculos.Core.Dominio.ModuloDesafioCupom;
 using LocadoraDeVeiculos.Core.Dominio.ModuloDevolucao;
 using LocadoraDeVeiculos.Core.Dominio.ModuloFuncionario;
 using LocadoraDeVeiculos.Core.Dominio.ModuloGrupoAutomovel;
+using LocadoraDeVeiculos.Core.Dominio.ModuloParceiro;
 using LocadoraDeVeiculos.Core.Dominio.ModuloPlanoCobranca;
 using LocadoraDeVeiculos.Core.Dominio.ModuloTaxaServico;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -45,6 +48,9 @@ public class LocadoraDeVeiculosDbContext(
     public DbSet<Aluguel> Alugueis { get; set; }
     public DbSet<Devolucao> Devolucoes { get; set; }
     public DbSet<Configuracao> Configuracoes { get; set; }
+    public DbSet<Parceiro> Parceiros { get; set; }
+    public DbSet<Cupom> Cupons { get; set; }
+    public DbSet<DesafioCupom> DesafiosCupom { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // aplica todos os mapeamentos automaticamente (Mapeadores)
