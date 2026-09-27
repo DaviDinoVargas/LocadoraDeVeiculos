@@ -27,7 +27,7 @@ public class CadastrarFuncionarioCommandValidator : AbstractValidator<CadastrarF
 
         RuleFor(p => p.Senha)
             .NotEmpty().WithMessage("O campo {PropertyName} é obrigatório.")
-            .MinimumLength(6).WithMessage("A senha deve conter pelo menos {MinLength} caracteres.") // options.Password.RequiredLength = 6
+            .MinimumLength(8).WithMessage("A senha deve conter pelo menos {MinLength} caracteres.") // options.Password.RequiredLength = 8
             .Matches(@"[A-Z]").WithMessage("A senha deve conter pelo menos uma letra maiúscula.")   // options.Password.RequireUppercase = true
             .Matches(@"[a-z]").WithMessage("A senha deve conter pelo menos uma letra minúscula.")   // options.Password.RequireLowercase = true
             .Matches(@"[0-9]").WithMessage("A senha deve conter pelo menos um número.");            // options.Password.RequireDigit = true

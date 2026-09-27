@@ -24,7 +24,14 @@ public static class IdentityConfig
             options.Password.RequireLowercase = true;
             options.Password.RequireUppercase = true;
             options.Password.RequireNonAlphanumeric = false;
-            options.Password.RequiredLength = 6;
+            options.Password.RequiredLength = 8;
+
+            // Proteção contra força bruta: bloqueia a conta após várias tentativas erradas.
+            // O bloqueio só é aplicado de fato quando o login passa pelo SignInManager
+            // (CheckPasswordSignInAsync com lockoutOnFailure: true), não pelo UserManager sozinho.
+            options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+            options.Lockout.MaxFailedAccessAttempts = 5;
+            options.Lockout.AllowedForNewUsers = true;
         })
         .AddEntityFrameworkStores<LocadoraDeVeiculosDbContext>()
         .AddDefaultTokenProviders();
