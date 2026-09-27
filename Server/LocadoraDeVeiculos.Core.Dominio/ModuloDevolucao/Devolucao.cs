@@ -48,31 +48,40 @@ namespace LocadoraDeVeiculos.Core.Dominio.ModuloDevolucao
             ValorTotal = registroEditado.ValorTotal;
         }
 
+        // Percentual da diária cobrado como multa, por dia de atraso na devolução.
+        // Ex.: 1 dia de atraso = 10% de uma diária; 5 dias de atraso = 50% de uma diária (5 * 10%).
+        private const decimal PercentualMultaPorDiaDeAtraso = 0.10m;
+
         // Método para calcular os valores (será chamado no handler)
         public void CalcularValores(
             decimal precoCombustivel,
             decimal capacidadeTanque,
             decimal quilometragemInicial,
+            DateTimeOffset dataSaida,
             DateTimeOffset dataRetornoPrevisto,
             decimal valorPrevistoAluguel)
         {
-            CalcularMulta(dataRetornoPrevisto, valorPrevistoAluguel);
+            var diasContratados = Math.Max(1, (int)Math.Ceiling((dataRetornoPrevisto - dataSaida).TotalDays));
+
+            CalcularMulta(dataRetornoPrevisto, valorPrevistoAluguel, diasContratados);
             CalcularAdicionalCombustivel(precoCombustivel, capacidadeTanque);
             CalcularValorTotal(valorPrevistoAluguel);
         }
 
-        private void CalcularMulta(DateTimeOffset dataRetornoPrevisto, decimal valorPrevistoAluguel)
+        private void CalcularMulta(DateTimeOffset dataRetornoPrevisto, decimal valorPrevistoAluguel, int diasContratados)
         {
-            if (DataDevolucao > dataRetornoPrevisto)
-            {
-                var diasAtraso = (DataDevolucao - dataRetornoPrevisto).Days;
-                // Multa de 10% do valor do aluguel (conforme requisitos)
-                ValorMultas = valorPrevistoAluguel * 0.10m;
-            }
-            else
+            if (DataDevolucao <= dataRetornoPrevisto)
             {
                 ValorMultas = 0;
+                return;
             }
+
+            // Antes, a multa era um valor fixo de 10% do aluguel inteiro, não importava se o
+            // atraso era de 1 dia ou de 30 — agora é proporcional aos dias de atraso reais.
+            var diasAtraso = (int)Math.Ceiling((DataDevolucao - dataRetornoPrevisto).TotalDays);
+            var valorDiaria = valorPrevistoAluguel / diasContratados;
+
+            ValorMultas = valorDiaria * PercentualMultaPorDiaDeAtraso * diasAtraso;
         }
 
         private void CalcularAdicionalCombustivel(decimal precoCombustivel, decimal capacidadeTanque)
