@@ -8,6 +8,11 @@ using System.Threading.Tasks;
 
 namespace LocadoraDeVeiculos.Core.Dominio.ModuloGrupoAutomovel;
 
-public interface IRepositorioGrupoAutomovel : IRepositorio<GrupoAutomovel>;
+public interface IRepositorioGrupoAutomovel : IRepositorio<GrupoAutomovel>
+{
+    Task<bool> ExisteGrupoComNomeAsync(string nome, Guid? idExcluir = null);
+    Task<bool> ExisteAutomovelVinculadoAsync(Guid grupoId);
+    Task<bool> ExistePlanoCobrancaVinculadoAsync(Guid grupoId);
+}
 
 

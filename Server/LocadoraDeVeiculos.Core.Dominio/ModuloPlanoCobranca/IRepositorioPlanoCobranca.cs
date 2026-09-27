@@ -7,4 +7,7 @@ using System.Threading.Tasks;
 
 namespace LocadoraDeVeiculos.Core.Dominio.ModuloPlanoCobranca;
 
-public interface IRepositorioPlanoCobranca : IRepositorio<PlanoCobranca>;
+public interface IRepositorioPlanoCobranca : IRepositorio<PlanoCobranca>
+{
+    Task<PlanoCobranca?> SelecionarMaisRecentePorGrupoAutomovelAsync(Guid grupoAutomovelId);
+}

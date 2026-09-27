@@ -1,4 +1,5 @@
-﻿using LocadoraDeVeiculos.Core.Dominio.ModuloAutomovel;
+﻿using LocadoraDeVeiculos.Core.Dominio.ModuloAluguel;
+using LocadoraDeVeiculos.Core.Dominio.ModuloAutomovel;
 using LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -47,9 +48,9 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloAutomovel
 
         public async Task<bool> ExisteAluguelEmAbertoAsync(Guid automovelId)
         {
-            // Esta verificação será implementada quando tivermos o módulo de Aluguéis
-            // Por enquanto, retorna false
-            return await Task.FromResult(false);
+            return await dbContext.Set<Aluguel>().AnyAsync(a =>
+                a.AutomovelId == automovelId &&
+                (a.Status == StatusAluguel.Reservado || a.Status == StatusAluguel.EmAndamento));
         }
 
         public async Task<List<Automovel>> SelecionarPorGrupoAsync(Guid grupoId)
@@ -59,11 +60,6 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloAutomovel
                 .Where(a => a.GrupoAutomovelId == grupoId)
                 .OrderBy(a => a.Placa)
                 .ToListAsync();
-        }
-
-        public Task<List<Automovel>> SelecionarTodosAsync(int quantity)
-        {
-            throw new NotImplementedException();
         }
     }
 }

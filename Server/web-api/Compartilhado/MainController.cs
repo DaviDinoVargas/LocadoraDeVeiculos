@@ -45,6 +45,7 @@ public abstract class MainController : ControllerBase
                 "RegistroNaoEncontrado" => NotFound(detalhes),          // 404
                 "RegistroDuplicado" => Conflict(detalhes),              // 409
                 "ExclusaoBloqueada" => UnprocessableEntity(detalhes),   // 422
+                "EstadoInvalido" => Conflict(detalhes),                 // 409
                 "ExcecaoInterna" => StatusCode(500, detalhes),          // 500
                 _ => BadRequest(detalhes)
             };

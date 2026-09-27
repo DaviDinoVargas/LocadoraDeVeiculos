@@ -28,9 +28,12 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.ModuloPlanoCobranca
                 .ToListAsync();
         }
 
-        public Task<List<PlanoCobranca>> SelecionarTodosAsync(int quantity)
+        public async Task<PlanoCobranca?> SelecionarMaisRecentePorGrupoAutomovelAsync(Guid grupoAutomovelId)
         {
-            throw new NotImplementedException();
+            return await dbContext.PlanoCobranca
+                .Where(p => p.GrupoAutomovelId == grupoAutomovelId)
+                .OrderByDescending(p => p.CriadoEmUtc)
+                .FirstOrDefaultAsync();
         }
     }
 }

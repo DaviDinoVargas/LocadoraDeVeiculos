@@ -20,10 +20,5 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloConfiguracao
             return await dbContext.Configuracoes
                 .FirstOrDefaultAsync(c => c.EmpresaId == empresaId && !c.Excluido);
         }
-
-        public Task<List<Configuracao>> SelecionarTodosAsync(int quantity)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

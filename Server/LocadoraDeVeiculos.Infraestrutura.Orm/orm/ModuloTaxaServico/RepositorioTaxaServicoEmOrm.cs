@@ -1,4 +1,5 @@
-﻿using LocadoraDeVeiculos.Core.Dominio.ModuloTaxaServico;
+﻿using LocadoraDeVeiculos.Core.Dominio.ModuloAluguel;
+using LocadoraDeVeiculos.Core.Dominio.ModuloTaxaServico;
 using LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -45,9 +46,9 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloTaxaServico
 
         public async Task<bool> ExisteAluguelVinculadoAsync(Guid taxaServicoId)
         {
-            // Esta verificação será implementada quando tivermos o módulo de Aluguéis
-            // Por enquanto, retorna false
-            return await Task.FromResult(false);
+            return await dbContext.Set<Aluguel>().AnyAsync(a =>
+                (a.Status == StatusAluguel.Reservado || a.Status == StatusAluguel.EmAndamento) &&
+                a.TaxasServicos.Any(t => t.Id == taxaServicoId));
         }
 
         public async Task<List<TaxaServico>> SelecionarPorTipoAsync(TipoCalculo tipoCalculo)
@@ -56,11 +57,6 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloTaxaServico
                 .Where(t => t.TipoCalculo == tipoCalculo)
                 .OrderBy(t => t.Nome)
                 .ToListAsync();
-        }
-
-        public Task<List<TaxaServico>> SelecionarTodosAsync(int quantity)
-        {
-            throw new NotImplementedException();
         }
 
         public async Task<List<TaxaServico>> SelecionarPorIdsAsync(List<Guid> ids)

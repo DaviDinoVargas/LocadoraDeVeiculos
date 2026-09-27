@@ -44,10 +44,5 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloDevolucao
                 .ThenInclude(a => a!.Cliente)
                 .FirstOrDefaultAsync(d => d.AluguelId == aluguelId);
         }
-
-        public Task<List<Devolucao>> SelecionarTodosAsync(int quantity)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

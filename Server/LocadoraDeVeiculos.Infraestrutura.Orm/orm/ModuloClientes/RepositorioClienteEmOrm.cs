@@ -1,4 +1,5 @@
-﻿using LocadoraDeVeiculos.Core.Dominio.ModuloCliente;
+﻿using LocadoraDeVeiculos.Core.Dominio.ModuloAluguel;
+using LocadoraDeVeiculos.Core.Dominio.ModuloCliente;
 using LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -60,8 +61,9 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloCliente
 
         public async Task<bool> ExisteAluguelEmAbertoAsync(Guid clienteId)
         {
-            // Esta verificação será implementada quando eu fizer o módulo de Aluguéis
-            return await Task.FromResult(false);
+            return await dbContext.Set<Aluguel>().AnyAsync(a =>
+                a.ClienteId == clienteId &&
+                (a.Status == StatusAluguel.Reservado || a.Status == StatusAluguel.EmAndamento));
         }
 
         public async Task<List<ClientePessoaFisica>> SelecionarPessoasFisicasAsync()
@@ -90,11 +92,6 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloCliente
         {
             return await dbContext.Set<ClientePessoaJuridica>()
                 .FirstOrDefaultAsync(c => c.Id == id);
-        }
-
-        public Task<List<Cliente>> SelecionarTodosAsync(int quantity)
-        {
-            throw new NotImplementedException();
         }
     }
 }

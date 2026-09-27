@@ -13,7 +13,6 @@ public interface IRepositorio<T> where T : EntidadeBase<T>
     Task<bool> ExcluirAsync(Guid id);
 
     Task<List<T>> SelecionarTodosAsync();
-    Task<List<T>> SelecionarTodosAsync(int quantity);
 
     Task<T?> SelecionarPorIdAsync(Guid id);
 }

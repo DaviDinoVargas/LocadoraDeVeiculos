@@ -1,4 +1,6 @@
-﻿using LocadoraDeVeiculos.Core.Dominio.ModuloGrupoAutomovel;
+﻿using LocadoraDeVeiculos.Core.Dominio.ModuloAutomovel;
+using LocadoraDeVeiculos.Core.Dominio.ModuloGrupoAutomovel;
+using LocadoraDeVeiculos.Core.Dominio.ModuloPlanoCobranca;
 using LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -45,21 +47,12 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloGrupoAutomovel
 
         public async Task<bool> ExisteAutomovelVinculadoAsync(Guid grupoId)
         {
-            // Esta verificação será implementada quando tivermos o módulo de Automóveis
-            // Por enquanto, retorna false
-            return await Task.FromResult(false);
+            return await dbContext.Set<Automovel>().AnyAsync(a => a.GrupoAutomovelId == grupoId);
         }
 
         public async Task<bool> ExistePlanoCobrancaVinculadoAsync(Guid grupoId)
         {
-            // Esta verificação será implementada quando tivermos o módulo de Planos de Cobrança
-            // Por enquanto, retorna false
-            return await Task.FromResult(false);
-        }
-
-        public Task<List<GrupoAutomovel>> SelecionarTodosAsync(int quantity)
-        {
-            throw new NotImplementedException();
+            return await dbContext.Set<PlanoCobranca>().AnyAsync(p => p.GrupoAutomovelId == grupoId);
         }
     }
 }

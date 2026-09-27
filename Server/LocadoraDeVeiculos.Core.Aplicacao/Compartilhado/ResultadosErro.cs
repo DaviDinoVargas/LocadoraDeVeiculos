@@ -52,6 +52,13 @@ public abstract class ResultadosErro
             .WithMetadata("TipoErro", "ExclusaoBloqueada");
     }
 
+    public static Error EstadoInvalidoErro(string mensagemErro)
+    {
+        return new Error("Estado inválido para esta operação")
+            .CausedBy(mensagemErro)
+            .WithMetadata("TipoErro", "EstadoInvalido");
+    }
+
 
     public static Error ExcecaoInternaErro(Exception ex)
     {

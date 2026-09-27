@@ -42,9 +42,4 @@ public class RepositorioFuncionarioEmOrm : RepositorioBaseEmOrm<Funcionario>, IR
             .Include(u => u.Usuario)
             .ToListAsync();
     }
-
-    public Task<List<Funcionario>> SelecionarTodosAsync(int quantity)
-    {
-        throw new NotImplementedException();
-    }
 }

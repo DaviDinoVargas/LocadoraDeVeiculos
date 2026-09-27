@@ -107,10 +107,5 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloAluguel
                 .OrderByDescending(a => a.DataSaida)
                 .ToListAsync();
         }
-
-        public Task<List<Aluguel>> SelecionarTodosAsync(int quantity)
-        {
-            throw new NotImplementedException();
-        }
     }
 }
