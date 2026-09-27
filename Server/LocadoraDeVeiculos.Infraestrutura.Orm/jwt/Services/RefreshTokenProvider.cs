@@ -19,11 +19,11 @@ public class RefreshTokenProvider(
     private readonly HttpContext? httpContext = contextAccessor.HttpContext;
     private readonly TimeSpan expiracaoTokenEmDias = TimeSpan.FromDays(7);
 
-    public async Task<RefreshToken> GerarRefreshTokenAsync(Usuario usuario)
+    public async Task<(RefreshToken entidade, string tokenBruto)> GerarRefreshTokenAsync(Usuario usuario)
     {
-        var tokenString = GerarTokenOpaco();
+        var tokenBruto = GerarTokenOpaco();
 
-        var hash = Hash(tokenString);
+        var hash = Hash(tokenBruto);
 
         var now = DateTime.UtcNow;
 
@@ -41,13 +41,17 @@ public class RefreshTokenProvider(
 
         await dbContext.SaveChangesAsync();
 
-        return novoRefreshToken;
+        // Só o token BRUTO deve sair do servidor (via cookie). O banco guarda apenas o hash:
+        // se o banco vazar, o valor exposto não é suficiente para autenticar (precisaria reverter o SHA-256).
+        return (novoRefreshToken, tokenBruto);
     }
 
-    public async Task<(Usuario usuario, RefreshToken novoRefreshToken)> RotacionarRefreshTokenAsync(string refreshTokenHash)
+    public async Task<(Usuario usuario, RefreshToken novoRefreshToken, string novoTokenBruto)> RotacionarRefreshTokenAsync(string refreshTokenBruto)
     {
+        var hashRecebido = Hash(refreshTokenBruto);
+
         var token = await dbContext.RefreshTokens
-            .FirstOrDefaultAsync(t => t.TokenHash == refreshTokenHash);
+            .FirstOrDefaultAsync(t => t.TokenHash == hashRecebido);
 
         if (token is null)
             throw new SecurityTokenException("Token de rotação não foi encontado.");
@@ -63,9 +67,9 @@ public class RefreshTokenProvider(
             ?? throw new SecurityTokenException("Usuário não encontrado.");
 
         // cria novo token e revoga o antigo
-        var novoToken = GerarTokenOpaco();
+        var novoTokenBruto = GerarTokenOpaco();
 
-        var novoHash = Hash(novoToken);
+        var novoHash = Hash(novoTokenBruto);
 
         token.RevogadoEmUtc = DateTime.UtcNow;
         token.SubstituidoPorTokenHash = novoHash;
@@ -87,7 +91,21 @@ public class RefreshTokenProvider(
 
         await dbContext.SaveChangesAsync();
 
-        return (usuario, novoRefreshToken);
+        return (usuario, novoRefreshToken, novoTokenBruto);
+    }
+
+    /// <summary>
+    /// Resolve o dono de um refresh token a partir do valor BRUTO recebido do cliente (cookie),
+    /// aplicando o mesmo hash usado no cadastro antes de consultar o banco. Usado no logout.
+    /// </summary>
+    public async Task<Guid?> ObterUsuarioIdPorTokenBrutoAsync(string refreshTokenBruto)
+    {
+        var hash = Hash(refreshTokenBruto);
+
+        var token = await dbContext.RefreshTokens
+            .FirstOrDefaultAsync(t => t.TokenHash == hash);
+
+        return token?.UsuarioId;
     }
 
     public async Task RevogarTokensUsuarioAsync(Guid usuarioId, string motivo)

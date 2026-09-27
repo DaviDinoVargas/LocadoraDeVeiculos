@@ -14,4 +14,4 @@ public record RegistrarUsuarioCommand(
     string Email,
     string Senha,
     string ConfirmarSenha
-) : IRequest<Result<(AccessToken AccessToken, RefreshToken RefreshToken)>>;
+) : IRequest<Result<(AccessToken AccessToken, RefreshToken RefreshToken, string RefreshTokenBruto)>>;

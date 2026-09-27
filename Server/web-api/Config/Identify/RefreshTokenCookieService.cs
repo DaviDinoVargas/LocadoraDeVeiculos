@@ -11,17 +11,18 @@ public static class RefreshTokenCookieService
 {
     private static readonly string nome = "LocadoraDeVeiculos.RefreshToken";
 
-    public static void EnviarCookie(HttpResponse response, RefreshToken token)
+    public static void EnviarCookie(HttpResponse response, string tokenBruto, DateTime expiraEmUtc)
     {
         var options = new CookieOptions
         {
             HttpOnly = true,
             Secure = true,
-            SameSite = SameSiteMode.None,
-            Expires = token.ExpiraEmUtc
+            SameSite = SameSiteMode.Lax,
+            Expires = expiraEmUtc
         };
 
-        response.Cookies.Append(nome, token.TokenHash, options);
+        // O cookie carrega o token BRUTO (o segredo em si), nunca o hash guardado no banco.
+        response.Cookies.Append(nome, tokenBruto, options);
     }
 
     public static void LimparCookie(HttpResponse response)
@@ -30,7 +31,7 @@ public static class RefreshTokenCookieService
         {
             HttpOnly = true,
             Secure = true,
-            SameSite = SameSiteMode.None
+            SameSite = SameSiteMode.Lax
         });
     }
 

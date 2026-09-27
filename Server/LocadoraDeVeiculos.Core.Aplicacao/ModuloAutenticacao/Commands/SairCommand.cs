@@ -8,4 +8,4 @@ using System.Threading.Tasks;
 
 namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Commands;
 
-public record SairCommand(string RefreshTokenHash) : IRequest<Result>;
+public record SairCommand(string RefreshTokenBruto) : IRequest<Result>;

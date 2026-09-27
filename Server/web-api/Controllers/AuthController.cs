@@ -6,11 +6,13 @@ using LocadoraDeVeiculos.WebApi.Config.Identify;
 using LocadoraDeVeiculos.WebApi.Models.ModuloAutenticacao;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace LocadoraDeVeiculos.WebApi.Controllers;
 
 [ApiController]
 [Route("api/auth")]
+[EnableRateLimiting("auth")]
 public class AutenticacaoController(IMediator mediator) : MainController
 {
     [HttpPost("registrar")]
@@ -41,12 +43,12 @@ public class AutenticacaoController(IMediator mediator) : MainController
     [HttpPost("rotacionar")]
     public async Task<ActionResult<AccessToken>> Rotacionar()
     {
-        var refreshToken = RefreshTokenCookieService.Get(Request);
+        var refreshTokenBruto = RefreshTokenCookieService.Get(Request);
 
-        if (refreshToken is null)
+        if (refreshTokenBruto is null)
             return Unauthorized("O token de rotação não foi encontrado.");
 
-        var result = await mediator.Send(new RotacionarTokenCommand(refreshToken));
+        var result = await mediator.Send(new RotacionarTokenCommand(refreshTokenBruto));
 
         return ProcessarResultado(result, ResponderComToken);
     }
@@ -54,12 +56,12 @@ public class AutenticacaoController(IMediator mediator) : MainController
     [HttpPost("sair")]
     public async Task<IActionResult> Sair()
     {
-        var refreshTokenHash = RefreshTokenCookieService.Get(Request);
+        var refreshTokenBruto = RefreshTokenCookieService.Get(Request);
 
-        if (refreshTokenHash is null)
+        if (refreshTokenBruto is null)
             return Unauthorized("O token de rotação não foi encontrado.");
 
-        var result = await mediator.Send(new SairCommand(refreshTokenHash));
+        var result = await mediator.Send(new SairCommand(refreshTokenBruto));
 
         return ProcessarResultado(result, () =>
         {
@@ -69,9 +71,9 @@ public class AutenticacaoController(IMediator mediator) : MainController
         });
     }
 
-    private ActionResult ResponderComToken((AccessToken AccessToken, RefreshToken RefreshToken) valor)
+    private ActionResult ResponderComToken((AccessToken AccessToken, RefreshToken RefreshToken, string RefreshTokenBruto) valor)
     {
-        RefreshTokenCookieService.EnviarCookie(Response, valor.RefreshToken);
+        RefreshTokenCookieService.EnviarCookie(Response, valor.RefreshTokenBruto, valor.RefreshToken.ExpiraEmUtc);
 
         return Ok(valor.AccessToken);
     }

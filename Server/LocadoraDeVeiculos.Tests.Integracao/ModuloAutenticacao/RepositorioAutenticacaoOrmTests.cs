@@ -102,12 +102,17 @@ namespace LocadoraDeVeiculos.Tests.Integracao.ModuloAutenticacao
 
             // 4) GERAR TOKENS MANUALMENTE
             var accessToken = await _accessTokenProvider.GerarAccessTokenAsync(usuarioCriado!);
-            var refreshToken = await _refreshTokenProvider.GerarRefreshTokenAsync(usuarioCriado!);
+            var (refreshToken, refreshTokenBruto) = await _refreshTokenProvider.GerarRefreshTokenAsync(usuarioCriado!);
 
             Assert.IsFalse(string.IsNullOrEmpty(accessToken.Chave));
             Assert.IsFalse(string.IsNullOrEmpty(refreshToken.TokenHash));
+            Assert.IsFalse(string.IsNullOrEmpty(refreshTokenBruto));
 
-            // 5) ROTACIONAR REFRESH TOKEN
+            // Regressão de segurança: o valor bruto (o que vai no cookie) nunca pode ser
+            // igual ao hash armazenado no banco — senão um vazamento do banco vira sessão válida.
+            Assert.AreNotEqual(refreshTokenBruto, refreshToken.TokenHash);
+
+            // 5) ROTACIONAR REFRESH TOKEN (usando o token BRUTO, como o cliente de fato envia)
             var rotacionarHandler = new RotacionarTokenCommandHandler(
                 _context,
                 _accessTokenProvider,
@@ -115,12 +120,13 @@ namespace LocadoraDeVeiculos.Tests.Integracao.ModuloAutenticacao
                 NullLogger<RotacionarTokenCommandHandler>.Instance
             );
 
-            var rotacionarCommand = new RotacionarTokenCommand(refreshToken.TokenHash);
+            var rotacionarCommand = new RotacionarTokenCommand(refreshTokenBruto);
             var rotacaoResult = await rotacionarHandler.Handle(rotacionarCommand, CancellationToken.None);
 
             Assert.IsTrue(rotacaoResult.IsSuccess);
             Assert.IsNotNull(rotacaoResult.Value.Item1);
             Assert.IsNotNull(rotacaoResult.Value.Item2);
+            Assert.IsFalse(string.IsNullOrEmpty(rotacaoResult.Value.Item3));
 
             // 6) GARANTIR QUE TOKEN ANTIGO FOI REVOGADO
             var tokenAntigo = await _context.RefreshTokens.FirstOrDefaultAsync(t => t.TokenHash == refreshToken.TokenHash);

@@ -20,9 +20,9 @@ public class RegistrarUsuarioCommandHandler(
     AccessTokenProvider tokenProvider,
     RefreshTokenProvider refreshTokenProvider,
     ILogger<RegistrarUsuarioCommandHandler> logger
-) : IRequestHandler<RegistrarUsuarioCommand, Result<(AccessToken, RefreshToken)>>
+) : IRequestHandler<RegistrarUsuarioCommand, Result<(AccessToken, RefreshToken, string)>>
 {
-    public async Task<Result<(AccessToken, RefreshToken)>> Handle(
+    public async Task<Result<(AccessToken, RefreshToken, string)>> Handle(
         RegistrarUsuarioCommand command, CancellationToken cancellationToken)
     {
         Usuario? usuario = null;
@@ -91,12 +91,12 @@ public class RegistrarUsuarioCommandHandler(
             if (accessToken is null)
                 return Result.Fail(ResultadosErro.ExcecaoInternaErro(new Exception("Falha ao gerar token de acesso.")));
 
-            var refreshToken = await refreshTokenProvider.GerarRefreshTokenAsync(usuario);
+            var (refreshToken, refreshTokenBruto) = await refreshTokenProvider.GerarRefreshTokenAsync(usuario);
 
             if (refreshToken is null)
                 return Result.Fail(ResultadosErro.ExcecaoInternaErro(new Exception("Falha ao gerar token de rotação.")));
 
-            return Result.Ok((accessToken, refreshToken));
+            return Result.Ok((accessToken, refreshToken, refreshTokenBruto));
         }
         catch (Exception ex)
         {

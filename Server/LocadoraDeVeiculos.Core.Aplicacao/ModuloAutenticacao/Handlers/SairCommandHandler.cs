@@ -28,17 +28,14 @@ public class SairCommandHandler(
     {
         try
         {
-            var token = await dbContext.RefreshTokens
-                .FirstOrDefaultAsync(t => t.TokenHash == command.RefreshTokenHash, cancellationToken);
+            var usuarioId = await refreshTokenProvider.ObterUsuarioIdPorTokenBrutoAsync(command.RefreshTokenBruto);
 
-            if (token is null)
+            if (usuarioId is null)
                 throw new SecurityTokenException("O token de rotação não foi encontrado.");
 
-            var usuarioId = token.UsuarioId;
+            await refreshTokenProvider.RevogarTokensUsuarioAsync(usuarioId.Value, "Logout");
 
-            await refreshTokenProvider.RevogarTokensUsuarioAsync(usuarioId, "Logout");
-
-            var usuarioEncontrado = await userManager.FindByIdAsync(usuarioId.ToString());
+            var usuarioEncontrado = await userManager.FindByIdAsync(usuarioId.Value.ToString());
 
             if (usuarioEncontrado is null)
                 return Result.Fail(ResultadosErro.RegistroNaoEncontradoErro("Não foi possível encontrar o usuário requisitado."));

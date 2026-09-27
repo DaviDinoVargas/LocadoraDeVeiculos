@@ -14,13 +14,13 @@ public class RotacionarTokenCommandHandler(
     AccessTokenProvider accessTokenProvider,
     RefreshTokenProvider refreshTokenProvider,
     ILogger<RotacionarTokenCommandHandler> logger
-) : IRequestHandler<RotacionarTokenCommand, Result<(AccessToken, RefreshToken)>>
+) : IRequestHandler<RotacionarTokenCommand, Result<(AccessToken, RefreshToken, string)>>
 {
-    public async Task<Result<(AccessToken, RefreshToken)>> Handle(RotacionarTokenCommand command, CancellationToken cancellationToken)
+    public async Task<Result<(AccessToken, RefreshToken, string)>> Handle(RotacionarTokenCommand command, CancellationToken cancellationToken)
     {
         try
         {
-            var (usuarioEncontrado, novoRefreshToken) = await refreshTokenProvider.RotacionarRefreshTokenAsync(command.RefreshTokenString);
+            var (usuarioEncontrado, novoRefreshToken, novoTokenBruto) = await refreshTokenProvider.RotacionarRefreshTokenAsync(command.RefreshTokenString);
 
             usuarioEncontrado.AccessTokenVersionId = Guid.NewGuid();
 
@@ -28,7 +28,7 @@ public class RotacionarTokenCommandHandler(
 
             await dbContext.SaveChangesAsync(cancellationToken);
 
-            return Result.Ok((novoAccessToken, novoRefreshToken));
+            return Result.Ok((novoAccessToken, novoRefreshToken, novoTokenBruto));
         }
         catch (Exception ex)
         {
