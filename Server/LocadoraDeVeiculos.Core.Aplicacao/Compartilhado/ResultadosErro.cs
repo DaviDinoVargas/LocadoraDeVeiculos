@@ -55,8 +55,12 @@ public abstract class ResultadosErro
 
     public static Error ExcecaoInternaErro(Exception ex)
     {
+        // Importante: NÃO usar .CausedBy(ex) aqui. FluentResults guarda ex.Message como um
+        // "Reason" que o MainController serializa de volta na resposta HTTP — isso vazaria
+        // detalhes internos (mensagens de SQL, caminhos, stack) para quem chama a API.
+        // A exceção completa já é logada (ILogger) em cada handler que a captura; aqui só
+        // guardamos a mensagem genérica que de fato deve chegar ao cliente.
         return new Error("Ocorreu um erro interno do servidor")
-            .CausedBy(ex)
             .WithMetadata("TipoErro", "ExcecaoInterna");
     }
 }
