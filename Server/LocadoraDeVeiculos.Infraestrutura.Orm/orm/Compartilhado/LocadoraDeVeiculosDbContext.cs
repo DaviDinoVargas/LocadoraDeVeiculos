@@ -12,6 +12,7 @@ using LocadoraDeVeiculos.Core.Dominio.ModuloPlanoCobranca;
 using LocadoraDeVeiculos.Core.Dominio.ModuloTaxaServico;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using System.Reflection;
 
 namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
 
@@ -33,20 +34,47 @@ public class LocadoraDeVeiculosDbContext(
     public DbSet<Configuracao> Configuracoes { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // Se tiver filtros multi-tenant no futuro, colocar aqui
-        if (tenantProvider is not null)
-        {
-            // Exemplo:
-            modelBuilder.Entity<Funcionario>()
-                 .HasQueryFilter(f => f.EmpresaId == tenantProvider.EmpresaId && !f.Excluido);
-        }
-
         // aplica todos os mapeamentos automaticamente (Mapeadores)
         var assembly = typeof(LocadoraDeVeiculosDbContext).Assembly;
 
         modelBuilder.ApplyConfigurationsFromAssembly(assembly);
 
         base.OnModelCreating(modelBuilder);
+
+        AplicarFiltrosMultiTenant(modelBuilder);
+    }
+
+    /// <summary>
+    /// Aplica automaticamente o isolamento multi-tenant (EmpresaId) e o filtro de exclusão lógica
+    /// a TODA entidade que derive de EntidadeBase&lt;T&gt;, sem depender de configurar cada uma manualmente.
+    /// Isso evita que uma nova entidade "esqueça" o filtro, como acontecia antes (só Funcionario tinha).
+    /// </summary>
+    private void AplicarFiltrosMultiTenant(ModelBuilder modelBuilder)
+    {
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            // Em TPH (ex.: ClientePessoaFisica/Juridica), só a raiz da hierarquia precisa do filtro.
+            if (entityType.BaseType is not null)
+                continue;
+
+            var clrType = entityType.ClrType;
+            var baseClr = clrType.BaseType;
+
+            if (baseClr is not { IsGenericType: true } || baseClr.GetGenericTypeDefinition() != typeof(EntidadeBase<>))
+                continue;
+
+            AplicarFiltroTenantMethod.MakeGenericMethod(clrType).Invoke(this, new object[] { modelBuilder });
+        }
+    }
+
+    private static readonly MethodInfo AplicarFiltroTenantMethod = typeof(LocadoraDeVeiculosDbContext)
+        .GetMethod(nameof(AplicarFiltroTenant), BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+    private void AplicarFiltroTenant<TEntidade>(ModelBuilder modelBuilder)
+        where TEntidade : EntidadeBase<TEntidade>
+    {
+        modelBuilder.Entity<TEntidade>().HasQueryFilter(e =>
+            !e.Excluido && (tenantProvider == null || e.EmpresaId == tenantProvider.EmpresaId));
     }
 
     public async Task<int> GravarAsync()

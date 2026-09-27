@@ -1,6 +1,8 @@
 ﻿using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
+using LocadoraDeVeiculos.Core.Dominio.ModuloFuncionario;
 using LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System;
@@ -48,23 +50,21 @@ public class AccessTokenProvider
 
         Guid empresaId = usuario.Id;
 
-        //if (cargoDoUsuarioStr == CargoUsuario.Funcionario.ToString())
-        //{
-        //    // Se for funcionário, busca a empresa vinculada
-        //    var funcionario = await dbContext.Set<Funcionario>()
-        //        .AsNoTracking()
-        //        .IgnoreQueryFilters()
-        //        .FirstOrDefaultAsync(f => f.UsuarioId == usuario.Id && !f.Excluido);
+        if (cargoDoUsuarioStr == CargoUsuario.Funcionario.ToString())
+        {
+            // Se for funcionário, o tenant é a empresa vinculada, não o próprio usuário.
+            // IgnoreQueryFilters é necessário aqui: ainda não existe tenant no contexto
+            // (é justamente esta consulta que descobre qual é o tenant do usuário).
+            var funcionario = await dbContext.Set<Funcionario>()
+                .AsNoTracking()
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(f => f.UsuarioId == usuario.Id && !f.Excluido);
 
-        //    if (funcionario is null)
-        //        throw new Exception("Funcionário não encontrado ou inativo.");
+            if (funcionario is null)
+                throw new Exception("Funcionário não encontrado ou inativo.");
 
-        //    empresaId = funcionario.EmpresaId;
-        //}
-        //else
-        //{
-        //    empresaId = usuario.Id;
-        //}
+            empresaId = funcionario.EmpresaId;
+        }
 
         var claims = new List<Claim>
         {
