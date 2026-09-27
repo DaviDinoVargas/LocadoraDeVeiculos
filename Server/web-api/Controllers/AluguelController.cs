@@ -28,7 +28,8 @@ namespace LocadoraDeVeiculos.WebApi.Controllers
                 request.DataSaida,
                 request.DataRetornoPrevisto,
                 request.ValorPrevisto,
-                request.TaxasServicosIds
+                request.TaxasServicosIds,
+                request.CupomCodigo
             );
 
             var result = await mediator.Send(command, cancellationToken);
@@ -54,7 +55,8 @@ namespace LocadoraDeVeiculos.WebApi.Controllers
                 request.DataSaida,
                 request.DataRetornoPrevisto,
                 request.ValorPrevisto,
-                request.TaxasServicosIds
+                request.TaxasServicosIds,
+                request.CupomCodigo
             );
 
             var result = await mediator.Send(command, cancellationToken);
@@ -68,7 +70,8 @@ namespace LocadoraDeVeiculos.WebApi.Controllers
                     valor.ClienteId,
                     valor.DataSaida,
                     valor.DataRetornoPrevisto,
-                    valor.ValorPrevisto
+                    valor.ValorPrevisto,
+                    valor.ValorDesconto
                 );
                 return Ok(response);
             });
@@ -180,7 +183,9 @@ namespace LocadoraDeVeiculos.WebApi.Controllers
                     valor.ValorPrevisto,
                     valor.ValorCaucao,
                     valor.Status,
-                    taxas
+                    taxas,
+                    valor.ValorDesconto,
+                    valor.CupomCodigo
                 );
 
                 return Ok(response);

@@ -11,7 +11,8 @@ namespace LocadoraDeVeiculos.WebApi.Models.ModuloAluguel
         DateTimeOffset DataSaida,
         DateTimeOffset DataRetornoPrevisto,
         decimal ValorPrevisto,
-        List<Guid> TaxasServicosIds
+        List<Guid> TaxasServicosIds,
+        string? CupomCodigo = null
     );
 
     public record EditarAluguelRequest(
@@ -21,7 +22,8 @@ namespace LocadoraDeVeiculos.WebApi.Models.ModuloAluguel
         DateTimeOffset DataSaida,
         DateTimeOffset DataRetornoPrevisto,
         decimal ValorPrevisto,
-        List<Guid> TaxasServicosIds
+        List<Guid> TaxasServicosIds,
+        string? CupomCodigo = null
     );
 
     public record IniciarAluguelRequest(Guid Id);
@@ -40,7 +42,8 @@ namespace LocadoraDeVeiculos.WebApi.Models.ModuloAluguel
         Guid ClienteId,
         DateTimeOffset DataSaida,
         DateTimeOffset DataRetornoPrevisto,
-        decimal ValorPrevisto
+        decimal ValorPrevisto,
+        decimal ValorDesconto
     );
 
     public record IniciarAluguelResponse(Guid Id, string Status);
@@ -64,7 +67,9 @@ namespace LocadoraDeVeiculos.WebApi.Models.ModuloAluguel
         decimal ValorPrevisto,
         decimal ValorCaucao,
         string Status,
-        List<SelecionarTaxaServicoDto> TaxasServicos
+        List<SelecionarTaxaServicoDto> TaxasServicos,
+        decimal ValorDesconto,
+        string? CupomCodigo
     );
 
     public record SelecionarAlugueisPorStatusResponse(IReadOnlyList<SelecionarAlugueisDto> Registros);
