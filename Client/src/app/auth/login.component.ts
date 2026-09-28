@@ -11,6 +11,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { WebcamCaptureService } from '../shared/webcam-capture.service';
+import { AuthShellComponent } from './auth-shell.component';
 
 @Component({
   selector: 'app-login',
@@ -24,7 +25,8 @@ import { WebcamCaptureService } from '../shared/webcam-capture.service';
     MatInputModule,
     MatButtonModule,
     MatProgressSpinnerModule,
-    MatIconModule
+    MatIconModule,
+    AuthShellComponent
   ],
   templateUrl: './login.component.html',
   styleUrls: ['./scss/auth-shared-styles.css']

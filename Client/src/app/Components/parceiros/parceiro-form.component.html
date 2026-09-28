@@ -1,0 +1,54 @@
+<div class="container mt-3">
+  <h4 *ngIf="!editMode">Novo Parceiro</h4>
+  <h4 *ngIf="editMode">Editar Parceiro</h4>
+
+  <form [formGroup]="form" (ngSubmit)="salvar()">
+    <div class="mb-3">
+      <label class="form-label">Nome</label>
+      <input class="form-control" formControlName="nome"/>
+      <div *ngIf="form.controls['nome'].invalid && form.controls['nome'].touched" class="text-danger small">
+        Nome é obrigatório.
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">CNPJ</label>
+      <input class="form-control" formControlName="cnpj"/>
+      <div *ngIf="form.controls['cnpj'].invalid && form.controls['cnpj'].touched" class="text-danger small">
+        CNPJ é obrigatório.
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Categoria</label>
+      <select class="form-select" formControlName="categoria">
+        <option value="">Selecione a categoria</option>
+        <option *ngFor="let c of categorias" [value]="c.value">{{ c.label }}</option>
+      </select>
+      <div *ngIf="form.controls['categoria'].invalid && form.controls['categoria'].touched" class="text-danger small">
+        Categoria é obrigatória.
+      </div>
+    </div>
+
+    <div class="mb-3 form-check" *ngIf="editMode">
+      <input type="checkbox" class="form-check-input" id="ativoCheck" formControlName="ativo"/>
+      <label class="form-check-label" for="ativoCheck">Parceiro ativo</label>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary" type="submit" [disabled]="loading">
+        <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
+        {{ editMode ? 'Salvar' : 'Criar' }}
+      </button>
+      <button class="btn btn-secondary" type="button" (click)="cancelar()" [disabled]="loading">
+        Cancelar
+      </button>
+    </div>
+
+    <div *ngIf="serverErrors.length > 0" class="alert alert-danger mt-3">
+      <ul class="mb-0">
+        <li *ngFor="let error of serverErrors">{{ error }}</li>
+      </ul>
+    </div>
+  </form>
+</div>

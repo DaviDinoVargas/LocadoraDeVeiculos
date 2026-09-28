@@ -11,6 +11,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
+import { AuthShellComponent } from './auth-shell.component';
 
 @Component({
   selector: 'app-register',
@@ -24,7 +25,8 @@ import { MatIconModule } from '@angular/material/icon';
     MatInputModule,
     MatButtonModule,
     MatProgressSpinnerModule,
-    MatIconModule
+    MatIconModule,
+    AuthShellComponent
   ],
   templateUrl: './register.component.html',
   styleUrls: ['./scss/auth-shared-styles.css']

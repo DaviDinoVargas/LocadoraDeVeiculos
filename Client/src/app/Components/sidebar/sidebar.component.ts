@@ -90,13 +90,6 @@ export class SidebarComponent implements OnInit, OnDestroy {
     const allMenuItems: MenuItem[] = [
       // Dashboard
       {
-        label: 'Dashboard',
-        icon: 'dashboard',
-        path: '/dashboard',
-        roles: ['Empresa', 'Funcionario'],
-        module: this.modules.dashboard
-      },
-      {
         label: 'Home',
         icon: 'home',
         path: '/home',
@@ -157,8 +150,8 @@ export class SidebarComponent implements OnInit, OnDestroy {
         module: this.modules.operacional,
         expanded: false,
         children: [
-          { label: 'Novo Aluguel', icon: 'add_circle', path: '/alugueis/novo', roles: ['Empresa', 'Funcionario'] },
-          { label: 'Em Aberto', icon: 'pending_actions', path: '/alugueis/abertos', roles: ['Empresa', 'Funcionario'] },
+          { label: 'Novo Aluguel', icon: 'add_circle', path: '/alugueis/new', roles: ['Empresa', 'Funcionario'] },
+          { label: 'Em Aberto', icon: 'pending_actions', path: '/alugueis?status=em-aberto', roles: ['Empresa', 'Funcionario'] },
           { label: 'Todos', icon: 'list', path: '/alugueis', roles: ['Empresa', 'Funcionario'] }
         ]
       },
@@ -177,6 +170,25 @@ export class SidebarComponent implements OnInit, OnDestroy {
         path: '/taxas-servicos',
         roles: ['Empresa', 'Funcionario'],
         module: this.modules.financeiro
+      },
+      {
+        label: 'Parceiros',
+        icon: 'business',
+        path: '/parceiros',
+        roles: ['Empresa'],
+        module: this.modules.financeiro
+      },
+      {
+        label: 'Cupons',
+        icon: 'local_offer',
+        path: '/cupons',
+        roles: ['Empresa'],
+        module: this.modules.financeiro,
+        expanded: false,
+        children: [
+          { label: 'Todos os Cupons', icon: 'list', path: '/cupons', roles: ['Empresa'] },
+          { label: 'Desafios de Cupom', icon: 'emoji_events', path: '/desafios-cupom', roles: ['Empresa'] }
+        ]
       },
 
       // Configurações
@@ -249,7 +261,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
       event.stopPropagation();
     }
 
-    this.router.navigate([path]).then(() => {
+    this.router.navigateByUrl(path).then(() => {
       this.onNavigateMobile();
     }).catch(error => {
       console.error('Erro na navegação:', error);

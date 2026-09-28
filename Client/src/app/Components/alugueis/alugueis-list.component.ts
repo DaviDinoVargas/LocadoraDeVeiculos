@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AlugueisService } from './alugueis.service';
 import { SelecionarAlugueisDto } from './aluguel.model';
@@ -22,10 +22,15 @@ export class AlugueisListComponent implements OnInit {
   constructor(
     private svc: AlugueisService,
     private router: Router,
+    private route: ActivatedRoute,
     private snack: MatSnackBar
   ) {}
 
   ngOnInit() {
+    const statusInicial = this.route.snapshot.queryParamMap.get('status');
+    if (statusInicial) {
+      this.filtroStatus = statusInicial;
+    }
     this.carregar();
   }
 

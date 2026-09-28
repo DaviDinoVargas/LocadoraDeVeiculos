@@ -26,6 +26,12 @@ import { DevolucaoViewComponent } from './Components/devolucoes/devolucao-view.c
 import { DevolucaoFormComponent } from './Components/devolucoes/devolucao-form.component';
 import { CameraMonitorComponent } from './Components/monitoramento/camera-monitor.component';
 import { VerificacaoFacialComponent } from './Components/verificacao-facial/verificacao-facial.component';
+import { ParceirosListComponent } from './Components/parceiros/parceiros-list.component';
+import { ParceiroFormComponent } from './Components/parceiros/parceiro-form.component';
+import { CuponsListComponent } from './Components/cupons/cupons-list.component';
+import { CupomFormComponent } from './Components/cupons/cupom-form.component';
+import { DesafiosCupomListComponent } from './Components/desafios-cupom/desafios-cupom-list.component';
+import { DesafioCupomFormComponent } from './Components/desafios-cupom/desafio-cupom-form.component';
 
 
 export const routes: Routes = [
@@ -40,19 +46,19 @@ export const routes: Routes = [
   { path: 'funcionarios/:id/edit', component: FuncionarioFormComponent, canActivate: [AuthGuard] },
 
    // Rotas para Planos de Cobrança
-  { path: 'planos-cobranca', component: PlanosCobrancaListComponent },
-  { path: 'planos-cobranca/new', component: PlanoCobrancaFormComponent },
-  { path: 'planos-cobranca/:id/edit', component: PlanoCobrancaFormComponent },
+  { path: 'planos-cobranca', component: PlanosCobrancaListComponent, canActivate: [AuthGuard] },
+  { path: 'planos-cobranca/new', component: PlanoCobrancaFormComponent, canActivate: [AuthGuard] },
+  { path: 'planos-cobranca/:id/edit', component: PlanoCobrancaFormComponent, canActivate: [AuthGuard] },
 
   // Rotas para Grupos de Veículo
-  { path: 'grupoveiculos', component: GruposVeiculoListComponent },
-  { path: 'grupoveiculos/new', component: GrupoVeiculoFormComponent },
-  { path: 'grupoveiculos/:id/edit', component: GrupoVeiculoFormComponent },
+  { path: 'grupoveiculos', component: GruposVeiculoListComponent, canActivate: [AuthGuard] },
+  { path: 'grupoveiculos/new', component: GrupoVeiculoFormComponent, canActivate: [AuthGuard] },
+  { path: 'grupoveiculos/:id/edit', component: GrupoVeiculoFormComponent, canActivate: [AuthGuard] },
 
   // Rotas para Veículos
-  { path: 'veiculos', component: VeiculosListComponent },
-  { path: 'veiculos/new', component: VeiculoFormComponent },
-  { path: 'veiculos/:id/edit', component: VeiculoFormComponent },
+  { path: 'veiculos', component: VeiculosListComponent, canActivate: [AuthGuard] },
+  { path: 'veiculos/new', component: VeiculoFormComponent, canActivate: [AuthGuard] },
+  { path: 'veiculos/:id/edit', component: VeiculoFormComponent, canActivate: [AuthGuard] },
 
  { path: 'clientes', component: ClientesListComponent, canActivate: [AuthGuard] },
   { path: 'clientes/pf', component: ClientesListComponent, canActivate: [AuthGuard] },
@@ -71,9 +77,9 @@ export const routes: Routes = [
 { path: 'configuracoes/combustivel', component: ConfiguracaoFormComponent, canActivate: [AuthGuard] },
 
   // Rotas para Condutores
-  { path: 'condutores', component: CondutoresListComponent },
-  { path: 'condutores/new', component: CondutorFormComponent },
-  { path: 'condutores/:id/edit', component: CondutorFormComponent },
+  { path: 'condutores', component: CondutoresListComponent, canActivate: [AuthGuard] },
+  { path: 'condutores/new', component: CondutorFormComponent, canActivate: [AuthGuard] },
+  { path: 'condutores/:id/edit', component: CondutorFormComponent, canActivate: [AuthGuard] },
 
 // Rotas para Devoluções
 { path: 'devolucoes', component: DevolucoesListComponent, canActivate: [AuthGuard] },
@@ -81,13 +87,14 @@ export const routes: Routes = [
 { path: 'alugueis/:id/devolver', component: DevolucaoFormComponent, canActivate: [AuthGuard] },
 
   // Rotas para Taxas e Serviços
-  { path: 'taxas-servicos', component: TaxasServicosListComponent },
-  { path: 'taxas-servicos/new', component: TaxaServicoFormComponent },
-  { path: 'taxas-servicos/:id/edit', component: TaxaServicoFormComponent },
+  { path: 'taxas-servicos', component: TaxasServicosListComponent, canActivate: [AuthGuard] },
+  { path: 'taxas-servicos/new', component: TaxaServicoFormComponent, canActivate: [AuthGuard] },
+  { path: 'taxas-servicos/:id/edit', component: TaxaServicoFormComponent, canActivate: [AuthGuard] },
 
    {
     path: 'camera-monitor',
     component: CameraMonitorComponent,
+    canActivate: [AuthGuard],
     data: { title: 'Monitoramento de Câmeras' }
   },
 
@@ -97,6 +104,21 @@ export const routes: Routes = [
     canActivate: [AuthGuard],
     data: { title: 'Verificação Facial' }
   },
+
+  // Rotas para Parceiros
+  { path: 'parceiros', component: ParceirosListComponent, canActivate: [AuthGuard] },
+  { path: 'parceiros/new', component: ParceiroFormComponent, canActivate: [AuthGuard] },
+  { path: 'parceiros/:id/edit', component: ParceiroFormComponent, canActivate: [AuthGuard] },
+
+  // Rotas para Cupons
+  { path: 'cupons', component: CuponsListComponent, canActivate: [AuthGuard] },
+  { path: 'cupons/new', component: CupomFormComponent, canActivate: [AuthGuard] },
+  { path: 'cupons/:id/edit', component: CupomFormComponent, canActivate: [AuthGuard] },
+
+  // Rotas para Desafios de Cupom
+  { path: 'desafios-cupom', component: DesafiosCupomListComponent, canActivate: [AuthGuard] },
+  { path: 'desafios-cupom/new', component: DesafioCupomFormComponent, canActivate: [AuthGuard] },
+  { path: 'desafios-cupom/:id/edit', component: DesafioCupomFormComponent, canActivate: [AuthGuard] },
 
     { path: '**', redirectTo: 'home' }
 ];

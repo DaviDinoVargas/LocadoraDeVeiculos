@@ -1,17 +1,95 @@
-.home-container {
-  padding: 20px;
+:host {
+  display: block;
+  padding: 32px;
+  background: var(--app-color-bg);
+  min-height: 100%;
+}
+
+.home-header {
+  margin-bottom: 28px;
+}
+
+.home-header h1 {
+  font-size: 1.9rem;
+  font-weight: 800;
+  color: var(--app-color-text);
+  margin: 0 0 4px 0;
+}
+
+.subtitulo {
+  color: var(--app-color-text-muted);
+  margin: 0;
 }
 
 .cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
-  margin-top: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
 }
 
-.card {
-  min-height: 150px;
+.atalho-card {
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  background: var(--app-color-surface);
+  border: 1px solid var(--app-color-border);
+  border-radius: var(--app-radius-lg);
+  padding: 20px;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: var(--app-shadow-sm);
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+
+.atalho-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--app-shadow-md);
+  border-color: var(--app-color-primary);
+}
+
+.atalho-icone {
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--app-radius-md);
+  background: var(--app-color-primary-soft);
+  color: var(--app-color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+}
+
+.atalho-texto {
+  flex: 1;
+  min-width: 0;
+}
+
+.atalho-texto h2 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  color: var(--app-color-text);
+}
+
+.atalho-texto p {
+  font-size: 0.85rem;
+  color: var(--app-color-text-muted);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.atalho-seta {
+  flex: 0 0 auto;
+  color: var(--app-color-text-muted);
+  opacity: 0;
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.atalho-card:hover .atalho-seta {
+  opacity: 1;
+  transform: translateX(2px);
+  color: var(--app-color-primary);
 }

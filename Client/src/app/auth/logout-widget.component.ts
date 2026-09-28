@@ -12,11 +12,12 @@ import { MatIcon } from "@angular/material/icon";
   standalone: true,
   imports: [CommonModule, MatButtonModule, MatSnackBarModule, MatIcon],
   templateUrl: './logout-widget.component.html',
-  styleUrls: ['./scss/auth-shared-styles.css']
+  styleUrls: ['./scss/logout-widget.component.scss']
 })
 export class LogoutWidgetComponent implements OnInit, OnDestroy {
   public show = false;
   public usuarioNome: string | null = null;
+  public iniciais = '';
 
   private sub?: Subscription;
 
@@ -51,9 +52,18 @@ export class LogoutWidgetComponent implements OnInit, OnDestroy {
     if (logged) {
       const usuario = this.auth.getUsuario();
       this.usuarioNome = usuario?.nomeCompleto || 'Usuário';
+      this.iniciais = this.calcularIniciais(this.usuarioNome);
     } else {
       this.usuarioNome = null;
+      this.iniciais = '';
     }
+  }
+
+  private calcularIniciais(nome: string): string {
+    const partes = nome.trim().split(/\s+/).filter(Boolean);
+    if (partes.length === 0) return '?';
+    if (partes.length === 1) return partes[0].charAt(0).toUpperCase();
+    return (partes[0].charAt(0) + partes[partes.length - 1].charAt(0)).toUpperCase();
   }
 
   sair(): void {

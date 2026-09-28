@@ -1,49 +1,52 @@
-<div class="login-container">
-  <mat-card class="login-card">
-    <mat-card-header>
-      <mat-card-title>Login - Locadora de Veículos</mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      <form [formGroup]="form" (ngSubmit)="submit()">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Email</mat-label>
-          <input matInput type="email" formControlName="email" placeholder="Ex: usuario@exemplo.com" required>
-          <mat-error *ngIf="form.get('email')?.hasError('required')">Email é obrigatório</mat-error>
-          <mat-error *ngIf="form.get('email')?.hasError('email')">Email inválido</mat-error>
-        </mat-form-field>
+<app-auth-shell
+  titulo="Gerencie sua locadora com simplicidade e controle total"
+>
+  <div class="auth-form-header">
+    <h2>Entrar</h2>
+    <p>Acesse sua conta para continuar.</p>
+  </div>
 
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Senha</mat-label>
-          <input matInput [type]="showPassword ? 'text' : 'password'" formControlName="senha" required>
-          <button mat-icon-button matSuffix type="button" (click)="toggleShowPassword()" [attr.aria-label]="'Mostrar senha'" [attr.aria-pressed]="showPassword">
-            <mat-icon>{{showPassword ? 'visibility_off' : 'visibility'}}</mat-icon>
-          </button>
-          <mat-error *ngIf="form.get('senha')?.hasError('required')">Senha é obrigatória</mat-error>
-        </mat-form-field>
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Email</mat-label>
+      <input matInput type="email" formControlName="email" placeholder="Ex: usuario@exemplo.com" required>
+      <mat-error *ngIf="form.get('email')?.hasError('required')">Email é obrigatório</mat-error>
+      <mat-error *ngIf="form.get('email')?.hasError('email')">Email inválido</mat-error>
+    </mat-form-field>
 
-        <button mat-raised-button color="primary" type="submit" [disabled]="loading" class="full-width">
-          <mat-spinner diameter="20" *ngIf="loading"></mat-spinner>
-          <span *ngIf="!loading">Entrar</span>
-        </button>
-      </form>
-
-      <button mat-stroked-button type="button" class="full-width facial-toggle" (click)="alternarModoFacial()" [disabled]="loading">
-        <mat-icon>face</mat-icon>
-        {{ modoFacial ? 'Cancelar reconhecimento facial' : 'Entrar com reconhecimento facial' }}
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Senha</mat-label>
+      <input matInput [type]="showPassword ? 'text' : 'password'" formControlName="senha" required>
+      <button mat-icon-button matSuffix type="button" (click)="toggleShowPassword()" [attr.aria-label]="'Mostrar senha'" [attr.aria-pressed]="showPassword">
+        <mat-icon>{{showPassword ? 'visibility_off' : 'visibility'}}</mat-icon>
       </button>
+      <mat-error *ngIf="form.get('senha')?.hasError('required')">Senha é obrigatória</mat-error>
+    </mat-form-field>
 
-      <div class="facial-login" *ngIf="modoFacial">
-        <video #video muted playsinline [class.hidden]="!cameraAtiva"></video>
-        <canvas #canvas class="hidden"></canvas>
-        <p *ngIf="!cameraAtiva">Ligando câmera...</p>
-        <button mat-raised-button color="accent" type="button" class="full-width" [disabled]="!cameraAtiva || loading" (click)="entrarComRosto()">
-          <mat-spinner diameter="20" *ngIf="loading"></mat-spinner>
-          <span *ngIf="!loading">Capturar e entrar</span>
-        </button>
-      </div>
-    </mat-card-content>
-    <mat-card-actions>
-      <a mat-button routerLink="/registrar">Criar uma conta</a>
-    </mat-card-actions>
-  </mat-card>
-</div>
+    <button mat-raised-button color="primary" type="submit" [disabled]="loading" class="full-width login-btn">
+      <mat-spinner diameter="20" *ngIf="loading"></mat-spinner>
+      <span *ngIf="!loading">Entrar</span>
+    </button>
+  </form>
+
+  <div class="auth-divider"><span>ou</span></div>
+
+  <button mat-stroked-button type="button" class="full-width facial-toggle" (click)="alternarModoFacial()" [disabled]="loading">
+    <mat-icon>face</mat-icon>
+    {{ modoFacial ? 'Cancelar reconhecimento facial' : 'Entrar com reconhecimento facial' }}
+  </button>
+
+  <div class="facial-login" [class.hidden]="!modoFacial">
+    <video #video muted playsinline [class.hidden]="!cameraAtiva"></video>
+    <canvas #canvas class="hidden"></canvas>
+    <p *ngIf="modoFacial && !cameraAtiva">Ligando câmera...</p>
+    <button mat-raised-button color="accent" type="button" class="full-width" [disabled]="!cameraAtiva || loading" (click)="entrarComRosto()">
+      <mat-spinner diameter="20" *ngIf="loading"></mat-spinner>
+      <span *ngIf="!loading">Capturar e entrar</span>
+    </button>
+  </div>
+
+  <p class="auth-footer-link">
+    Não tem uma conta? <a routerLink="/registrar">Criar uma conta</a>
+  </p>
+</app-auth-shell>

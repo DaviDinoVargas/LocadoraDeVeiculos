@@ -1,0 +1,70 @@
+<div class="container mt-3">
+  <h4 *ngIf="!editMode">Novo Desafio de Cupom</h4>
+  <h4 *ngIf="editMode">Editar Desafio de Cupom</h4>
+
+  <form [formGroup]="form" (ngSubmit)="salvar()">
+    <div class="mb-3">
+      <label class="form-label">Nome</label>
+      <input class="form-control" formControlName="nome"/>
+      <div *ngIf="form.controls['nome'].invalid && form.controls['nome'].touched" class="text-danger small">
+        Nome é obrigatório.
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Descrição</label>
+      <input class="form-control" formControlName="descricao"/>
+      <div *ngIf="form.controls['descricao'].invalid && form.controls['descricao'].touched" class="text-danger small">
+        Descrição é obrigatória.
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Meta de Aluguéis</label>
+      <input type="number" min="1" class="form-control" formControlName="metaQuantidadeAlugueis"/>
+      <div *ngIf="form.controls['metaQuantidadeAlugueis'].invalid && form.controls['metaQuantidadeAlugueis'].touched" class="text-danger small">
+        Meta deve ser pelo menos 1.
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Período (dias)</label>
+      <input type="number" min="1" class="form-control" formControlName="periodoDias"/>
+      <div *ngIf="form.controls['periodoDias'].invalid && form.controls['periodoDias'].touched" class="text-danger small">
+        Período deve ser pelo menos 1 dia.
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Cupom de Recompensa</label>
+      <select class="form-select" formControlName="cupomRecompensaId">
+        <option value="">Selecione o cupom</option>
+        <option *ngFor="let c of cupons" [value]="c.id">{{ c.codigo }} — {{ c.descricao }}</option>
+      </select>
+      <div *ngIf="form.controls['cupomRecompensaId'].invalid && form.controls['cupomRecompensaId'].touched" class="text-danger small">
+        Cupom de recompensa é obrigatório.
+      </div>
+    </div>
+
+    <div class="mb-3 form-check" *ngIf="editMode">
+      <input type="checkbox" class="form-check-input" id="ativoCheck" formControlName="ativo"/>
+      <label class="form-check-label" for="ativoCheck">Desafio ativo</label>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary" type="submit" [disabled]="loading">
+        <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
+        {{ editMode ? 'Salvar' : 'Criar' }}
+      </button>
+      <button class="btn btn-secondary" type="button" (click)="cancelar()" [disabled]="loading">
+        Cancelar
+      </button>
+    </div>
+
+    <div *ngIf="serverErrors.length > 0" class="alert alert-danger mt-3">
+      <ul class="mb-0">
+        <li *ngFor="let error of serverErrors">{{ error }}</li>
+      </ul>
+    </div>
+  </form>
+</div>

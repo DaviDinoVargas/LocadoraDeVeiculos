@@ -1,47 +1,21 @@
-.login-shell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  min-height: calc(100vh - 48px);
-  background: linear-gradient(180deg, #f7fbff 0%, #ffffff 100%);
+.auth-form-header {
+  margin-bottom: 24px;
 }
 
-.login-card {
-  width: 100%;
-  max-width: 420px;
-  padding: 8px;
-  border-radius: 12px;
-  box-shadow: 0 6px 20px rgba(23, 43, 77, 0.08);
+.auth-form-header h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--app-color-text);
+  margin: 0 0 4px 0;
 }
 
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.brand-icon {
-  font-size: 40px;
-  color: #1976d2;
-}
-
-.subtitle {
-  color: rgba(0,0,0,0.6);
-  margin-bottom: 16px;
+.auth-form-header p {
+  color: var(--app-color-text-muted);
+  margin: 0;
 }
 
 .full-width {
   width: 100%;
-}
-
-.actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 12px;
-  gap: 12px;
 }
 
 .login-btn {
@@ -50,17 +24,49 @@
   gap: 8px;
   align-items: center;
   justify-content: center;
+  margin-top: 4px;
 }
 
 mat-progress-spinner { vertical-align: middle; margin-right: 6px; }
 
-.help {
-  margin-top: 12px;
-  color: rgba(0,0,0,0.54);
+.auth-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: var(--app-color-text-muted);
+  font-size: 0.85rem;
+  margin: 20px 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid var(--app-color-border);
+}
+
+.auth-divider span {
+  padding: 0 12px;
+}
+
+.auth-footer-link {
+  margin-top: 20px;
+  text-align: center;
+  color: var(--app-color-text-muted);
+  font-size: 0.9rem;
+}
+
+.auth-footer-link a {
+  color: var(--app-color-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-footer-link a:hover {
+  text-decoration: underline;
 }
 
 .facial-toggle {
-  margin-top: 12px;
   display: inline-flex;
   gap: 8px;
   align-items: center;
@@ -72,10 +78,14 @@ mat-progress-spinner { vertical-align: middle; margin-right: 6px; }
   text-align: center;
 }
 
+.facial-login.hidden {
+  display: none !important;
+}
+
 .facial-login video {
   width: 100%;
   max-width: 320px;
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
   background: #202124;
   margin-bottom: 12px;
 }

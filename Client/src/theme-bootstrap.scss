@@ -1,0 +1,175 @@
+// Re-tema o Bootstrap (carregado como CSS puro em angular.json, antes deste
+// arquivo) usando as variáveis locais que cada componente do Bootstrap 5.3
+// já expõe (--bs-btn-bg, --bs-card-border-radius, etc.) em vez de tentar
+// recompilar o Sass do Bootstrap — muito mais barato e sem risco de quebrar
+// a build. Os tokens em si (--app-color-*, --app-radius-*) vêm de styles.scss.
+:root {
+  --bs-border-radius: var(--app-radius-md);
+  --bs-border-radius-sm: var(--app-radius-sm);
+  --bs-border-radius-lg: var(--app-radius-lg);
+  --bs-border-radius-xl: var(--app-radius-lg);
+  --bs-body-font-family: var(--app-font-family);
+  --bs-body-color: var(--app-color-text);
+  --bs-body-bg: var(--app-color-bg);
+  --bs-link-color: var(--app-color-primary);
+  --bs-link-color-rgb: 26, 86, 219;
+  --bs-link-hover-color: var(--app-color-primary-hover);
+  --bs-box-shadow: var(--app-shadow-md);
+  --bs-box-shadow-sm: var(--app-shadow-sm);
+  --bs-box-shadow-lg: var(--app-shadow-lg);
+}
+
+body {
+  font-family: var(--app-font-family);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+// --- Botões ---------------------------------------------------------
+.btn {
+  --bs-btn-border-radius: var(--app-radius-sm);
+  --bs-btn-font-weight: 600;
+  --bs-btn-padding-y: 0.5rem;
+  --bs-btn-padding-x: 1rem;
+  box-shadow: none !important;
+}
+
+.btn-primary {
+  --bs-btn-bg: var(--app-color-primary);
+  --bs-btn-border-color: var(--app-color-primary);
+  --bs-btn-hover-bg: var(--app-color-primary-hover);
+  --bs-btn-hover-border-color: var(--app-color-primary-hover);
+  --bs-btn-active-bg: var(--app-color-primary-hover);
+  --bs-btn-active-border-color: var(--app-color-primary-hover);
+  --bs-btn-disabled-bg: var(--app-color-primary);
+  --bs-btn-disabled-border-color: var(--app-color-primary);
+  --bs-btn-focus-shadow-rgb: 26, 86, 219;
+}
+
+.btn-secondary {
+  --bs-btn-color: var(--app-color-text);
+  --bs-btn-bg: #eef1f6;
+  --bs-btn-border-color: #eef1f6;
+  --bs-btn-hover-color: var(--app-color-text);
+  --bs-btn-hover-bg: #e1e6ee;
+  --bs-btn-hover-border-color: #e1e6ee;
+  --bs-btn-active-color: var(--app-color-text);
+  --bs-btn-active-bg: #e1e6ee;
+}
+
+.btn-danger {
+  --bs-btn-bg: var(--app-color-danger);
+  --bs-btn-border-color: var(--app-color-danger);
+  --bs-btn-hover-bg: #b91c1c;
+  --bs-btn-hover-border-color: #b91c1c;
+  --bs-btn-active-bg: #b91c1c;
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--app-color-primary);
+  --bs-btn-border-color: var(--app-color-primary);
+  --bs-btn-hover-bg: var(--app-color-primary);
+  --bs-btn-hover-border-color: var(--app-color-primary);
+  --bs-btn-active-bg: var(--app-color-primary);
+  --bs-btn-active-border-color: var(--app-color-primary);
+}
+
+.btn-outline-danger {
+  --bs-btn-color: var(--app-color-danger);
+  --bs-btn-border-color: var(--app-color-danger);
+  --bs-btn-hover-bg: var(--app-color-danger);
+  --bs-btn-hover-border-color: var(--app-color-danger);
+  --bs-btn-active-bg: var(--app-color-danger);
+  --bs-btn-active-border-color: var(--app-color-danger);
+}
+
+.btn-outline-secondary {
+  --bs-btn-color: var(--app-color-text-muted);
+  --bs-btn-border-color: var(--app-color-border);
+  --bs-btn-hover-bg: var(--app-color-bg);
+  --bs-btn-hover-color: var(--app-color-text);
+  --bs-btn-hover-border-color: var(--app-color-border);
+}
+
+// --- Cartões ---------------------------------------------------------
+.card {
+  --bs-card-border-color: var(--app-color-border);
+  --bs-card-box-shadow: var(--app-shadow-sm);
+  box-shadow: var(--app-shadow-sm);
+}
+
+.card-title {
+  font-weight: 700;
+}
+
+// --- Formulários -------------------------------------------------------
+.form-control,
+.form-select {
+  border-color: var(--app-color-border);
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--app-color-primary);
+  box-shadow: 0 0 0 3px var(--app-color-primary-soft);
+}
+
+.form-label {
+  font-weight: 600;
+  color: var(--app-color-text);
+}
+
+// --- Alertas -------------------------------------------------------
+.alert-info {
+  --bs-alert-color: #1e4e8c;
+  --bs-alert-bg: var(--app-color-primary-soft);
+  --bs-alert-border-color: #cfe0fb;
+}
+
+.alert-success {
+  --bs-alert-color: #0f5a30;
+  --bs-alert-bg: var(--app-color-success-soft);
+  --bs-alert-border-color: #bfe6cc;
+}
+
+.alert-danger {
+  --bs-alert-color: #8c1c1c;
+  --bs-alert-bg: var(--app-color-danger-soft);
+  --bs-alert-border-color: #f5c2c0;
+}
+
+// --- Tabelas -------------------------------------------------------
+.table {
+  --bs-table-hover-bg: var(--app-color-primary-soft);
+}
+
+.table thead th {
+  font-weight: 700;
+  color: var(--app-color-text-muted);
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.03em;
+  border-bottom-width: 2px;
+}
+
+// --- Badges, abas, menus -------------------------------------------
+.badge {
+  font-weight: 600;
+}
+
+.nav-tabs {
+  --bs-nav-tabs-link-active-color: var(--app-color-primary);
+  --bs-nav-tabs-link-active-border-color: var(--app-color-border) var(--app-color-border) var(--app-color-surface);
+}
+
+.dropdown-menu {
+  --bs-dropdown-border-color: var(--app-color-border);
+  box-shadow: var(--app-shadow-md);
+}
+
+.spinner-border.text-primary {
+  color: var(--app-color-primary) !important;
+}

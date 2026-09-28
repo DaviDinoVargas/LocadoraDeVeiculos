@@ -9,12 +9,52 @@
 html {
   @include mat.theme((
     color: (
-      primary: mat.$magenta-palette,
+      primary: mat.$blue-palette,
       tertiary: mat.$violet-palette,
     ),
-    typography: Roboto,
+    typography: (
+      plain-family: 'Inter, Roboto, "Helvetica Neue", sans-serif',
+      brand-family: 'Inter, Roboto, "Helvetica Neue", sans-serif',
+    ),
     density: 0,
   ));
+}
+
+// ---------------------------------------------------------------------
+// Design tokens do app (fora do Angular Material). Inspirados nos
+// princípios de design da Dropbox Brand: tipografia confiante, bastante
+// espaço em branco, cantos arredondados generosos, uma cor de destaque só.
+// Usados pelo global.scss (compartilhado pelas telas de CRUD) e pelos
+// componentes que têm estilo próprio (sidebar, home, chatbot, etc.).
+// ---------------------------------------------------------------------
+:root {
+  --app-font-family: 'Inter', Roboto, 'Helvetica Neue', sans-serif;
+
+  --app-color-primary: #1a56db;
+  --app-color-primary-hover: #1544ad;
+  --app-color-primary-soft: #eaf1fd;
+  --app-color-accent: #6c2bd9;
+
+  --app-color-success: #16a34a;
+  --app-color-success-soft: #e6f4ea;
+  --app-color-danger: #dc2626;
+  --app-color-danger-soft: #fce8e6;
+  --app-color-warning: #d97706;
+  --app-color-warning-soft: #fef3e2;
+
+  --app-color-text: #16213a;
+  --app-color-text-muted: #5b6b85;
+  --app-color-border: #e3e8f0;
+  --app-color-bg: #f6f8fb;
+  --app-color-surface: #ffffff;
+
+  --app-radius-sm: 6px;
+  --app-radius-md: 10px;
+  --app-radius-lg: 16px;
+
+  --app-shadow-sm: 0 1px 3px rgba(16, 24, 40, 0.06);
+  --app-shadow-md: 0 4px 16px rgba(16, 24, 40, 0.08);
+  --app-shadow-lg: 0 12px 32px rgba(16, 24, 40, 0.14);
 }
 
 body {
@@ -26,9 +66,10 @@ body {
   // Set a default background, font and text colors for the application using
   // Angular Material's system-level CSS variables. Learn more about these
   // variables at https://material.angular.dev/guide/system-variables
-  background-color: var(--mat-sys-surface);
-  color: var(--mat-sys-on-surface);
+  background-color: var(--app-color-bg);
+  color: var(--app-color-text);
   font: var(--mat-sys-body-medium);
+  font-family: var(--app-font-family);
 
   // Reset the user agent margin.
   margin: 0;
@@ -36,4 +77,4 @@ body {
 /* You can add global styles to this file, and also import other style files */
 
 html, body { height: 100%; }
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+body { margin: 0; font-family: var(--app-font-family); }

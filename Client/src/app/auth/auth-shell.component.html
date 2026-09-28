@@ -1,0 +1,29 @@
+<div class="auth-shell">
+  <section class="auth-brand">
+    <div class="auth-brand-content">
+      <div class="auth-brand-logo">
+        <span class="auth-brand-logo-icon"><i class="bi bi-car-front-fill"></i></span>
+        <span class="auth-brand-logo-text">Locadora</span>
+      </div>
+
+      <h1>{{ titulo }}</h1>
+
+      <ul class="auth-brand-features">
+        <li *ngFor="let item of destaques">
+          <span class="auth-brand-features-icon"><i class="bi bi-check-lg"></i></span>
+          {{ item }}
+        </li>
+      </ul>
+    </div>
+
+    <div class="auth-brand-shape auth-brand-shape--1"></div>
+    <div class="auth-brand-shape auth-brand-shape--2"></div>
+    <div class="auth-brand-shape auth-brand-shape--3"></div>
+  </section>
+
+  <section class="auth-panel">
+    <div class="auth-panel-content">
+      <ng-content></ng-content>
+    </div>
+  </section>
+</div>

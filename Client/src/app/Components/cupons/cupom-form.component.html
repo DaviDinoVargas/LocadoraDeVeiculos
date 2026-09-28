@@ -1,0 +1,86 @@
+<div class="container mt-3">
+  <h4 *ngIf="!editMode">Novo Cupom</h4>
+  <h4 *ngIf="editMode">Editar Cupom</h4>
+
+  <form [formGroup]="form" (ngSubmit)="salvar()">
+    <div class="mb-3">
+      <label class="form-label">Código</label>
+      <input class="form-control text-uppercase" formControlName="codigo"/>
+      <div *ngIf="form.controls['codigo'].invalid && form.controls['codigo'].touched" class="text-danger small">
+        Código é obrigatório.
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Descrição</label>
+      <input class="form-control" formControlName="descricao"/>
+      <div *ngIf="form.controls['descricao'].invalid && form.controls['descricao'].touched" class="text-danger small">
+        Descrição é obrigatória.
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Tipo de Desconto</label>
+      <select class="form-select" formControlName="tipoDesconto">
+        <option value="">Selecione o tipo</option>
+        <option *ngFor="let t of tiposDesconto" [value]="t.value">{{ t.label }}</option>
+      </select>
+      <div *ngIf="form.controls['tipoDesconto'].invalid && form.controls['tipoDesconto'].touched" class="text-danger small">
+        Tipo de desconto é obrigatório.
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Valor do Desconto</label>
+      <input type="number" step="0.01" min="0" class="form-control" formControlName="valorDesconto"/>
+      <div *ngIf="form.controls['valorDesconto'].invalid && form.controls['valorDesconto'].touched" class="text-danger small">
+        Valor deve ser maior ou igual a 0.
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Válido até</label>
+      <input type="date" class="form-control" formControlName="validoAte"/>
+      <div *ngIf="form.controls['validoAte'].invalid && form.controls['validoAte'].touched" class="text-danger small">
+        Data de validade é obrigatória.
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Limite de Usos</label>
+      <input type="number" min="1" class="form-control" formControlName="limiteUsos"/>
+      <div *ngIf="form.controls['limiteUsos'].invalid && form.controls['limiteUsos'].touched" class="text-danger small">
+        Limite de usos deve ser pelo menos 1.
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Parceiro (opcional)</label>
+      <select class="form-select" formControlName="parceiroId">
+        <option value="">Nenhum parceiro</option>
+        <option *ngFor="let p of parceiros" [value]="p.id">{{ p.nome }}</option>
+      </select>
+    </div>
+
+    <div class="mb-3 form-check" *ngIf="editMode">
+      <input type="checkbox" class="form-check-input" id="ativoCheck" formControlName="ativo"/>
+      <label class="form-check-label" for="ativoCheck">Cupom ativo</label>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary" type="submit" [disabled]="loading">
+        <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
+        {{ editMode ? 'Salvar' : 'Criar' }}
+      </button>
+      <button class="btn btn-secondary" type="button" (click)="cancelar()" [disabled]="loading">
+        Cancelar
+      </button>
+    </div>
+
+    <div *ngIf="serverErrors.length > 0" class="alert alert-danger mt-3">
+      <ul class="mb-0">
+        <li *ngFor="let error of serverErrors">{{ error }}</li>
+      </ul>
+    </div>
+  </form>
+</div>

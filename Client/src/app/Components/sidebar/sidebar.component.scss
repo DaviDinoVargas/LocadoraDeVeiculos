@@ -1,9 +1,11 @@
+@use "sass:color";
+
 // Variáveis
 $sidebar-width: 260px;
 $sidebar-collapsed-width: 64px;
 $sidebar-bg: #1e293b;
 $sidebar-color: #cbd5e1;
-$sidebar-active-bg: #3b82f6;
+$sidebar-active-bg: #1a56db;
 $sidebar-active-color: white;
 $sidebar-hover-bg: rgba(255, 255, 255, 0.1);
 $sidebar-border: rgba(255, 255, 255, 0.1);
@@ -397,7 +399,7 @@ $z-index-hamburger: 1001;
   transition: background $transition-speed ease, transform $transition-speed ease;
 
   &:hover {
-    background: darken($sidebar-bg, 5%);
+    background: color.adjust($sidebar-bg, $lightness: -5%);
     transform: scale(1.05);
   }
 
