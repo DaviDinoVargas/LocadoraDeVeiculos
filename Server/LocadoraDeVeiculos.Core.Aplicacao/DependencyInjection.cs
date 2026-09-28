@@ -75,7 +75,7 @@ public static class DependencyInjection
             client.BaseAddress = new Uri(mlApiBaseUrl);
             client.Timeout = TimeSpan.FromSeconds(10);
         });
-        services.AddScoped<FacialAuthClient>();
+        services.AddScoped<IFacialAuthClient, FacialAuthClient>();
 
         return services;
     }

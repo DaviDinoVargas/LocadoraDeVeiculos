@@ -11,7 +11,13 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Services;
 // O backend .NET nunca confia numa alegação de "rosto verificado" vinda do
 // Angular: é ele quem chama o serviço de ML diretamente (servidor-a-servidor) e
 // decide se emite um token de acesso, exatamente como faz hoje com a senha.
-public class FacialAuthClient(IHttpClientFactory httpClientFactory, IConfiguration configuration)
+public interface IFacialAuthClient
+{
+    Task<FacialVerifyResult> VerificarAsync(string personId, string imagemBase64, CancellationToken cancellationToken);
+    Task<FacialEnrollResult> CadastrarAsync(string personId, string imagemBase64, CancellationToken cancellationToken);
+}
+
+public class FacialAuthClient(IHttpClientFactory httpClientFactory, IConfiguration configuration) : IFacialAuthClient
 {
     private const string NomeCliente = "MlApi";
 

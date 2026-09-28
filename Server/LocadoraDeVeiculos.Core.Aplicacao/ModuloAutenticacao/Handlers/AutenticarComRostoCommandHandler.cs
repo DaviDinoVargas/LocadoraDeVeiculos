@@ -15,7 +15,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Handlers;
 
 public class AutenticarComRostoCommandHandler(
     UserManager<Usuario> userManager,
-    FacialAuthClient facialAuthClient,
+    IFacialAuthClient facialAuthClient,
     AccessTokenProvider tokenProvider,
     RefreshTokenProvider refreshTokenProvider,
     ILogger<AutenticarComRostoCommandHandler> logger

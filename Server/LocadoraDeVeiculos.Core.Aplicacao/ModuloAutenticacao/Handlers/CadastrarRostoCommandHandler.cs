@@ -14,7 +14,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Handlers;
 
 public class CadastrarRostoCommandHandler(
     UserManager<Usuario> userManager,
-    FacialAuthClient facialAuthClient,
+    IFacialAuthClient facialAuthClient,
     ILogger<CadastrarRostoCommandHandler> logger
 ) : IRequestHandler<CadastrarRostoCommand, Result<int>>
 {

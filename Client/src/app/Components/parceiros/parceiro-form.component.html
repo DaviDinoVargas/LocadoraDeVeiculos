@@ -13,9 +13,10 @@
 
     <div class="mb-3">
       <label class="form-label">CNPJ</label>
-      <input class="form-control" formControlName="cnpj"/>
+      <input class="form-control" formControlName="cnpj" placeholder="00.000.000/0000-00"/>
       <div *ngIf="form.controls['cnpj'].invalid && form.controls['cnpj'].touched" class="text-danger small">
-        CNPJ é obrigatório.
+        <span *ngIf="form.controls['cnpj'].hasError('required')">CNPJ é obrigatório.</span>
+        <span *ngIf="form.controls['cnpj'].hasError('pattern')">Use o formato 00.000.000/0000-00.</span>
       </div>
     </div>
 

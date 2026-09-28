@@ -33,7 +33,7 @@ export class ParceiroFormComponent implements OnInit, OnDestroy {
   ) {
     this.form = this.fb.group({
       nome: ['', Validators.required],
-      cnpj: ['', Validators.required],
+      cnpj: ['', [Validators.required, Validators.pattern(/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/)]],
       categoria: ['', Validators.required],
       ativo: [true]
     });
