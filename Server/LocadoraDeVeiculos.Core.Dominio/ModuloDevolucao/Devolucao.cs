@@ -107,11 +107,15 @@ namespace LocadoraDeVeiculos.Core.Dominio.ModuloDevolucao
         }
     }
 
+    // Nomes precisam bater com os values enviados pelo Angular (NIVEL_COMBUSTIVEL_OPTIONS,
+    // em devolucao.model.ts) -- o controller faz Enum.TryParse<NivelCombustivel> direto na
+    // string recebida, então um nome diferente aqui faz a API recusar a devolução inteira
+    // com 400 (era "Meio", o Angular sempre mandou "Metade").
     public enum NivelCombustivel
     {
         Vazio = 0,
         UmQuarto = 25,
-        Meio = 50,
+        Metade = 50,
         TresQuartos = 75,
         Cheio = 100
     }
