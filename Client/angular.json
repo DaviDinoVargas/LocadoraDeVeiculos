@@ -49,7 +49,9 @@
               }
             ],
             "styles": [
-              "src/styles.scss"
+              "node_modules/bootstrap/dist/css/bootstrap.min.css",
+              "src/styles.scss",
+              "src/theme-bootstrap.scss"
             ]
           },
           "configurations": {
@@ -97,6 +99,10 @@
           "options": {
             "tsConfig": "tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
+            "polyfills": [
+              "zone.js",
+              "zone.js/testing"
+            ],
             "assets": [
               {
                 "glob": "**/*",
@@ -110,5 +116,8 @@
         }
       }
     }
+  },
+  "cli": {
+    "analytics": "5a7bc2a1-cc14-4905-9177-4d7174920617"
   }
 }
