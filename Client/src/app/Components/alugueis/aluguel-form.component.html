@@ -91,6 +91,15 @@
       </div>
     </div>
 
+    <!-- Cupom de Desconto -->
+    <div class="mb-3">
+      <label class="form-label">Código do Cupom (opcional)</label>
+      <input class="form-control text-uppercase" formControlName="cupomCodigo" placeholder="Ex: BEMVINDO10"/>
+      <div class="mt-1" *ngIf="editMode && valorDescontoAtual > 0">
+        <span class="badge bg-success">Desconto aplicado: {{ formatarMoeda(valorDescontoAtual) }}</span>
+      </div>
+    </div>
+
     <!-- Valor Total -->
     <div class="mb-3">
       <label class="form-label">Valor Total Previsto</label>

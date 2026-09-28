@@ -36,6 +36,7 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
   veiculosDisponiveis: VeiculoDto[] = [];
   taxasServicos: TaxaServicoDto[] = [];
   taxasSelecionadas: string[] = [];
+  valorDescontoAtual = 0;
 
   private sub: Subscription | null = null;
 
@@ -57,7 +58,8 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
       dataSaida: ['', Validators.required],
       dataRetornoPrevisto: ['', Validators.required],
       valorPrevisto: [0, [Validators.required, Validators.min(0)]],
-      taxasServicosIds: [[]]
+      taxasServicosIds: [[]],
+      cupomCodigo: ['']
     });
   }
 
@@ -164,6 +166,7 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
       next: (a: any) => {
         this.form.patchValue(a);
         this.taxasSelecionadas = a.taxasServicos?.map((t: any) => t.id) || [];
+        this.valorDescontoAtual = a.valorDesconto || 0;
         this.loading = false;
       },
       error: () => {
@@ -181,8 +184,10 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const raw = this.form.getRawValue();
     const payload: AluguelDto = {
-      ...this.form.getRawValue(),
+      ...raw,
+      cupomCodigo: raw.cupomCodigo?.trim() || null,
       valorCaucao: 1000, // Valor fixo de caução
       status: 'Reservado'
     };

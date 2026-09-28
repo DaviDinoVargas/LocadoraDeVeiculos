@@ -9,6 +9,7 @@ export interface AluguelDto {
   valorCaucao: number;
   status: 'Reservado' | 'EmAndamento' | 'Concluido' | 'Cancelado';
   taxasServicosIds: string[];
+  cupomCodigo?: string | null;
 }
 
 export interface AluguelCompletoDto extends AluguelDto {
@@ -16,6 +17,7 @@ export interface AluguelCompletoDto extends AluguelDto {
   automovelPlaca?: string;
   clienteNome?: string;
   taxasServicos: TaxaServicoAluguelDto[];
+  valorDesconto?: number;
 }
 
 export interface TaxaServicoAluguelDto {
