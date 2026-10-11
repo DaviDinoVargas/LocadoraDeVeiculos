@@ -213,6 +213,18 @@ export class DataTableComponent<T extends object> {
     const visibilidade = this.visibilidade();
     return this.colunas().filter(c => visibilidade[c.id] !== false);
   });
+  /**
+   * Cartão do mobile: coluna com célula customizada e sem ordenação (ex.: foto) vira "mídia" ao lado do título;
+   * o título é a primeira coluna comum; as demais viram pares rótulo/valor (até 4).
+   */
+  protected readonly colunasCartao = computed(() => {
+    const visiveis = this.colunasVisiveis();
+    const ehMidia = (c: ColunaTabela<T>) => c.ordenavel === false && !!this.celulaCustom(c);
+    const midia = visiveis.find(ehMidia) ?? null;
+    const restantes = visiveis.filter(c => c !== midia);
+    return { midia, titulo: restantes[0] ?? null, resto: restantes.slice(1, 5) };
+  });
+
   protected readonly linhasPagina = computed(() => this.table.getRowModel().rows.map(r => r.original));
   protected readonly totalFiltrado = computed(() => this.dadosFiltrados().length);
   protected readonly totalPaginas = computed(() => Math.max(1, Math.ceil(this.totalFiltrado() / this.tamanhoPagina())));

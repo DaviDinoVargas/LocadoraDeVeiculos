@@ -229,25 +229,32 @@
               (click)="linhasClicaveis() && linhaClique.emit(linha)"
             >
               <div class="flex min-w-0 flex-1 flex-col gap-2">
-                @for (coluna of colunasVisiveis(); track coluna.id; let i = $index) {
-                  @if (i === 0) {
-                    <div class="text-title-s text-foreground truncate">
+                <div class="flex items-center gap-3">
+                  @if (colunasCartao().midia; as midia) {
+                    <ng-container
+                      [ngTemplateOutlet]="celulaCustom(midia) ?? padrao"
+                      [ngTemplateOutletContext]="{ $implicit: linha, coluna: midia }"
+                    />
+                  }
+                  @if (colunasCartao().titulo; as titulo) {
+                    <div class="text-title-s text-foreground min-w-0 truncate">
+                      <ng-container
+                        [ngTemplateOutlet]="celulaCustom(titulo) ?? padrao"
+                        [ngTemplateOutletContext]="{ $implicit: linha, coluna: titulo }"
+                      />
+                    </div>
+                  }
+                </div>
+                @for (coluna of colunasCartao().resto; track coluna.id) {
+                  <div class="text-body-m flex items-center justify-between gap-3">
+                    <span class="text-muted-foreground">{{ coluna.cabecalho }}</span>
+                    <span class="min-w-0 truncate text-right">
                       <ng-container
                         [ngTemplateOutlet]="celulaCustom(coluna) ?? padrao"
                         [ngTemplateOutletContext]="{ $implicit: linha, coluna: coluna }"
                       />
-                    </div>
-                  } @else if (i <= 4) {
-                    <div class="text-body-m flex items-center justify-between gap-3">
-                      <span class="text-muted-foreground">{{ coluna.cabecalho }}</span>
-                      <span class="min-w-0 truncate text-right">
-                        <ng-container
-                          [ngTemplateOutlet]="celulaCustom(coluna) ?? padrao"
-                          [ngTemplateOutletContext]="{ $implicit: linha, coluna: coluna }"
-                        />
-                      </span>
-                    </div>
-                  }
+                    </span>
+                  </div>
                 }
               </div>
               @if (acoesLinha().length && acoesDe(linha).length) {

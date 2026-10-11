@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { aplicarMascara, mascararCnpj, mascararCpf, MascaraDirective } from './mascara.directive';
+import { aplicarMascara, mascararCnpj, mascararCpf, mascararPlaca, mascararTelefone, MascaraDirective } from './mascara.directive';
 
 describe('funções de máscara', () => {
   it('CPF: aplica pontuação progressivamente e limita a 11 dígitos', () => {
@@ -41,6 +41,27 @@ class HostComponent {
   cpf = new FormControl('');
   cnpj = new FormControl('');
 }
+
+describe('máscaras de telefone e placa', () => {
+  it('telefone: celular (11 dígitos) e fixo (10), progressivo e limitado', () => {
+    expect(mascararTelefone('')).toBe('');
+    expect(mascararTelefone('1')).toBe('(1');
+    expect(mascararTelefone('119')).toBe('(11) 9');
+    expect(mascararTelefone('1198765')).toBe('(11) 9876-5');
+    expect(mascararTelefone('11987654321')).toBe('(11) 98765-4321');
+    expect(mascararTelefone('1134567890')).toBe('(11) 3456-7890');
+    expect(mascararTelefone('119876543210000')).toBe('(11) 98765-4321');
+    expect(mascararTelefone('(11) 98765-4321')).toBe('(11) 98765-4321');
+  });
+
+  it('placa: maiúsculas, hífen depois das 3 letras, padrão antigo e Mercosul', () => {
+    expect(mascararPlaca('abc')).toBe('ABC');
+    expect(mascararPlaca('abc1d23')).toBe('ABC-1D23');
+    expect(mascararPlaca('abc-1234')).toBe('ABC-1234');
+    expect(mascararPlaca('abc1d23xyz')).toBe('ABC-1D23');
+    expect(aplicarMascara('placa', 'bra2e19')).toBe('BRA-2E19');
+  });
+});
 
 describe('MascaraDirective', () => {
   let fixture: ComponentFixture<HostComponent>;

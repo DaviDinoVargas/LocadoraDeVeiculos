@@ -62,10 +62,10 @@
   </button>
 
   <div [class.hidden]="!modoFacial()" class="mt-4 flex flex-col gap-3">
-    <div class="bg-surface-lowest border-border relative aspect-[4/3] overflow-hidden rounded-xl border">
+    <div class="bg-video border-border relative aspect-[4/3] overflow-hidden rounded-xl border">
       <video #video muted playsinline class="size-full -scale-x-100 object-cover" [class.invisible]="!cameraAtiva()"></video>
       @if (!cameraAtiva()) {
-        <p class="text-body-m text-muted-foreground absolute inset-0 flex items-center justify-center" role="status">
+        <p class="text-body-m text-on-video absolute inset-0 flex items-center justify-center" role="status">
           Ligando câmera…
         </p>
       }

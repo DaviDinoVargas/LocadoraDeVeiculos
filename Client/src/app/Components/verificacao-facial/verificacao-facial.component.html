@@ -7,7 +7,7 @@
   <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
     <!-- Câmera -->
     <section class="flex flex-col gap-3" aria-label="Câmera">
-      <div class="bg-surface-lowest border-border relative aspect-[4/3] w-full overflow-hidden rounded-xl border">
+      <div class="bg-video border-border relative aspect-[4/3] w-full overflow-hidden rounded-xl border">
         <video #video muted playsinline class="size-full -scale-x-100 object-cover" [class.invisible]="estadoCamera() !== 'ativa'"></video>
         <canvas #canvas class="hidden"></canvas>
 
@@ -23,9 +23,9 @@
             Centralize o rosto no contorno
           </span>
         } @else {
-          <div class="text-on-surface-variant absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center">
-            <span class="bg-muted flex size-14 items-center justify-center rounded-full" aria-hidden="true">
-              <ng-icon [name]="estadoCamera() === 'erro' ? 'lucideVideoOff' : 'lucideVideo'" class="text-2xl" [class.text-destructive]="estadoCamera() === 'erro'" />
+          <div class="text-on-video absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center">
+            <span class="flex size-14 items-center justify-center rounded-full bg-white/10" aria-hidden="true">
+              <ng-icon [name]="estadoCamera() === 'erro' ? 'lucideVideoOff' : 'lucideVideo'" class="text-2xl" [class.text-on-video-error]="estadoCamera() === 'erro'" />
             </span>
             @switch (estadoCamera()) {
               @case ('ligando') {

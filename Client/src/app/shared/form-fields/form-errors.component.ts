@@ -7,6 +7,8 @@ import { HlmAlertImports } from '@spartan-ng/helm/alert';
   selector: 'app-form-errors',
   imports: [HlmAlertImports, NgIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  // sem erros o elemento some, para não deixar um vão extra entre o cabeçalho e o formulário
+  host: { '[class.hidden]': '!erros().length' },
   template: `
     @if (erros().length) {
       <div hlmAlert variant="destructive">

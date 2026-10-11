@@ -73,6 +73,11 @@
   --input: var(--md-outline);
   --ring: var(--md-primary);
 
+  /* Superfície de vídeo: escura nos dois temas (câmeras e prévia da webcam, SKILL §18.6) */
+  --video: #141218;
+  --on-video: #e6e0e9;
+  --on-video-error: #f2b8b5;
+
   /* Gráficos (SKILL §19.3) */
   --chart-1: var(--md-primary);
   --chart-2: var(--md-tertiary);
@@ -180,6 +185,10 @@
   --color-on-warning: var(--on-warning);
   --color-warning-container: var(--warning-container);
   --color-on-warning-container: var(--on-warning-container);
+
+  --color-video: var(--video);
+  --color-on-video: var(--on-video);
+  --color-on-video-error: var(--on-video-error);
 
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);

@@ -95,14 +95,14 @@
           @let e = estadoDe(cam);
           <article
             #tile
-            class="bg-surface-lowest border-border relative flex aspect-video flex-col overflow-hidden rounded-xl border"
+            class="bg-video border-border relative flex aspect-video flex-col overflow-hidden rounded-xl border"
             [attr.aria-label]="'Câmera ' + cam + ', ' + rotuloEstado(e.estado).toLowerCase()"
           >
             <!-- vídeo ou estado -->
             @if ((e.estado === 'ao-vivo' || e.estado === 'reconectando') && e.url && abaVisivel()) {
               <img [src]="e.url" [alt]="'Câmera ' + cam + ', ao vivo'" class="size-full object-contain" (load)="aoCarregarStream(cam)" (error)="aoFalharStream(cam)" />
             } @else {
-              <div class="text-on-surface-variant flex size-full flex-col items-center justify-center gap-2 p-4 text-center">
+              <div class="text-on-video flex size-full flex-col items-center justify-center gap-2 p-4 text-center">
                 @switch (e.estado) {
                   @case ('iniciando') {
                     <ng-icon name="lucideLoader2" class="animate-spin text-3xl motion-reduce:animate-none" aria-hidden="true" />
@@ -111,12 +111,12 @@
                   @case ('reconectando') {
                     <ng-icon name="lucideRefreshCw" class="animate-spin text-3xl motion-reduce:animate-none" aria-hidden="true" />
                     <p class="text-body-m" role="status">Reconectando… (tentativa {{ e.tentativas }})</p>
-                    <button hlmBtn variant="outline" size="sm" type="button" (click)="tentarAgora(cam)">Tentar agora</button>
+                    <button hlmBtn variant="secondary" size="sm" type="button" (click)="tentarAgora(cam)">Tentar agora</button>
                   }
                   @case ('erro') {
-                    <ng-icon name="lucideTriangleAlert" class="text-destructive text-3xl" aria-hidden="true" />
+                    <ng-icon name="lucideTriangleAlert" class="text-on-video-error text-3xl" aria-hidden="true" />
                     <p class="text-body-m max-w-sm" role="alert">{{ e.mensagem || 'Não foi possível exibir a câmera.' }}</p>
-                    <button hlmBtn variant="outline" size="sm" type="button" (click)="iniciarCamera(cam)">Tentar novamente</button>
+                    <button hlmBtn variant="secondary" size="sm" type="button" (click)="iniciarCamera(cam)">Tentar novamente</button>
                   }
                   @case ('sem-permissao') {
                     <ng-icon name="lucideLock" class="text-3xl" aria-hidden="true" />

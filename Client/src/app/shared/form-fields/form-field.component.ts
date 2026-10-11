@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, booleanAttribute, computed, contentChild, effect, inject, input, signal } from '@angular/core';
-import { AbstractControl, NgControl, ValidationErrors } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, OnDestroy, booleanAttribute, computed, effect, inject, input } from '@angular/core';
+import { ValidationErrors } from '@angular/forms';
 import { NgIcon } from '@ng-icons/core';
+import { BrnField, BrnFieldA11yService } from '@spartan-ng/brain/field';
 import { HlmField, HlmFieldImports } from '@spartan-ng/helm/field';
 
 const MENSAGENS_PADRAO: Record<string, (valor: unknown) => string> = {
@@ -25,13 +26,16 @@ export function mensagemDeErro(errors: ValidationErrors | null, personalizadas: 
   return MENSAGENS_PADRAO[chave]?.(errors[chave]) ?? 'Valor inválido';
 }
 
+let proximoId = 0;
+
 /**
  * Wrapper único de campo (SKILL §17.1): rótulo SEMPRE visível acima, ajuda abaixo, obrigatoriedade
- * em texto e erro específico com ícone. A ligação rótulo ↔ campo ↔ erro (`for`, `aria-describedby`,
- * `aria-invalid`) é do Spartan (brain/field). O erro só aparece depois do blur (touched) ou do envio
- * (o formulário chama `markAllAsTouched()`).
+ * em texto e erro específico com ícone. O próprio campo É o `hlm-field` (host directive): o controle projetado
+ * (input/select) fica sob este elemento na árvore de injeção, e só assim o Spartan liga rótulo ↔ campo
+ * (`for`/`id`) e o campo fica `aria-invalid`. O erro só aparece depois do blur (touched) ou do envio (o
+ * formulário chama `markAllAsTouched()`), e é registrado no `aria-describedby` do controle.
  *
- *   <app-form-field label="E-mail" obrigatorio ajuda="Usado para entrar">
+ *   <app-form-field label="E-mail" required hint="Usado para entrar">
  *     <input hlmInput type="email" formControlName="email" autocomplete="email" />
  *   </app-form-field>
  */
@@ -39,53 +43,59 @@ export function mensagemDeErro(errors: ValidationErrors | null, personalizadas: 
   selector: 'app-form-field',
   imports: [HlmFieldImports, NgIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  // O próprio campo É o `hlm-field` (host directive): o controle projetado (input/select) fica sob este
-  // elemento na árvore de injeção, e só assim o Spartan liga rótulo ↔ campo ↔ erro (for, aria-describedby).
   hostDirectives: [HlmField],
   host: { class: 'min-w-0 gap-1.5' },
   template: `
-      @if (rotulo()) {
-        <label hlmFieldLabel class="text-label-l">
-          {{ rotulo() }}
-          @if (obrigatorio()) {
-            <span class="text-body-s text-muted-foreground font-normal">(obrigatório)</span>
-          }
-        </label>
-      }
-      <ng-content />
-      @if (ajuda()) {
-        <p hlmFieldDescription class="text-body-s">{{ ajuda() }}</p>
-      }
-      <hlm-field-error class="text-body-s flex items-start gap-1">
+    @if (rotulo()) {
+      <label hlmFieldLabel class="text-label-l">
+        {{ rotulo() }}
+        @if (obrigatorio()) {
+          <span class="text-body-s text-muted-foreground font-normal">(obrigatório)</span>
+        }
+      </label>
+    }
+    <ng-content />
+    @if (ajuda()) {
+      <p hlmFieldDescription class="text-body-s" [id]="idAjuda">{{ ajuda() }}</p>
+    }
+    @if (erroVisivel()) {
+      <p [id]="idErro" role="alert" class="text-body-s text-destructive flex items-start gap-1">
         <ng-icon name="lucideCircleAlert" class="mt-0.5 shrink-0" aria-hidden="true" />
         <span>{{ mensagem() }}</span>
-      </hlm-field-error>
+      </p>
+    }
   `
 })
-export class FormFieldComponent {
+export class FormFieldComponent implements OnDestroy {
   readonly rotulo = input('', { alias: 'label' });
   readonly ajuda = input('', { alias: 'hint' });
   readonly obrigatorio = input(false, { alias: 'required', transform: booleanAttribute });
   /** Mensagens por chave de erro para este campo (sobrepõem as padrão). */
   readonly mensagens = input<Record<string, string>>({});
-  /** Controle de fora do campo (ex.: erro no grupo, como "senhas diferentes"). Por padrão usa o do campo projetado. */
-  readonly controle = input<AbstractControl | null>(null, { alias: 'control' });
 
-  private readonly ngControl = contentChild(NgControl);
-  private readonly erros = signal<ValidationErrors | null>(null);
+  private readonly campo = inject(BrnField);
+  private readonly a11y = inject(BrnFieldA11yService);
 
-  protected readonly mensagem = computed(() => mensagemDeErro(this.erros(), this.mensagens()));
+  private readonly numero = proximoId++;
+  protected readonly idErro = `app-campo-erro-${this.numero}`;
+  protected readonly idAjuda = `app-campo-ajuda-${this.numero}`;
+
+  protected readonly mensagem = computed(() => mensagemDeErro(this.campo.errors(), this.mensagens()));
+  protected readonly erroVisivel = computed(() => !!this.campo.controlState()?.spartanInvalid && !!this.mensagem());
 
   constructor() {
-    const destroyRef = inject(DestroyRef);
-    effect(onCleanup => {
-      const controle = this.controle() ?? this.ngControl()?.control ?? null;
-      if (!controle) return;
-      const atualizar = () => this.erros.set(controle.errors);
-      atualizar();
-      const sub = controle.events.subscribe(atualizar);
-      onCleanup(() => sub.unsubscribe());
+    effect(() => {
+      if (this.erroVisivel()) this.a11y.registerError(this.idErro);
+      else this.a11y.unregisterError(this.idErro);
     });
-    destroyRef.onDestroy(() => this.erros.set(null));
+    effect(() => {
+      if (this.ajuda()) this.a11y.registerDescription(this.idAjuda);
+      else this.a11y.unregisterDescription(this.idAjuda);
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.a11y.unregisterError(this.idErro);
+    this.a11y.unregisterDescription(this.idAjuda);
   }
 }
