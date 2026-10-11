@@ -7,6 +7,7 @@ import { crudForm } from '../../shared/form-fields/crud-form';
 import { FormActionsComponent } from '../../shared/form-fields/form-actions.component';
 import { FormErrorsComponent } from '../../shared/form-fields/form-errors.component';
 import { FormFieldComponent } from '../../shared/form-fields/form-field.component';
+import { InputPrefixoComponent } from '../../shared/form-fields/input-prefixo.component';
 import { FormSectionComponent } from '../../shared/form-fields/form-section.component';
 import { FormSkeletonComponent } from '../../shared/form-fields/form-skeleton.component';
 import { PageHeaderComponent } from '../../shared/layout/page-header.component';
@@ -18,7 +19,7 @@ import { TaxasServicosService } from './taxas-servicos.service';
   selector: 'app-taxa-servico-form',
   imports: [
     ReactiveFormsModule, HlmInputImports, HlmNativeSelectImports, PageComponent, PageHeaderComponent, FormSectionComponent,
-    FormFieldComponent, FormActionsComponent, FormErrorsComponent, FormSkeletonComponent
+    FormFieldComponent, InputPrefixoComponent, FormActionsComponent, FormErrorsComponent, FormSkeletonComponent
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './taxa-servico-form.component.html'

@@ -28,16 +28,14 @@
 
       <app-form-section titulo="Preços" descricao="O valor do aluguel é calculado no servidor com estes preços.">
         <app-form-field class="col-span-12 sm:col-span-4" label="Preço da diária" required [mensagens]="mensagensPreco">
-          <div class="relative">
-            <span class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2" aria-hidden="true">R$</span>
-            <input hlmInput type="number" formControlName="precoDiaria" step="0.01" min="0" inputmode="decimal" class="pl-10" />
-          </div>
+          <app-input-prefixo>
+            <input hlmInput type="number" formControlName="precoDiaria" step="0.01" min="0" inputmode="decimal" />
+          </app-input-prefixo>
         </app-form-field>
         <app-form-field class="col-span-12 sm:col-span-4" label="Preço por km" [mensagens]="mensagensPreco" hint="Cobrado acima do limite de km livre.">
-          <div class="relative">
-            <span class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2" aria-hidden="true">R$</span>
-            <input hlmInput type="number" formControlName="precoPorKm" step="0.01" min="0" inputmode="decimal" class="pl-10" />
-          </div>
+          <app-input-prefixo>
+            <input hlmInput type="number" formControlName="precoPorKm" step="0.01" min="0" inputmode="decimal" />
+          </app-input-prefixo>
         </app-form-field>
         <app-form-field class="col-span-12 sm:col-span-4" label="Km livre (limite)" [mensagens]="mensagensPreco" hint="Quilômetros sem cobrança extra.">
           <input hlmInput type="number" formControlName="kmLivreLimite" step="1" min="0" inputmode="numeric" />
