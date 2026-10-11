@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { DevolucaoDto, DevolucaoCompletoDto, SelecionarDevolucoesDto } from './devolucao.model';
 import { API_BASE_URL } from '../../core/api.config';
+import { extrairDados } from '../../core/api-response';
 
 @Injectable({ providedIn: 'root' })
 export class DevolucoesService {
@@ -10,30 +11,24 @@ export class DevolucoesService {
 
   constructor(private http: HttpClient) {}
 
-  private extractData<T>(raw: any): T {
-    if (!raw) return raw;
-    if (raw.dados) return raw.dados as T;
-    if (raw.registros) return raw.registros as T;
-    return raw as T;
-  }
 
   listar(): Observable<SelecionarDevolucoesDto[]> {
-    return this.http.get<any>(this.base).pipe(map(raw => this.extractData<SelecionarDevolucoesDto[]>(raw)));
+    return this.http.get<unknown>(this.base).pipe(map(raw => extrairDados<SelecionarDevolucoesDto[]>(raw)));
   }
 
   obter(id: string): Observable<DevolucaoCompletoDto> {
-    return this.http.get<any>(`${this.base}/${id}`).pipe(map(raw => this.extractData<DevolucaoCompletoDto>(raw)));
+    return this.http.get<unknown>(`${this.base}/${id}`).pipe(map(raw => extrairDados<DevolucaoCompletoDto>(raw)));
   }
 
   obterPorAluguelId(aluguelId: string): Observable<DevolucaoCompletoDto> {
-    return this.http.get<any>(`${this.base}/aluguel/${aluguelId}`).pipe(map(raw => this.extractData<DevolucaoCompletoDto>(raw)));
+    return this.http.get<unknown>(`${this.base}/aluguel/${aluguelId}`).pipe(map(raw => extrairDados<DevolucaoCompletoDto>(raw)));
   }
 
   registrar(payload: DevolucaoDto): Observable<DevolucaoDto> {
-    return this.http.post<any>(this.base, payload).pipe(map(raw => this.extractData<DevolucaoDto>(raw)));
+    return this.http.post<unknown>(this.base, payload).pipe(map(raw => extrairDados<DevolucaoDto>(raw)));
   }
 
   excluir(id: string): Observable<void> {
-    return this.http.delete<any>(`${this.base}/${id}`).pipe(map(raw => this.extractData<void>(raw)));
+    return this.http.delete<unknown>(`${this.base}/${id}`).pipe(map(raw => extrairDados<void>(raw)));
   }
 }

@@ -177,8 +177,8 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
     });
   }
 
-  onTaxaChange(event: any, taxa: TaxaServicoDto) {
-    if (event.target.checked) {
+  onTaxaChange(event: Event, taxa: TaxaServicoDto) {
+    if ((event.target as HTMLInputElement).checked) {
       this.taxasSelecionadas.push(taxa.id!);
     } else {
       const index = this.taxasSelecionadas.indexOf(taxa.id!);
@@ -351,14 +351,14 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
   carregar(id: string) {
     this.loading = true;
     this.svc.obter(id).subscribe({
-      next: (a: any) => {
+      next: (a: AluguelCompletoDto) => {
         // <input type="date"> só aceita yyyy-MM-dd: com o ISO que a API devolve ele aparecia em branco.
         this.form.patchValue({
           ...a,
           dataSaida: String(a.dataSaida ?? '').slice(0, 10),
           dataRetornoPrevisto: String(a.dataRetornoPrevisto ?? '').slice(0, 10)
         });
-        this.taxasSelecionadas = a.taxasServicos?.map((t: any) => t.id) || [];
+        this.taxasSelecionadas = a.taxasServicos?.map(t => t.id) || [];
         this.form.patchValue({ taxasServicosIds: this.taxasSelecionadas }, { emitEvent: false });
         this.descontoCupom = a.valorDesconto || 0;
         this.cupomDoAluguel = a.cupomCodigo ? String(a.cupomCodigo).toUpperCase() : null;

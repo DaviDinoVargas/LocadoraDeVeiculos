@@ -8,6 +8,7 @@ import { CuponsService } from './cupons.service';
 import { CupomDto, TIPOS_DESCONTO } from './cupom.model';
 import { ParceirosService } from '../parceiros/parceiros.service';
 import { ParceiroDto } from '../parceiros/parceiro.model';
+import { mensagensDeErro } from '../../core/api-error';
 
 @Component({
   selector: 'app-cupom-form',
@@ -100,9 +101,9 @@ export class CupomFormComponent implements OnInit, OnDestroy {
       this.router.navigate(['/cupons']);
     };
 
-    const errorHandler = (err: any) => {
+    const errorHandler = (err: unknown) => {
       this.loading = false;
-      this.serverErrors = [err?.message ?? 'Erro desconhecido'];
+      this.serverErrors = mensagensDeErro(err);
       this.snack.open(this.serverErrors[0], 'Fechar', { duration: 4000 });
     };
 

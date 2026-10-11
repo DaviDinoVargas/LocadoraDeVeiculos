@@ -4,6 +4,7 @@ import { Observable, map } from 'rxjs';
 import { CupomDto, ValidacaoCupomDto } from './cupom.model';
 import { API_BASE_URL } from '../../core/api.config';
 import { SILENCIAR_ERRO } from '../../core/http-context';
+import { extrairDados } from '../../core/api-response';
 
 @Injectable({ providedIn: 'root' })
 export class CuponsService {
@@ -11,26 +12,21 @@ export class CuponsService {
 
   constructor(private http: HttpClient) {}
 
-  private extractData<T>(raw: any): T {
-    if (!raw) return raw;
-    if (raw.registros) return raw.registros as T;
-    return raw as T;
-  }
 
   listar(): Observable<CupomDto[]> {
-    return this.http.get<any>(this.base).pipe(map(raw => this.extractData<CupomDto[]>(raw)));
+    return this.http.get<unknown>(this.base).pipe(map(raw => extrairDados<CupomDto[]>(raw)));
   }
 
   obter(id: string): Observable<CupomDto> {
-    return this.http.get<any>(`${this.base}/${id}`).pipe(map(raw => this.extractData<CupomDto>(raw)));
+    return this.http.get<unknown>(`${this.base}/${id}`).pipe(map(raw => extrairDados<CupomDto>(raw)));
   }
 
   criar(payload: CupomDto): Observable<CupomDto> {
-    return this.http.post<any>(this.base, payload).pipe(map(raw => this.extractData<CupomDto>(raw)));
+    return this.http.post<unknown>(this.base, payload).pipe(map(raw => extrairDados<CupomDto>(raw)));
   }
 
   atualizar(id: string, payload: CupomDto): Observable<CupomDto> {
-    return this.http.put<any>(`${this.base}/${id}`, payload).pipe(map(raw => this.extractData<CupomDto>(raw)));
+    return this.http.put<unknown>(`${this.base}/${id}`, payload).pipe(map(raw => extrairDados<CupomDto>(raw)));
   }
 
   // Usada enquanto o usuário digita o código no formulário de aluguel: o resultado (válido ou não)
@@ -42,6 +38,6 @@ export class CuponsService {
   }
 
   excluir(id: string): Observable<void> {
-    return this.http.delete<any>(`${this.base}/${id}`).pipe(map(raw => this.extractData<void>(raw)));
+    return this.http.delete<unknown>(`${this.base}/${id}`).pipe(map(raw => extrairDados<void>(raw)));
   }
 }

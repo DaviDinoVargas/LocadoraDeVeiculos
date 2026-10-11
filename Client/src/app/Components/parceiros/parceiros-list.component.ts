@@ -1,10 +1,12 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
 import { ParceirosService } from './parceiros.service';
 import { ParceiroDto, categoriaLabel } from './parceiro.model';
+import { ConfirmacaoService } from '../../core/confirmacao.service';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-parceiros-list',
@@ -14,6 +16,8 @@ import { ParceiroDto, categoriaLabel } from './parceiro.model';
   styleUrls: ['../scss/global.scss']
 })
 export class ParceirosListComponent implements OnInit {
+  private readonly confirmacao = inject(ConfirmacaoService);
+
   parceiros: ParceiroDto[] = [];
   loading = false;
   categoriaLabel = categoriaLabel;
@@ -52,17 +56,21 @@ export class ParceirosListComponent implements OnInit {
   }
 
   excluir(id?: string) {
-    if (!id || !confirm('Deseja realmente excluir este parceiro?')) return;
+    if (!id) return;
 
-    this.svc.excluir(id).subscribe({
-      next: () => {
-        this.snack.open('Parceiro excluído', 'Fechar', { duration: 3000 });
-        this.carregar();
-      },
-      error: (err) => {
-        console.error('Erro ao excluir parceiro:', err);
-        this.snack.open('Falha ao excluir parceiro', 'Fechar', { duration: 4000 });
-      }
-    });
+    this.confirmacao.confirmar({ titulo: 'Confirmar exclusão', mensagem: 'Deseja realmente excluir este parceiro?', confirmar: 'Excluir', destrutivo: true })
+      .pipe(filter(Boolean))
+      .subscribe(() => {
+        this.svc.excluir(id).subscribe({
+          next: () => {
+            this.snack.open('Parceiro excluído', 'Fechar', { duration: 3000 });
+            this.carregar();
+          },
+          error: (err) => {
+            console.error('Erro ao excluir parceiro:', err);
+            this.snack.open('Falha ao excluir parceiro', 'Fechar', { duration: 4000 });
+          }
+        });
+      });
   }
 }

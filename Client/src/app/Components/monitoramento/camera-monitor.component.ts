@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { CameraService, DeteccaoPlaca } from './camera.service';
 import { AlugueisService } from '../alugueis/alugueis.service';
@@ -7,6 +7,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription, interval, of } from 'rxjs';
 import { debounceTime, distinctUntilChanged, catchError } from 'rxjs/operators';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
   selector: 'app-camera-monitor',
@@ -16,6 +17,8 @@ import { debounceTime, distinctUntilChanged, catchError } from 'rxjs/operators';
   styleUrls: ['./camera-monitor.component.scss']
 })
 export class CameraMonitorComponent implements OnInit, OnDestroy {
+  private readonly snack = inject(MatSnackBar);
+
   // Câmeras: DEVE SER UM ARRAY de números
   cameras: number[] = [];
 
@@ -74,28 +77,10 @@ export class CameraMonitorComponent implements OnInit, OnDestroy {
   carregarCameras() {
     this.loading = true;
     this.cameraService.listarCameras().subscribe({
-      next: (response: any) => {
-        console.log('Resposta da API:', response);
-
-        // CRÍTICO: Converter resposta para array de números
-        let camerasArray: number[] = [];
-
-        if (response && response.cameras && Array.isArray(response.cameras)) {
-          // Caso 1: Resposta é objeto com propriedade 'cameras'
-          camerasArray = response.cameras.map((cam: any) => Number(cam));
-        } else if (Array.isArray(response)) {
-          // Caso 2: Resposta já é array diretamente
-          camerasArray = response.map((cam: any) => Number(cam));
-        } else if (typeof response === 'object') {
-          // Caso 3: É objeto, extrair valores numéricos
-          camerasArray = Object.values(response)
-            .filter(val => !isNaN(Number(val)))
-            .map(val => Number(val));
-        } else {
-          // Caso 4: Fallback para desenvolvimento
-          console.warn('Formato de resposta não reconhecido, usando fallback');
-          camerasArray = [0, 1, 2, 3];
-        }
+      next: (response) => {
+        // O serviço de ML responde { cameras: number[], count: number } (era tipado como number[] e
+        // o componente aceitava até 4 formatos, 3 deles inexistentes).
+        const camerasArray = (response?.cameras ?? []).map(Number);
 
         this.cameras = camerasArray;
 
@@ -108,8 +93,6 @@ export class CameraMonitorComponent implements OnInit, OnDestroy {
           }
         });
 
-        console.log('Câmeras processadas:', this.cameras);
-        console.log('Estados das câmeras:', Array.from(this.camerasAtivas.entries()));
 
         this.loading = false;
       },
@@ -130,7 +113,6 @@ export class CameraMonitorComponent implements OnInit, OnDestroy {
   }
 
   iniciarCamera(cameraIndex: number) {
-    console.log(`Iniciando câmera ${cameraIndex}...`);
 
     // Atualizar estado
     this.loadingCameras.set(cameraIndex, true);
@@ -138,7 +120,6 @@ export class CameraMonitorComponent implements OnInit, OnDestroy {
 
     this.cameraService.iniciarCamera(cameraIndex).subscribe({
       next: (response) => {
-        console.log(`Câmera ${cameraIndex} iniciada:`, response);
 
         // Atualizar estado para ativa
         this.camerasAtivas.set(cameraIndex, true);
@@ -167,13 +148,12 @@ export class CameraMonitorComponent implements OnInit, OnDestroy {
         this.camerasStatus.set(cameraIndex, 'stopped');
         this.loadingCameras.set(cameraIndex, false);
 
-        alert(`Erro ao iniciar câmera ${cameraIndex}: ${err.message || 'Verifique a conexão'}`);
+        this.snack.open(`Erro ao iniciar câmera ${cameraIndex}: ${err.message || 'Verifique a conexão'}`, 'Fechar', { duration: 5000 });
       }
     });
   }
 
   pararCamera(cameraIndex: number) {
-    console.log(`Parando câmera ${cameraIndex}...`);
 
     // Atualizar estado
     this.loadingCameras.set(cameraIndex, true);
@@ -181,7 +161,6 @@ export class CameraMonitorComponent implements OnInit, OnDestroy {
 
     this.cameraService.pararCamera(cameraIndex).subscribe({
       next: (response) => {
-        console.log(`Câmera ${cameraIndex} parada:`, response);
 
         // Atualizar estado para inativa
         this.camerasAtivas.set(cameraIndex, false);
@@ -200,17 +179,15 @@ export class CameraMonitorComponent implements OnInit, OnDestroy {
         this.loadingCameras.set(cameraIndex, false);
 
         // Forçar parada local mesmo se o servidor falhar
-        alert(`Câmera ${cameraIndex} parada localmente (erro no servidor: ${err.message})`);
+        this.snack.open(`Câmera ${cameraIndex} parada localmente (erro no servidor: ${err.message})`, 'Fechar', { duration: 5000 });
       }
     });
   }
 
   toggleCamera(cameraIndex: number) {
-    console.log(`Toggle câmera ${cameraIndex}. Estado atual:`, this.camerasAtivas.get(cameraIndex));
 
     // Evitar múltiplos cliques
     if (this.loadingCameras.get(cameraIndex)) {
-      console.log(`Câmera ${cameraIndex} já está processando...`);
       return;
     }
 
@@ -222,7 +199,6 @@ export class CameraMonitorComponent implements OnInit, OnDestroy {
   }
 
   pararTodasCameras() {
-    console.log('Parando todas as câmeras...');
 
     this.cameras.forEach(cam => {
       if (this.camerasAtivas.get(cam) && !this.loadingCameras.get(cam)) {
@@ -283,7 +259,6 @@ export class CameraMonitorComponent implements OnInit, OnDestroy {
 
     // Verificar se a câmera está ativa
     if (!this.camerasAtivas.get(deteccao.camera)) {
-      console.log(`Ignorando detecção da câmera ${deteccao.camera} (inativa)`);
       return;
     }
 
@@ -402,11 +377,11 @@ export class CameraMonitorComponent implements OnInit, OnDestroy {
           if (aluguelParaPlaca && aluguelParaPlaca.id) {
             this.router.navigate(['/alugueis', aluguelParaPlaca.id, 'devolver']);
           } else {
-            alert(`Nenhum aluguel em aberto encontrado para a placa ${placa}`);
+            this.snack.open(`Nenhum aluguel em aberto encontrado para a placa ${placa}`, 'Fechar', { duration: 5000 });
           }
         },
         error: () => {
-          alert('Erro ao buscar informações do aluguel');
+          this.snack.open('Erro ao buscar informações do aluguel', 'Fechar', { duration: 5000 });
         }
       });
     }
@@ -425,14 +400,4 @@ export class CameraMonitorComponent implements OnInit, OnDestroy {
     return this.placasComAluguel.get(placa);
   }
 
-  // ========== MÉTODOS DE DEBUG ==========
-
-  debugCameras() {
-    console.log('=== DEBUG CÂMERAS ===');
-    console.log('Câmeras:', this.cameras);
-    console.log('Estados:', Array.from(this.camerasAtivas.entries()));
-    console.log('Status:', Array.from(this.camerasStatus.entries()));
-    console.log('Loading:', Array.from(this.loadingCameras.entries()));
-    console.log('=====================');
-  }
 }

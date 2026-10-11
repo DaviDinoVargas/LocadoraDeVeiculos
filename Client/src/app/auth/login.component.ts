@@ -58,13 +58,11 @@ export class LoginComponent implements OnInit, OnDestroy {
 
     // Pega a URL de retorno dos query params
     this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/home';
-    console.log('LoginComponent inicializado, returnUrl:', this.returnUrl);
   }
 
   ngOnInit(): void {
     // Verifica se já está logado
     if (this.auth.isLoggedIn()) {
-      console.log('Já está logado, redirecionando para:', this.returnUrl);
       this.router.navigateByUrl(this.returnUrl);
     }
   }

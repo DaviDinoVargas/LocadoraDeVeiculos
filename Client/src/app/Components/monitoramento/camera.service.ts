@@ -29,18 +29,18 @@ export class CameraService {
   constructor(private http: HttpClient) {}
 
   // Listar câmeras disponíveis
-  listarCameras(): Observable<number[]> {
-    return this.http.get<number[]>(`${this.baseUrl}/cameras`);
+  listarCameras(): Observable<{ cameras: number[]; count: number }> {
+    return this.http.get<{ cameras: number[]; count: number }>(`${this.baseUrl}/cameras`);
   }
 
   // Iniciar câmera
-  iniciarCamera(cameraIndex: number, fps: number = 10): Observable<any> {
-    return this.http.post(`${this.baseUrl}/start`, { camera: cameraIndex, fps });
+  iniciarCamera(cameraIndex: number, fps: number = 10): Observable<{ ok: boolean; camera: number; fps: number }> {
+    return this.http.post<{ ok: boolean; camera: number; fps: number }>(`${this.baseUrl}/start`, { camera: cameraIndex, fps });
   }
 
   // Parar câmera
-  pararCamera(cameraIndex: number): Observable<any> {
-    return this.http.post(`${this.baseUrl}/stop/${cameraIndex}`, {});
+  pararCamera(cameraIndex: number): Observable<{ ok: boolean; camera: number }> {
+    return this.http.post<{ ok: boolean; camera: number }>(`${this.baseUrl}/stop/${cameraIndex}`, {});
   }
 
   // Obter últimas detecções

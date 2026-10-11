@@ -1,10 +1,12 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
 import { CuponsService } from './cupons.service';
 import { CupomDto, tipoDescontoLabel } from './cupom.model';
+import { ConfirmacaoService } from '../../core/confirmacao.service';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-cupons-list',
@@ -14,6 +16,8 @@ import { CupomDto, tipoDescontoLabel } from './cupom.model';
   styleUrls: ['../scss/global.scss']
 })
 export class CuponsListComponent implements OnInit {
+  private readonly confirmacao = inject(ConfirmacaoService);
+
   cupons: CupomDto[] = [];
   loading = false;
   tipoDescontoLabel = tipoDescontoLabel;
@@ -64,17 +68,21 @@ export class CuponsListComponent implements OnInit {
   }
 
   excluir(id?: string) {
-    if (!id || !confirm('Deseja realmente excluir este cupom?')) return;
+    if (!id) return;
 
-    this.svc.excluir(id).subscribe({
-      next: () => {
-        this.snack.open('Cupom excluído', 'Fechar', { duration: 3000 });
-        this.carregar();
-      },
-      error: (err) => {
-        console.error('Erro ao excluir cupom:', err);
-        this.snack.open('Falha ao excluir cupom', 'Fechar', { duration: 4000 });
-      }
-    });
+    this.confirmacao.confirmar({ titulo: 'Confirmar exclusão', mensagem: 'Deseja realmente excluir este cupom?', confirmar: 'Excluir', destrutivo: true })
+      .pipe(filter(Boolean))
+      .subscribe(() => {
+        this.svc.excluir(id).subscribe({
+          next: () => {
+            this.snack.open('Cupom excluído', 'Fechar', { duration: 3000 });
+            this.carregar();
+          },
+          error: (err) => {
+            console.error('Erro ao excluir cupom:', err);
+            this.snack.open('Falha ao excluir cupom', 'Fechar', { duration: 4000 });
+          }
+        });
+      });
   }
 }

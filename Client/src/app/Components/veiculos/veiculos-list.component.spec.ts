@@ -6,6 +6,7 @@ import { VeiculosListComponent } from './veiculos-list.component';
 import { VeiculosService } from './veiculos.service';
 import { GruposVeiculoService } from '../grupoveiculos/grupos-veiculo.service';
 import { AuthService } from '../../auth/auth.service';
+import { ConfirmacaoService } from '../../core/confirmacao.service';
 import { VeiculoDto } from './veiculo.model';
 
 describe('VeiculosListComponent', () => {
@@ -32,6 +33,7 @@ describe('VeiculosListComponent', () => {
         { provide: VeiculosService, useValue: veiculos },
         { provide: GruposVeiculoService, useValue: grupos },
         { provide: AuthService, useValue: { getUsuario: () => ({ cargo }) } },
+        { provide: ConfirmacaoService, useValue: { confirmar: () => of(true) } },
         { provide: MatSnackBar, useValue: { open: () => {} } }
       ]
     });
@@ -41,7 +43,7 @@ describe('VeiculosListComponent', () => {
   };
 
   const linhas = () => fixture.nativeElement.querySelectorAll('tbody tr').length;
-  const evento = (valor: string) => ({ target: { value: valor } });
+  const evento = (valor: string) => ({ target: { value: valor } }) as unknown as Event;
 
   it('filtro por grupo consulta o servidor e a tabela mostra só o resultado (antes o filtro não aparecia na tela)', () => {
     montar('Empresa');
@@ -69,7 +71,6 @@ describe('VeiculosListComponent', () => {
   it('excluir mantém o filtro de grupo ativo ao recarregar', () => {
     montar('Empresa');
     veiculos.excluir.and.returnValue(of(undefined));
-    spyOn(window, 'confirm').and.returnValue(true);
     component.filtrarPorGrupo(evento('g1'));
     veiculos.listarPorGrupo.calls.reset();
 

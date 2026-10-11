@@ -6,6 +6,7 @@ import { TaxasServicosService } from './taxas-servicos.service';
 import { TaxaServicoDto } from './taxa-servico.model';
 import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
+import { mensagensDeErro } from '../../core/api-error';
 
 @Component({
   selector: 'app-taxa-servico-form',
@@ -83,9 +84,9 @@ export class TaxaServicoFormComponent implements OnInit, OnDestroy {
       this.router.navigate(['/taxas-servicos']);
     };
 
-    const errorHandler = (err: any) => {
+    const errorHandler = (err: unknown) => {
       this.loading = false;
-      this.serverErrors = [err?.message ?? 'Erro desconhecido'];
+      this.serverErrors = mensagensDeErro(err);
       this.snack.open(this.serverErrors[0], 'Fechar', { duration: 4000 });
     };
 

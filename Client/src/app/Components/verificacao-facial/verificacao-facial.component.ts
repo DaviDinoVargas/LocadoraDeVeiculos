@@ -120,7 +120,7 @@ export class VerificacaoFacialComponent implements OnInit, OnDestroy {
     });
   }
 
-  private mensagemDeErro(err: any, acao: 'cadastrar' | 'verificar'): string {
+  private mensagemDeErro(err: { status?: number } | null, acao: 'cadastrar' | 'verificar'): string {
     if (err?.status === 422) {
       return 'Nenhum rosto detectado na imagem. Aproxime-se da câmera e tente novamente.';
     }

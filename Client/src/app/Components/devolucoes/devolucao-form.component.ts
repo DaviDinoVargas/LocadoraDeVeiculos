@@ -9,6 +9,7 @@ import { DevolucaoDto, NIVEL_COMBUSTIVEL_OPTIONS } from './devolucao.model';
 import { AluguelCompletoDto, SelecionarAlugueisDto, TaxaServicoAluguelDto } from '../alugueis/aluguel.model';
 import { ConfiguracaoDto } from '../configuracoes/configuracao.model';
 import { CommonModule } from '@angular/common';
+import { mensagensDeErro } from '../../core/api-error';
 
 @Component({
   selector: 'app-devolucao-form',
@@ -202,9 +203,9 @@ export class DevolucaoFormComponent implements OnInit {
           this.router.navigate(['/devolucoes']);
         }
       },
-      error: (err: any) => {
+      error: (err: unknown) => {
         this.loading = false;
-        this.serverErrors = [err?.message ?? 'Erro desconhecido'];
+        this.serverErrors = mensagensDeErro(err);
         this.snack.open(this.serverErrors[0], 'Fechar', { duration: 4000 });
       }
     });

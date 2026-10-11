@@ -8,6 +8,7 @@ import { ParceirosService } from './parceiros.service';
 import { ParceiroDto, CATEGORIAS_PARCEIRO } from './parceiro.model';
 import { VALIDADORES_CNPJ } from '../../shared/validators/documentos';
 import { MascaraDirective } from '../../shared/mascaras/mascara.directive';
+import { mensagensDeErro } from '../../core/api-error';
 
 @Component({
   selector: 'app-parceiro-form',
@@ -87,9 +88,9 @@ export class ParceiroFormComponent implements OnInit, OnDestroy {
       this.router.navigate(['/parceiros']);
     };
 
-    const errorHandler = (err: any) => {
+    const errorHandler = (err: unknown) => {
       this.loading = false;
-      this.serverErrors = [err?.message ?? 'Erro desconhecido'];
+      this.serverErrors = mensagensDeErro(err);
       this.snack.open(this.serverErrors[0], 'Fechar', { duration: 4000 });
     };
 

@@ -37,7 +37,7 @@ export class LogoutWidgetComponent implements OnInit, OnDestroy {
     // Atualiza em navegações
     this.sub = this.router.events.pipe(
       filter(e => e instanceof NavigationEnd)
-    ).subscribe((e: any) => {
+    ).subscribe(() => {
       this.updateVisibilityAndUser();
     });
   }

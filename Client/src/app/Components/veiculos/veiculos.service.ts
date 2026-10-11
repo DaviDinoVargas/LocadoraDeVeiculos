@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { VeiculoDto } from './veiculo.model';
 import { API_BASE_URL } from '../../core/api.config';
+import { extrairDados } from '../../core/api-response';
 
 @Injectable({ providedIn: 'root' })
 export class VeiculosService {
@@ -10,31 +11,25 @@ export class VeiculosService {
 
   constructor(private http: HttpClient) {}
 
-  private extractData<T>(raw: any): T {
-    if (!raw) return raw;
-    if (raw.dados) return raw.dados as T;
-    if (raw.registros) return raw.registros as T;
-    return raw as T;
-  }
 
   listar(): Observable<VeiculoDto[]> {
-    return this.http.get<any>(this.base).pipe(map(raw => this.extractData<VeiculoDto[]>(raw)));
+    return this.http.get<unknown>(this.base).pipe(map(raw => extrairDados<VeiculoDto[]>(raw)));
   }
 
   obter(id: string): Observable<VeiculoDto> {
-    return this.http.get<any>(`${this.base}/${id}`).pipe(map(raw => this.extractData<VeiculoDto>(raw)));
+    return this.http.get<unknown>(`${this.base}/${id}`).pipe(map(raw => extrairDados<VeiculoDto>(raw)));
   }
 
   criar(payload: VeiculoDto): Observable<VeiculoDto> {
-    return this.http.post<any>(this.base, payload).pipe(map(raw => this.extractData<VeiculoDto>(raw)));
+    return this.http.post<unknown>(this.base, payload).pipe(map(raw => extrairDados<VeiculoDto>(raw)));
   }
 
   atualizar(id: string, payload: VeiculoDto): Observable<VeiculoDto> {
-    return this.http.put<any>(`${this.base}/${id}`, payload).pipe(map(raw => this.extractData<VeiculoDto>(raw)));
+    return this.http.put<unknown>(`${this.base}/${id}`, payload).pipe(map(raw => extrairDados<VeiculoDto>(raw)));
   }
 
   excluir(id: string): Observable<void> {
-    return this.http.delete<any>(`${this.base}/${id}`).pipe(map(raw => this.extractData<void>(raw)));
+    return this.http.delete<unknown>(`${this.base}/${id}`).pipe(map(raw => extrairDados<void>(raw)));
   }
 
   // Veículos sem aluguel ativo no período (mesma regra do 409 ao salvar). Na edição, aluguelId
@@ -42,10 +37,10 @@ export class VeiculosService {
   listarDisponiveis(dataSaida: string, dataRetornoPrevisto: string, aluguelId?: string): Observable<VeiculoDto[]> {
     let params = new HttpParams().set('dataSaida', dataSaida).set('dataRetornoPrevisto', dataRetornoPrevisto);
     if (aluguelId) params = params.set('aluguelId', aluguelId);
-    return this.http.get<any>(`${this.base}/disponiveis`, { params }).pipe(map(raw => this.extractData<VeiculoDto[]>(raw)));
+    return this.http.get<unknown>(`${this.base}/disponiveis`, { params }).pipe(map(raw => extrairDados<VeiculoDto[]>(raw)));
   }
 
   listarPorGrupo(grupoId: string): Observable<VeiculoDto[]> {
-    return this.http.get<any>(`${this.base}/grupo/${grupoId}`).pipe(map(raw => this.extractData<VeiculoDto[]>(raw)));
+    return this.http.get<unknown>(`${this.base}/grupo/${grupoId}`).pipe(map(raw => extrairDados<VeiculoDto[]>(raw)));
   }
 }

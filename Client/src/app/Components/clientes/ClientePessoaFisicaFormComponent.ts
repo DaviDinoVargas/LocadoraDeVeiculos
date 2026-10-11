@@ -3,11 +3,12 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { Router, ActivatedRoute, ParamMap } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ClientesService } from './clientes.service';
-import { ClientePessoaFisicaDto, ClientePessoaJuridicaDto } from './cliente.model';
+import { ClientePessoaFisicaDto, ClientePessoaJuridicaDto, ClienteDto } from './cliente.model';
 import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { VALIDADORES_CPF } from '../../shared/validators/documentos';
 import { MascaraDirective } from '../../shared/mascaras/mascara.directive';
+import { HttpErrorResponse } from '@angular/common/http';
 
 @Component({
   selector: 'app-cliente-pessoa-fisica-form',
@@ -73,7 +74,7 @@ export class ClientePessoaFisicaFormComponent implements OnInit, OnDestroy {
   carregar(id: string) {
     this.loading = true;
     this.svc.obter(id).subscribe({
-      next: (cliente: any) => {
+      next: (cliente: ClienteDto) => {
         if (cliente.tipoCliente !== 'PessoaFisica') {
           this.snack.open('Cliente não é uma pessoa física', 'Fechar', { duration: 4000 });
           this.router.navigate(['/clientes']);
@@ -111,8 +112,9 @@ export class ClientePessoaFisicaFormComponent implements OnInit, OnDestroy {
   // Método para formatar durante a digitação
 
   // Método para formatar RG durante a digitação
-  formatarRGInput(event: any) {
-    let value = event.target.value.replace(/\D/g, '');
+  formatarRGInput(event: Event) {
+    const campo = event.target as HTMLInputElement;
+    let value = campo.value.replace(/\D/g, '');
 
     if (value.length > 9) {
       value = value.substring(0, 9);
@@ -125,13 +127,14 @@ export class ClientePessoaFisicaFormComponent implements OnInit, OnDestroy {
       value = value.replace(/(\d{3})(\d{1})$/, '$1-$2');
     }
 
-    event.target.value = value;
+    campo.value = value;
     this.form.get('rg')?.setValue(value, { emitEvent: false });
   }
 
   // Método para formatar telefone
-  formatarTelefoneInput(event: any) {
-    let value = event.target.value.replace(/\D/g, '');
+  formatarTelefoneInput(event: Event) {
+    const campo = event.target as HTMLInputElement;
+    let value = campo.value.replace(/\D/g, '');
 
     if (value.length > 11) {
       value = value.substring(0, 11);
@@ -144,7 +147,7 @@ export class ClientePessoaFisicaFormComponent implements OnInit, OnDestroy {
       value = value.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
     }
 
-    event.target.value = value;
+    campo.value = value;
     this.form.get('telefone')?.setValue(value, { emitEvent: false });
   }
 
@@ -173,7 +176,7 @@ export class ClientePessoaFisicaFormComponent implements OnInit, OnDestroy {
     const formValue = this.form.getRawValue();
 
     // Criar payload com dados formatados
-    const payload: any = {
+    const payload: ClientePessoaFisicaDto = {
       nome: formValue.nome,
       cpf: formValue.cpf, // Já está formatado com pontos e traço
       telefone: formValue.telefone
@@ -208,8 +211,6 @@ export class ClientePessoaFisicaFormComponent implements OnInit, OnDestroy {
     }
 
     // Log para debug
-    console.log('Payload sendo enviado:', JSON.stringify(payload, null, 2));
-    console.log('CPF sendo enviado:', payload.cpf);
 
     this.loading = true;
     this.serverErrors = [];
@@ -220,7 +221,7 @@ export class ClientePessoaFisicaFormComponent implements OnInit, OnDestroy {
       this.router.navigate(['/clientes']);
     };
 
-    const errorHandler = (err: any) => {
+    const errorHandler = (err: HttpErrorResponse) => {
       this.loading = false;
 
       console.error('Erro completo:', err);

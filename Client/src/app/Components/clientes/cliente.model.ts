@@ -5,12 +5,12 @@ export interface ClienteDto {
   telefone: string;
   email?: string;
   endereco?: string;
-  tipoCliente: 'PessoaFisica' | 'PessoaJuridica';
+  tipoCliente?: 'PessoaFisica' | 'PessoaJuridica'; // as listas pf/pj (endpoints próprios) não trazem o tipo
   cpf?: string;
   rg?: string;
   cnh?: string;
   validadeCnh?: string;
-  clientePessoaJuridicaId?: string;
+  clientePessoaJuridicaId?: string | null;
   clientePessoaJuridicaNome?: string;
   cnpj?: string;
   nomeFantasia?: string;

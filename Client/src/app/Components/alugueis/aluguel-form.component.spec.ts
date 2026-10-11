@@ -97,7 +97,7 @@ describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
   it('inclui as taxas marcadas no pedido de simulação', fakeAsync(() => {
     component.form.patchValue({ automovelId: 'v2', dataSaida: '2030-01-10', dataRetornoPrevisto: '2030-01-13' });
     tick(400);
-    component.onTaxaChange({ target: { checked: true } }, { id: 't1', nome: 'Seguro', preco: 30, tipoCalculo: 'Diario' } as never);
+    component.onTaxaChange({ target: { checked: true } } as unknown as Event, { id: 't1', nome: 'Seguro', preco: 30, tipoCalculo: 'Diario' } as never);
     tick(400);
 
     expect(alugueis.simular.calls.mostRecent().args[0].taxasServicosIds).toEqual(['t1']);

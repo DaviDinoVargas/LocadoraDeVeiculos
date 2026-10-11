@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { CondutoresService } from './condutores.service';
@@ -7,6 +7,8 @@ import { CondutorDto } from './condutor.model';
 import { ClienteDto } from '../clientes/cliente.model';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
+import { ConfirmacaoService } from '../../core/confirmacao.service';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-condutores-list',
@@ -16,6 +18,8 @@ import { ReactiveFormsModule } from '@angular/forms';
   styleUrls: ['../scss/global.scss']
 })
 export class CondutoresListComponent implements OnInit {
+  private readonly confirmacao = inject(ConfirmacaoService);
+
   condutores: CondutorDto[] = [];
   condutoresFiltrados: CondutorDto[] = [];
   clientes: ClienteDto[] = [];
@@ -56,8 +60,8 @@ export class CondutoresListComponent implements OnInit {
     });
   }
 
-  filtrarPorCliente(event: any) {
-    const clienteId = event.target.value;
+  filtrarPorCliente(event: Event) {
+    const clienteId = (event.target as HTMLSelectElement).value;
     if (!clienteId) {
       this.condutoresFiltrados = [...this.condutores];
     } else {
@@ -85,17 +89,21 @@ export class CondutoresListComponent implements OnInit {
   }
 
   excluir(id?: string) {
-    if (!id || !confirm('Deseja realmente excluir este condutor?')) return;
+    if (!id) return;
 
-    this.svc.excluir(id).subscribe({
-      next: () => {
-        this.snack.open('Condutor excluído', 'Fechar', { duration: 3000 });
-        this.carregar();
-      },
-      error: (err) => {
-        console.error('Erro ao excluir condutor:', err);
-        this.snack.open('Falha ao excluir condutor', 'Fechar', { duration: 4000 });
-      }
-    });
+    this.confirmacao.confirmar({ titulo: 'Confirmar exclusão', mensagem: 'Deseja realmente excluir este condutor?', confirmar: 'Excluir', destrutivo: true })
+      .pipe(filter(Boolean))
+      .subscribe(() => {
+        this.svc.excluir(id).subscribe({
+          next: () => {
+            this.snack.open('Condutor excluído', 'Fechar', { duration: 3000 });
+            this.carregar();
+          },
+          error: (err) => {
+            console.error('Erro ao excluir condutor:', err);
+            this.snack.open('Falha ao excluir condutor', 'Fechar', { duration: 4000 });
+          }
+        });
+      });
   }
 }

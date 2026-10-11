@@ -1,10 +1,12 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { GruposVeiculoService } from './grupos-veiculo.service';
 import { GrupoVeiculoDto } from './grupo-veiculo.model';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
+import { ConfirmacaoService } from '../../core/confirmacao.service';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-grupos-veiculo-list',
@@ -14,6 +16,8 @@ import { ReactiveFormsModule } from '@angular/forms';
   styleUrls: ['../scss/global.scss']
 })
 export class GruposVeiculoListComponent {
+  private readonly confirmacao = inject(ConfirmacaoService);
+
   grupos: GrupoVeiculoDto[] = [];
   loading = false;
 
@@ -49,17 +53,21 @@ export class GruposVeiculoListComponent {
   }
 
   excluir(id?: string) {
-    if (!id || !confirm('Deseja realmente excluir este grupo de veículo?')) return;
+    if (!id) return;
 
-    this.svc.excluir(id).subscribe({
-      next: () => {
-        this.snack.open('Grupo de veículo excluído', 'Fechar', { duration: 3000 });
-        this.carregar();
-      },
-      error: (err) => {
-        console.error('Erro ao excluir grupo de veículo:', err);
-        this.snack.open('Falha ao excluir grupo de veículo', 'Fechar', { duration: 4000 });
-      }
-    });
+    this.confirmacao.confirmar({ titulo: 'Confirmar exclusão', mensagem: 'Deseja realmente excluir este grupo de veículo?', confirmar: 'Excluir', destrutivo: true })
+      .pipe(filter(Boolean))
+      .subscribe(() => {
+        this.svc.excluir(id).subscribe({
+          next: () => {
+            this.snack.open('Grupo de veículo excluído', 'Fechar', { duration: 3000 });
+            this.carregar();
+          },
+          error: (err) => {
+            console.error('Erro ao excluir grupo de veículo:', err);
+            this.snack.open('Falha ao excluir grupo de veículo', 'Fechar', { duration: 4000 });
+          }
+        });
+      });
   }
 }

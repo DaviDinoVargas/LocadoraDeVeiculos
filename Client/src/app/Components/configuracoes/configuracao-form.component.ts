@@ -6,6 +6,7 @@ import { ConfiguracoesService } from './configuracoes.service';
 import { ConfiguracaoDto } from './configuracao.model';
 import { CommonModule } from '@angular/common';
 import { Observable, concat, last, of } from 'rxjs';
+import { mensagensDeErro } from '../../core/api-error';
 
 @Component({
   selector: 'app-configuracao-form',
@@ -84,9 +85,9 @@ export class ConfiguracaoFormComponent implements OnInit {
         this.mensagemSucesso = 'Configurações atualizadas com sucesso!';
         this.snack.open('Configurações atualizadas', 'Fechar', { duration: 3000 });
       },
-      error: (err: any) => {
+      error: (err: unknown) => {
         this.loading = false;
-        this.serverErrors = [err?.message ?? 'Erro desconhecido'];
+        this.serverErrors = mensagensDeErro(err);
         this.snack.open(this.serverErrors[0], 'Fechar', { duration: 4000 });
       }
     });

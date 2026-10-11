@@ -3,11 +3,12 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { Router, ActivatedRoute, ParamMap } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ClientesService } from './clientes.service';
-import { ClientePessoaJuridicaDto } from './cliente.model';
+import { ClientePessoaJuridicaDto, ClienteDto } from './cliente.model';
 import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { VALIDADORES_CNPJ } from '../../shared/validators/documentos';
 import { MascaraDirective } from '../../shared/mascaras/mascara.directive';
+import { HttpErrorResponse } from '@angular/common/http';
 
 @Component({
   selector: 'app-cliente-pessoa-juridica-form',
@@ -60,7 +61,7 @@ export class ClientePessoaJuridicaFormComponent implements OnInit, OnDestroy {
   carregar(id: string) {
     this.loading = true;
     this.svc.obter(id).subscribe({
-      next: (cliente: any) => {
+      next: (cliente: ClienteDto) => {
         if (cliente.tipoCliente !== 'PessoaJuridica') {
           this.snack.open('Cliente não é uma pessoa jurídica', 'Fechar', { duration: 4000 });
           this.router.navigate(['/clientes']);
@@ -93,7 +94,7 @@ export class ClientePessoaJuridicaFormComponent implements OnInit, OnDestroy {
       this.router.navigate(['/clientes']);
     };
 
-    const errorHandler = (err: any) => {
+    const errorHandler = (err: HttpErrorResponse) => {
       this.loading = false;
       this.serverErrors = [err?.message ?? 'Erro desconhecido'];
       this.snack.open(this.serverErrors[0], 'Fechar', { duration: 4000 });

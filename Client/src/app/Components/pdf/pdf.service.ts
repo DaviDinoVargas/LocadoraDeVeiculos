@@ -87,7 +87,7 @@ export class PdfService {
     });
 
     // Rodapé
-    const finalY = (doc as any).lastAutoTable.finalY + 20;
+    const finalY = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 20;
     doc.text('----------------------------------------------------', 105, finalY, { align: 'center' });
     doc.text('Assinatura do Funcionário', 105, finalY + 10, { align: 'center' });
     doc.text('_________________________', 105, finalY + 25, { align: 'center' });

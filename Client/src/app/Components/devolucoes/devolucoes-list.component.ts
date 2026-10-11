@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { DevolucoesService } from './devolucoes.service';
@@ -6,6 +6,8 @@ import { SelecionarDevolucoesDto } from './devolucao.model';
 import { PdfService } from '../pdf/pdf.service';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
+import { ConfirmacaoService } from '../../core/confirmacao.service';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-devolucoes-list',
@@ -15,6 +17,8 @@ import { ReactiveFormsModule } from '@angular/forms';
   styleUrls: ['../scss/global.scss']
 })
 export class DevolucoesListComponent implements OnInit {
+  private readonly confirmacao = inject(ConfirmacaoService);
+
   devolucoes: SelecionarDevolucoesDto[] = [];
   loading = false;
 
@@ -67,17 +71,21 @@ export class DevolucoesListComponent implements OnInit {
   }
 
   excluir(id?: string) {
-    if (!id || !confirm('Deseja realmente excluir esta devolução?')) return;
+    if (!id) return;
 
-    this.svc.excluir(id).subscribe({
-      next: () => {
-        this.snack.open('Devolução excluída com sucesso', 'Fechar', { duration: 3000 });
-        this.carregar();
-      },
-      error: (err) => {
-        console.error('Erro ao excluir devolução:', err);
-        this.snack.open('Falha ao excluir devolução', 'Fechar', { duration: 4000 });
-      }
-    });
+    this.confirmacao.confirmar({ titulo: 'Confirmar exclusão', mensagem: 'Deseja realmente excluir esta devolução?', confirmar: 'Excluir', destrutivo: true })
+      .pipe(filter(Boolean))
+      .subscribe(() => {
+        this.svc.excluir(id).subscribe({
+          next: () => {
+            this.snack.open('Devolução excluída com sucesso', 'Fechar', { duration: 3000 });
+            this.carregar();
+          },
+          error: (err) => {
+            console.error('Erro ao excluir devolução:', err);
+            this.snack.open('Falha ao excluir devolução', 'Fechar', { duration: 4000 });
+          }
+        });
+      });
   }
 }

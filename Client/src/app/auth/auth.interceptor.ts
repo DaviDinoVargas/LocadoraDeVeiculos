@@ -49,18 +49,18 @@ export const AuthInterceptor: HttpInterceptorFn = (req, next) => {
 }
 
 function handle401Error(
-  request: HttpRequest<any>,
+  request: HttpRequest<unknown>,
   next: HttpHandlerFn,
   auth: AuthService,
   router: Router
-): Observable<HttpEvent<any>> {
+): Observable<HttpEvent<unknown>> {
 
   if (!isRefreshing) {
     isRefreshing = true;
     refreshTokenSubject.next(null);
 
     return auth.rotacionarToken().pipe(
-      switchMap((token: any) => {
+      switchMap(token => {
         isRefreshing = false;
         refreshTokenSubject.next(token.accessToken);
 

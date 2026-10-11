@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { FuncionarioDto } from './funcionario.model';
 import { API_BASE_URL } from '../../core/api.config';
+import { extrairDados } from '../../core/api-response';
 
 @Injectable({ providedIn: 'root' })
 export class FuncionariosService {
@@ -11,30 +12,24 @@ export class FuncionariosService {
 
   constructor(private http: HttpClient) {}
 
-  private extractData<T>(raw: any): T {
-    if (!raw) return raw;
-    if (raw.dados) return raw.dados as T;
-    if (raw.registros) return raw.registros as T;
-    return raw as T;
-  }
 
   listar(): Observable<FuncionarioDto[]> {
-    return this.http.get<any>(this.base).pipe(map(raw => this.extractData<FuncionarioDto[]>(raw)));
+    return this.http.get<unknown>(this.base).pipe(map(raw => extrairDados<FuncionarioDto[]>(raw)));
   }
 
   obter(id: string): Observable<FuncionarioDto> {
-    return this.http.get<any>(`${this.base}/${id}`).pipe(map(raw => this.extractData<FuncionarioDto>(raw)));
+    return this.http.get<unknown>(`${this.base}/${id}`).pipe(map(raw => extrairDados<FuncionarioDto>(raw)));
   }
 
   criar(payload: FuncionarioDto): Observable<FuncionarioDto> {
-    return this.http.post<any>(this.base, payload).pipe(map(raw => this.extractData<FuncionarioDto>(raw)));
+    return this.http.post<unknown>(this.base, payload).pipe(map(raw => extrairDados<FuncionarioDto>(raw)));
   }
 
   atualizar(id: string, payload: FuncionarioDto): Observable<FuncionarioDto> {
-    return this.http.put<any>(`${this.base}/${id}`, payload).pipe(map(raw => this.extractData<FuncionarioDto>(raw)));
+    return this.http.put<unknown>(`${this.base}/${id}`, payload).pipe(map(raw => extrairDados<FuncionarioDto>(raw)));
   }
 
   excluir(id: string): Observable<void> {
-    return this.http.delete<any>(`${this.base}/${id}`).pipe(map(raw => this.extractData<void>(raw)));
+    return this.http.delete<unknown>(`${this.base}/${id}`).pipe(map(raw => extrairDados<void>(raw)));
   }
 }

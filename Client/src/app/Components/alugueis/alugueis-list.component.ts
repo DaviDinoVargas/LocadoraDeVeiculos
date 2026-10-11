@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AlugueisService } from './alugueis.service';
@@ -7,6 +7,8 @@ import { PdfService } from '../pdf/pdf.service';
 import { SelecionarAlugueisDto } from './aluguel.model';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
+import { ConfirmacaoService } from '../../core/confirmacao.service';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-alugueis-list',
@@ -16,6 +18,8 @@ import { ReactiveFormsModule } from '@angular/forms';
   styleUrls: ['../scss/global.scss']
 })
 export class AlugueisListComponent implements OnInit {
+  private readonly confirmacao = inject(ConfirmacaoService);
+
   alugueisFiltrados: SelecionarAlugueisDto[] = [];
   loading = false;
   filtroStatus: string = 'todos';
@@ -131,47 +135,59 @@ export class AlugueisListComponent implements OnInit {
 }
 
   iniciar(id?: string) {
-    if (!id || !confirm('Deseja realmente iniciar este aluguel?')) return;
+    if (!id) return;
 
-    this.svc.iniciar(id).subscribe({
-      next: () => {
-        this.snack.open('Aluguel iniciado com sucesso', 'Fechar', { duration: 3000 });
-        this.carregar();
-      },
-      error: (err) => {
-        console.error('Erro ao iniciar aluguel:', err);
-        this.snack.open('Falha ao iniciar aluguel', 'Fechar', { duration: 4000 });
-      }
-    });
+    this.confirmacao.confirmar({ titulo: 'Iniciar aluguel', mensagem: 'Deseja realmente iniciar este aluguel?', confirmar: 'Iniciar aluguel' })
+      .pipe(filter(Boolean))
+      .subscribe(() => {
+        this.svc.iniciar(id).subscribe({
+          next: () => {
+            this.snack.open('Aluguel iniciado com sucesso', 'Fechar', { duration: 3000 });
+            this.carregar();
+          },
+          error: (err) => {
+            console.error('Erro ao iniciar aluguel:', err);
+            this.snack.open('Falha ao iniciar aluguel', 'Fechar', { duration: 4000 });
+          }
+        });
+      });
   }
 
   cancelar(id?: string) {
-    if (!id || !confirm('Deseja realmente cancelar este aluguel?')) return;
+    if (!id) return;
 
-    this.svc.cancelar(id).subscribe({
-      next: () => {
-        this.snack.open('Aluguel cancelado com sucesso', 'Fechar', { duration: 3000 });
-        this.carregar();
-      },
-      error: (err) => {
-        console.error('Erro ao cancelar aluguel:', err);
-        this.snack.open('Falha ao cancelar aluguel', 'Fechar', { duration: 4000 });
-      }
-    });
+    this.confirmacao.confirmar({ titulo: 'Cancelar aluguel', mensagem: 'Deseja realmente cancelar este aluguel?', confirmar: 'Cancelar aluguel', cancelar: 'Voltar', destrutivo: true })
+      .pipe(filter(Boolean))
+      .subscribe(() => {
+        this.svc.cancelar(id).subscribe({
+          next: () => {
+            this.snack.open('Aluguel cancelado com sucesso', 'Fechar', { duration: 3000 });
+            this.carregar();
+          },
+          error: (err) => {
+            console.error('Erro ao cancelar aluguel:', err);
+            this.snack.open('Falha ao cancelar aluguel', 'Fechar', { duration: 4000 });
+          }
+        });
+      });
   }
 
   excluir(id?: string) {
-    if (!id || !confirm('Deseja realmente excluir este aluguel?')) return;
+    if (!id) return;
 
-    this.svc.excluir(id).subscribe({
-      next: () => {
-        this.snack.open('Aluguel excluído com sucesso', 'Fechar', { duration: 3000 });
-        this.carregar();
-      },
-      error: (err) => {
-        console.error('Erro ao excluir aluguel:', err);
-        this.snack.open('Falha ao excluir aluguel', 'Fechar', { duration: 4000 });
-      }
-    });
+    this.confirmacao.confirmar({ titulo: 'Confirmar exclusão', mensagem: 'Deseja realmente excluir este aluguel?', confirmar: 'Excluir', destrutivo: true })
+      .pipe(filter(Boolean))
+      .subscribe(() => {
+        this.svc.excluir(id).subscribe({
+          next: () => {
+            this.snack.open('Aluguel excluído com sucesso', 'Fechar', { duration: 3000 });
+            this.carregar();
+          },
+          error: (err) => {
+            console.error('Erro ao excluir aluguel:', err);
+            this.snack.open('Falha ao excluir aluguel', 'Fechar', { duration: 4000 });
+          }
+        });
+      });
   }
 }

@@ -1,10 +1,12 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ClientesService } from './clientes.service';
 import { ClienteDto, ClientePessoaFisicaDto, ClientePessoaJuridicaDto } from './cliente.model';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
+import { ConfirmacaoService } from '../../core/confirmacao.service';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-clientes-list',
@@ -14,7 +16,9 @@ import { ReactiveFormsModule } from '@angular/forms';
   styleUrls: ['../scss/global.scss']
 })
 export class ClientesListComponent implements OnInit {
-  clientes: any[] = [];
+  private readonly confirmacao = inject(ConfirmacaoService);
+
+  clientes: ClienteDto[] = [];
   loading = false;
   modoLista: 'todos' | 'pf' | 'pj' = 'todos';
   titulo: string = 'Clientes';
@@ -92,7 +96,7 @@ export class ClientesListComponent implements OnInit {
 
   // A lista geral (GET /clientes) devolve só `documentoPrincipal`; cpf/cnpj só existem nas listas
   // pf/pj e no detalhe. Antes a coluna "Documento" ficava vazia na aba "Todos".
-  obterDocumentoPrincipal(cliente: any): string {
+  obterDocumentoPrincipal(cliente: Partial<ClienteDto>): string {
     const documento: string = cliente.documentoPrincipal || cliente.cpf || cliente.cnpj || '';
     const digitos = documento.replace(/\D/g, '');
 
@@ -101,7 +105,7 @@ export class ClientesListComponent implements OnInit {
     return documento || '—';
   }
 
-  obterTipoCliente(cliente: any): string {
+  obterTipoCliente(cliente: Partial<ClienteDto>): string {
     if (this.modoLista === 'pf') return 'Pessoa Física';
     if (this.modoLista === 'pj') return 'Pessoa Jurídica';
 
@@ -193,7 +197,7 @@ export class ClientesListComponent implements OnInit {
     this.router.navigate([`/clientes/new/${tipo}`]);
   }
 
-  editar(cliente: any) {
+  editar(cliente: ClienteDto) {
     if (this.modoLista === 'pf' || cliente.tipoCliente === 'PessoaFisica' || cliente.cpf) {
       this.router.navigate([`/clientes/${cliente.id}/edit/pessoa-fisica`]);
     } else if (this.modoLista === 'pj' || cliente.tipoCliente === 'PessoaJuridica' || cliente.cnpj) {
@@ -202,25 +206,29 @@ export class ClientesListComponent implements OnInit {
   }
 
   excluir(id?: string) {
-    if (!id || !confirm('Deseja realmente excluir este cliente?')) return;
+    if (!id) return;
 
-    this.svc.excluir(id).subscribe({
-      next: () => {
-        this.snack.open('Cliente excluído', 'Fechar', { duration: 3000 });
-        // Recarrega a lista apropriada
-        if (this.modoLista === 'pf') {
-          this.carregarPessoasFisicas();
-        } else if (this.modoLista === 'pj') {
-          this.carregarPessoasJuridicas();
-        } else {
-          this.carregarTodos();
-        }
-      },
-      error: (err) => {
-        console.error('Erro ao excluir cliente:', err);
-        this.snack.open('Falha ao excluir cliente', 'Fechar', { duration: 4000 });
-      }
-    });
+    this.confirmacao.confirmar({ titulo: 'Confirmar exclusão', mensagem: 'Deseja realmente excluir este cliente?', confirmar: 'Excluir', destrutivo: true })
+      .pipe(filter(Boolean))
+      .subscribe(() => {
+        this.svc.excluir(id).subscribe({
+          next: () => {
+            this.snack.open('Cliente excluído', 'Fechar', { duration: 3000 });
+            // Recarrega a lista apropriada
+            if (this.modoLista === 'pf') {
+              this.carregarPessoasFisicas();
+            } else if (this.modoLista === 'pj') {
+              this.carregarPessoasJuridicas();
+            } else {
+              this.carregarTodos();
+            }
+          },
+          error: (err) => {
+            console.error('Erro ao excluir cliente:', err);
+            this.snack.open('Falha ao excluir cliente', 'Fechar', { duration: 4000 });
+          }
+        });
+      });
   }
 
   navegarParaPf() {

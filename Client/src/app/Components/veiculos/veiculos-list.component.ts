@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { VeiculosService } from './veiculos.service';
@@ -9,6 +9,8 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
 import { AuthService } from '../../auth/auth.service';
 import { SOMENTE_EMPRESA, cargoPodeAcessar } from '../../core/permissoes';
+import { ConfirmacaoService } from '../../core/confirmacao.service';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-veiculos-list',
@@ -18,6 +20,8 @@ import { SOMENTE_EMPRESA, cargoPodeAcessar } from '../../core/permissoes';
   styleUrls: ['../scss/global.scss']
 })
 export class VeiculosListComponent implements OnInit {
+  private readonly confirmacao = inject(ConfirmacaoService);
+
   veiculos: VeiculoDto[] = [];
   veiculosFiltrados: VeiculoDto[] = [];
   grupos: GrupoVeiculoDto[] = [];
@@ -71,8 +75,8 @@ export class VeiculosListComponent implements OnInit {
 
   // Antes o <select> alterava veiculosFiltrados mas a tabela renderizava `veiculos`: o filtro
   // não fazia nada na tela.
-  filtrarPorGrupo(event: any) {
-    this.grupoFiltroId = event.target.value;
+  filtrarPorGrupo(event: Event) {
+    this.grupoFiltroId = (event.target as HTMLSelectElement).value;
     this.carregar();
   }
 
@@ -96,17 +100,21 @@ export class VeiculosListComponent implements OnInit {
   }
 
   excluir(id?: string) {
-    if (!id || !confirm('Deseja realmente excluir este veículo?')) return;
+    if (!id) return;
 
-    this.svc.excluir(id).subscribe({
-      next: () => {
-        this.snack.open('Veículo excluído', 'Fechar', { duration: 3000 });
-        this.carregar();
-      },
-      error: (err) => {
-        console.error('Erro ao excluir veículo:', err);
-        this.snack.open('Falha ao excluir veículo', 'Fechar', { duration: 4000 });
-      }
-    });
+    this.confirmacao.confirmar({ titulo: 'Confirmar exclusão', mensagem: 'Deseja realmente excluir este veículo?', confirmar: 'Excluir', destrutivo: true })
+      .pipe(filter(Boolean))
+      .subscribe(() => {
+        this.svc.excluir(id).subscribe({
+          next: () => {
+            this.snack.open('Veículo excluído', 'Fechar', { duration: 3000 });
+            this.carregar();
+          },
+          error: (err) => {
+            console.error('Erro ao excluir veículo:', err);
+            this.snack.open('Falha ao excluir veículo', 'Fechar', { duration: 4000 });
+          }
+        });
+      });
   }
 }

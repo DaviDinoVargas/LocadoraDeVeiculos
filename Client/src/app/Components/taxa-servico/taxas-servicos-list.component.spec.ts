@@ -14,7 +14,7 @@ describe('TaxasServicosListComponent — filtro por tipo no servidor', () => {
 
   const seguro = { id: 't1', nome: 'Seguro', preco: 30, tipoCalculo: 'Diario' } as TaxaServicoDto;
   const limpeza = { id: 't2', nome: 'Limpeza', preco: 50, tipoCalculo: 'Fixo' } as TaxaServicoDto;
-  const evento = (valor: string) => ({ target: { value: valor } });
+  const evento = (valor: string) => ({ target: { value: valor } }) as unknown as Event;
 
   beforeEach(() => {
     svc = jasmine.createSpyObj('TaxasServicosService', ['listar', 'listarPorTipo']);

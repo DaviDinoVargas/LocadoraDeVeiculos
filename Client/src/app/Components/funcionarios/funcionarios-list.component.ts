@@ -1,10 +1,12 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { FuncionariosService } from './funcionarios.service';
 import { FuncionarioDto } from './funcionario.model';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
+import { ConfirmacaoService } from '../../core/confirmacao.service';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-funcionarios-list',
@@ -14,6 +16,8 @@ import { ReactiveFormsModule } from '@angular/forms';
   styleUrls: ['../scss/global.scss']
 })
 export class FuncionariosListComponent {
+  private readonly confirmacao = inject(ConfirmacaoService);
+
   funcionarios: FuncionarioDto[] = [];
   loading = false;
 
@@ -71,17 +75,21 @@ export class FuncionariosListComponent {
   }
 
   excluir(id?: string) {
-    if (!id || !confirm('Deseja realmente excluir este funcionário?')) return;
+    if (!id) return;
 
-    this.svc.excluir(id).subscribe({
-      next: () => {
-        this.snack.open('Funcionário excluído', 'Fechar', { duration: 3000 });
-        this.carregar();
-      },
-      error: (err) => {
-        console.error('Erro ao excluir funcionário:', err);
-        this.snack.open('Falha ao excluir funcionário', 'Fechar', { duration: 4000 });
-      }
-    });
+    this.confirmacao.confirmar({ titulo: 'Confirmar exclusão', mensagem: 'Deseja realmente excluir este funcionário?', confirmar: 'Excluir', destrutivo: true })
+      .pipe(filter(Boolean))
+      .subscribe(() => {
+        this.svc.excluir(id).subscribe({
+          next: () => {
+            this.snack.open('Funcionário excluído', 'Fechar', { duration: 3000 });
+            this.carregar();
+          },
+          error: (err) => {
+            console.error('Erro ao excluir funcionário:', err);
+            this.snack.open('Falha ao excluir funcionário', 'Fechar', { duration: 4000 });
+          }
+        });
+      });
   }
 }

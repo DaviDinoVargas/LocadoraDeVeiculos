@@ -8,6 +8,7 @@ import { DesafiosCupomService } from './desafios-cupom.service';
 import { DesafioCupomDto } from './desafio-cupom.model';
 import { CuponsService } from '../cupons/cupons.service';
 import { CupomDto } from '../cupons/cupom.model';
+import { mensagensDeErro } from '../../core/api-error';
 
 @Component({
   selector: 'app-desafio-cupom-form',
@@ -92,9 +93,9 @@ export class DesafioCupomFormComponent implements OnInit, OnDestroy {
       this.router.navigate(['/desafios-cupom']);
     };
 
-    const errorHandler = (err: any) => {
+    const errorHandler = (err: unknown) => {
       this.loading = false;
-      this.serverErrors = [err?.message ?? 'Erro desconhecido'];
+      this.serverErrors = mensagensDeErro(err);
       this.snack.open(this.serverErrors[0], 'Fechar', { duration: 4000 });
     };
 

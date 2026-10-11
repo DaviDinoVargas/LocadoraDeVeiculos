@@ -1,10 +1,12 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { TaxasServicosService } from './taxas-servicos.service';
 import { TaxaServicoDto } from './taxa-servico.model';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
+import { ConfirmacaoService } from '../../core/confirmacao.service';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-taxas-servicos-list',
@@ -14,6 +16,8 @@ import { ReactiveFormsModule } from '@angular/forms';
   styleUrls: ['../scss/global.scss']
 })
 export class TaxasServicosListComponent implements OnInit {
+  private readonly confirmacao = inject(ConfirmacaoService);
+
   taxas: TaxaServicoDto[] = [];
   taxasFiltradas: TaxaServicoDto[] = [];
   loading = false;
@@ -45,8 +49,8 @@ export class TaxasServicosListComponent implements OnInit {
   }
 
   // Filtro no servidor (GET /taxas-servicos/tipo/{tipo}); "todos" reaproveita a lista já carregada.
-  filtrarPorTipo(event: any) {
-    const tipo = event.target.value;
+  filtrarPorTipo(event: Event) {
+    const tipo = (event.target as HTMLSelectElement).value;
     if (!tipo) {
       this.taxasFiltradas = [...this.taxas];
       return;
@@ -82,17 +86,21 @@ export class TaxasServicosListComponent implements OnInit {
   }
 
   excluir(id?: string) {
-    if (!id || !confirm('Deseja realmente excluir esta taxa/serviço?')) return;
+    if (!id) return;
 
-    this.svc.excluir(id).subscribe({
-      next: () => {
-        this.snack.open('Taxa/serviço excluído', 'Fechar', { duration: 3000 });
-        this.carregar();
-      },
-      error: (err) => {
-        console.error('Erro ao excluir taxa/serviço:', err);
-        this.snack.open('Falha ao excluir taxa/serviço', 'Fechar', { duration: 4000 });
-      }
-    });
+    this.confirmacao.confirmar({ titulo: 'Confirmar exclusão', mensagem: 'Deseja realmente excluir esta taxa/serviço?', confirmar: 'Excluir', destrutivo: true })
+      .pipe(filter(Boolean))
+      .subscribe(() => {
+        this.svc.excluir(id).subscribe({
+          next: () => {
+            this.snack.open('Taxa/serviço excluído', 'Fechar', { duration: 3000 });
+            this.carregar();
+          },
+          error: (err) => {
+            console.error('Erro ao excluir taxa/serviço:', err);
+            this.snack.open('Falha ao excluir taxa/serviço', 'Fechar', { duration: 4000 });
+          }
+        });
+      });
   }
 }

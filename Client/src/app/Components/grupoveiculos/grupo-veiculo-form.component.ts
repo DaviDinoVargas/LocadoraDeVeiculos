@@ -6,6 +6,7 @@ import { GruposVeiculoService } from './grupos-veiculo.service';
 import { GrupoVeiculoDto } from './grupo-veiculo.model';
 import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
+import { mensagensDeErro } from '../../core/api-error';
 
 @Component({
   selector: 'app-grupo-veiculo-form',
@@ -82,9 +83,9 @@ export class GrupoVeiculoFormComponent implements OnInit, OnDestroy {
       this.router.navigate(['/grupoveiculos']);
     };
 
-    const errorHandler = (err: any) => {
+    const errorHandler = (err: unknown) => {
       this.loading = false;
-      this.serverErrors = [err?.message ?? 'Erro desconhecido'];
+      this.serverErrors = mensagensDeErro(err);
       this.snack.open(this.serverErrors[0], 'Fechar', { duration: 4000 });
     };
 

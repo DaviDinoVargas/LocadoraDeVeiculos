@@ -1,10 +1,12 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
 import { DesafiosCupomService } from './desafios-cupom.service';
 import { DesafioCupomDto } from './desafio-cupom.model';
+import { ConfirmacaoService } from '../../core/confirmacao.service';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-desafios-cupom-list',
@@ -14,6 +16,8 @@ import { DesafioCupomDto } from './desafio-cupom.model';
   styleUrls: ['../scss/global.scss']
 })
 export class DesafiosCupomListComponent implements OnInit {
+  private readonly confirmacao = inject(ConfirmacaoService);
+
   desafios: DesafioCupomDto[] = [];
   loading = false;
 
@@ -51,17 +55,21 @@ export class DesafiosCupomListComponent implements OnInit {
   }
 
   excluir(id?: string) {
-    if (!id || !confirm('Deseja realmente excluir este desafio?')) return;
+    if (!id) return;
 
-    this.svc.excluir(id).subscribe({
-      next: () => {
-        this.snack.open('Desafio excluído', 'Fechar', { duration: 3000 });
-        this.carregar();
-      },
-      error: (err) => {
-        console.error('Erro ao excluir desafio:', err);
-        this.snack.open('Falha ao excluir desafio', 'Fechar', { duration: 4000 });
-      }
-    });
+    this.confirmacao.confirmar({ titulo: 'Confirmar exclusão', mensagem: 'Deseja realmente excluir este desafio?', confirmar: 'Excluir', destrutivo: true })
+      .pipe(filter(Boolean))
+      .subscribe(() => {
+        this.svc.excluir(id).subscribe({
+          next: () => {
+            this.snack.open('Desafio excluído', 'Fechar', { duration: 3000 });
+            this.carregar();
+          },
+          error: (err) => {
+            console.error('Erro ao excluir desafio:', err);
+            this.snack.open('Falha ao excluir desafio', 'Fechar', { duration: 4000 });
+          }
+        });
+      });
   }
 }

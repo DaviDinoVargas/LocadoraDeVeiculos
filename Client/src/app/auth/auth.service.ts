@@ -4,6 +4,13 @@ import { Observable, of, throwError } from 'rxjs';
 import { map, catchError, finalize, shareReplay } from 'rxjs/operators';
 import { API_BASE_URL } from '../core/api.config';
 
+// Corpo das respostas de /auth/autenticar, /registrar, /entrar-facial e /rotacionar
+export interface RespostaToken {
+  chave: string;
+  expiracao: string;
+  usuarioAutenticado?: Usuario;
+}
+
 export interface AccessToken {
   accessToken: string;
   expires: string; // ISO string
@@ -33,7 +40,7 @@ export class AuthService {
 
   /** LOGIN */
   autenticar(email: string, senha: string): Observable<AccessToken> {
-    return this.http.post<any>(`${this.baseUrl}/autenticar`, { email, senha }, { withCredentials: true })
+    return this.http.post<RespostaToken>(`${this.baseUrl}/autenticar`, { email, senha }, { withCredentials: true })
       .pipe(
         map(response => this.mapTokenResponse(response)),
         catchError(err => throwError(() => err))
@@ -42,7 +49,7 @@ export class AuthService {
 
   /** REGISTRO */
   registrar(nomeCompleto: string, email: string, senha: string, confirmarSenha: string): Observable<AccessToken> {
-    return this.http.post<any>(`${this.baseUrl}/registrar`, { nomeCompleto, email, senha, confirmarSenha }, { withCredentials: true })
+    return this.http.post<RespostaToken>(`${this.baseUrl}/registrar`, { nomeCompleto, email, senha, confirmarSenha }, { withCredentials: true })
       .pipe(
         map(response => this.mapTokenResponse(response)),
         catchError(err => throwError(() => err))
@@ -51,7 +58,7 @@ export class AuthService {
 
   /** LOGIN VIA RECONHECIMENTO FACIAL */
   entrarComRosto(email: string, imagemBase64: string): Observable<AccessToken> {
-    return this.http.post<any>(`${this.baseUrl}/entrar-facial`, { email, imagemBase64 }, { withCredentials: true })
+    return this.http.post<RespostaToken>(`${this.baseUrl}/entrar-facial`, { email, imagemBase64 }, { withCredentials: true })
       .pipe(
         map(response => this.mapTokenResponse(response)),
         catchError(err => throwError(() => err))
@@ -69,7 +76,7 @@ export class AuthService {
   /** ROTACIONAR TOKEN */
   rotacionarToken(): Observable<AccessToken> {
     const token = this.getAccessToken();
-    return this.http.post<any>(`${this.baseUrl}/rotacionar`, {}, {
+    return this.http.post<RespostaToken>(`${this.baseUrl}/rotacionar`, {}, {
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       withCredentials: true
     }).pipe(
@@ -144,7 +151,7 @@ export class AuthService {
   }
 
   /** MAPEAR RESPOSTA DO BACKEND PARA AccessToken */
-  private mapTokenResponse(response: any): AccessToken {
+  private mapTokenResponse(response: RespostaToken): AccessToken {
     if (!response) throw new Error('Resposta inválida do servidor');
 
     const tokenResponse: AccessToken = {

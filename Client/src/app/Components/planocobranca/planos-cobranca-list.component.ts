@@ -1,10 +1,12 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { PlanosCobrancaService } from './planos-cobranca.service';
 import { PlanoCobrancaDto } from './plano-cobranca.model';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
+import { ConfirmacaoService } from '../../core/confirmacao.service';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-planos-cobranca-list',
@@ -14,6 +16,8 @@ import { ReactiveFormsModule } from '@angular/forms';
   styleUrls: ['../scss/global.scss']
 })
 export class PlanosCobrancaListComponent {
+  private readonly confirmacao = inject(ConfirmacaoService);
+
   planos: PlanoCobrancaDto[] = [];
   loading = false;
 
@@ -56,17 +60,21 @@ export class PlanosCobrancaListComponent {
   }
 
   excluir(id?: string) {
-    if (!id || !confirm('Deseja realmente excluir este plano de cobrança?')) return;
+    if (!id) return;
 
-    this.svc.excluir(id).subscribe({
-      next: () => {
-        this.snack.open('Plano de cobrança excluído', 'Fechar', { duration: 3000 });
-        this.carregar();
-      },
-      error: (err) => {
-        console.error('Erro ao excluir plano de cobrança:', err);
-        this.snack.open('Falha ao excluir plano de cobrança', 'Fechar', { duration: 4000 });
-      }
-    });
+    this.confirmacao.confirmar({ titulo: 'Confirmar exclusão', mensagem: 'Deseja realmente excluir este plano de cobrança?', confirmar: 'Excluir', destrutivo: true })
+      .pipe(filter(Boolean))
+      .subscribe(() => {
+        this.svc.excluir(id).subscribe({
+          next: () => {
+            this.snack.open('Plano de cobrança excluído', 'Fechar', { duration: 3000 });
+            this.carregar();
+          },
+          error: (err) => {
+            console.error('Erro ao excluir plano de cobrança:', err);
+            this.snack.open('Falha ao excluir plano de cobrança', 'Fechar', { duration: 4000 });
+          }
+        });
+      });
   }
 }
