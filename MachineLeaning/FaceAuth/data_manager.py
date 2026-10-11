@@ -8,7 +8,8 @@ import os
 import threading
 
 _LOCK = threading.Lock()
-_DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+# FACE_DATA_DIR permite apontar para um volume (Docker) fora do código.
+_DATA_DIR = os.environ.get('FACE_DATA_DIR') or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 _DATA_FILE = os.path.join(_DATA_DIR, 'faces.json')
 
 

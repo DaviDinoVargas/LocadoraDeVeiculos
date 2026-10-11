@@ -1,31 +1,23 @@
 import base64
-import os
 
 import cv2
 import numpy as np
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+
+from shared.auth import exigir_token_interno
 
 from . import data_manager
 from .face_recognition import comparar_faces, extrair_landmarks_de_imagem, normalizar_landmarks
 
-router = APIRouter(prefix="/face", tags=["face"])
-
-# Cadastrar um rosto associa permanentemente uma amostra biométrica a um
-# personId (normalmente "usuario:<email>"). Se qualquer um pudesse chamar
-# /face/enroll direto (o Angular expõe /api/ml/* sem exigir sessão, porque
-# quem valida o JWT de verdade é a Web API .NET, não este serviço), um
-# atacante poderia plantar o próprio rosto no personId de outra pessoa e
-# depois usar POST /api/auth/entrar-facial (.NET) pra logar como ela.
-# Por isso o cadastro só é aceito quando vem acompanhado do segredo
-# compartilhado que só o backend .NET conhece — o Angular nunca chama
-# /face/enroll diretamente, só via POST /api/auth/rosto (autenticado).
-INTERNAL_SHARED_SECRET = os.environ.get('ML_INTERNAL_TOKEN', 'dev-only-shared-secret-troque-em-producao')
-
-
-def _exigir_segredo_interno(x_internal_token: str | None):
-    if x_internal_token != INTERNAL_SHARED_SECRET:
-        raise HTTPException(status_code=401, detail="Token interno inválido ou ausente")
+# Todo o módulo facial é só para o backend .NET (servidor-a-servidor): exige o
+# X-Internal-Token (segredo compartilhado, ver shared/auth.py). O navegador nunca
+# o recebe. Antes só /face/enroll era protegido, e qualquer um que alcançasse o
+# proxy do Angular podia apagar o rosto de outra pessoa (DELETE), listar quem
+# tem rosto cadastrado (GET status) ou usar /verify como oráculo de similaridade.
+# O Angular fala com a Web API (/api/auth/rosto...), que valida o JWT, descobre
+# o personId a partir do usuário logado e só então chama este serviço.
+router = APIRouter(prefix="/face", tags=["face"], dependencies=[Depends(exigir_token_interno)])
 
 # Amostras suficientes para o rosto ser considerado uma correspondência.
 # Uma única amostra combinando já é aceita (modo "ou": basta bater com
@@ -55,15 +47,13 @@ def _decodificar_imagem(image_base64: str):
 
 
 @router.post("/enroll")
-def cadastrar_rosto(request: ImagemFacialRequest, x_internal_token: str | None = Header(default=None)):
+def cadastrar_rosto(request: ImagemFacialRequest):
     """Cadastra uma amostra facial (landmarks do MediaPipe FaceMesh) para
     um personId. Chamar algumas vezes com ângulos levemente diferentes
     melhora a taxa de acerto na verificação.
 
-    Só pode ser chamado pelo backend .NET (ver INTERNAL_SHARED_SECRET
-    acima) — nunca diretamente pelo navegador."""
-    _exigir_segredo_interno(x_internal_token)
-
+    Só pode ser chamado pelo backend .NET (token interno no router) —
+    nunca diretamente pelo navegador."""
     imagem = _decodificar_imagem(request.imageBase64)
     landmarks = extrair_landmarks_de_imagem(imagem)
     if landmarks is None:

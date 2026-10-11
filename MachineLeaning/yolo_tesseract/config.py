@@ -5,6 +5,8 @@ CAMERA_SERVER = os.environ.get('CAMERA_SERVER', None) #camera_server, colocar UR
 YOLO_MODEL = os.environ.get('YOLO_MODEL', 'yolov8n.pt') # path do peso YOLO (COCO pré-treinado; ver plate_localizer.py)
 MIN_CONFIDENCE = float(os.environ.get('MIN_CONF', 0.35))
 OCR_LANG = os.environ.get('OCR_LANG', 'eng')
+# Caminho do tesseract.exe quando ele não está no PATH (ex.: C:\Program Files\Tesseract-OCR\tesseract.exe)
+TESSERACT_CMD = os.environ.get('TESSERACT_CMD') or None
 
 # Threshold de IOU/area para considerar bbox de placa
 MIN_PLATE_AREA = int(os.environ.get('MIN_PLATE_AREA', 500))
