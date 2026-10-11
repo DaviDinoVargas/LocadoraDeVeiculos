@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
+import { API_BASE_URL } from '../core/api.config';
 
 export interface AccessToken {
   accessToken: string;
@@ -18,7 +19,7 @@ export interface Usuario {
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private baseUrl = 'https://localhost:7064/api/auth';
+  private baseUrl = `${API_BASE_URL}/auth`;
 
   // Estado de sessão mantido só em memória (nunca em localStorage/sessionStorage):
   // um XSS que rode no site não consegue mais roubar o token lendo o storage do navegador.

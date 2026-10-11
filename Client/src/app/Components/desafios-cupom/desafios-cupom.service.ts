@@ -2,10 +2,11 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { DesafioCupomDto } from './desafio-cupom.model';
+import { API_BASE_URL } from '../../core/api.config';
 
 @Injectable({ providedIn: 'root' })
 export class DesafiosCupomService {
-  private base = 'https://localhost:7064/api/desafios-cupom';
+  private base = `${API_BASE_URL}/desafios-cupom`;
 
   constructor(private http: HttpClient) {}
 

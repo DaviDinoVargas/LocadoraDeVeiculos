@@ -27,7 +27,7 @@ describe('AuthService', () => {
   it('guarda o token em memória após autenticar com sucesso', () => {
     service.autenticar('usuario@teste.com', 'Senha@123').subscribe();
 
-    const req = httpMock.expectOne('https://localhost:7064/api/auth/autenticar');
+    const req = httpMock.expectOne('/api/auth/autenticar');
     expect(req.request.method).toBe('POST');
     req.flush({
       chave: 'token-fake',
@@ -43,7 +43,7 @@ describe('AuthService', () => {
   it('considera o token expirado quando a data de expiração já passou', () => {
     service.autenticar('usuario@teste.com', 'Senha@123').subscribe();
 
-    const req = httpMock.expectOne('https://localhost:7064/api/auth/autenticar');
+    const req = httpMock.expectOne('/api/auth/autenticar');
     req.flush({
       chave: 'token-fake',
       expiracao: new Date(Date.now() - 60_000).toISOString(), // já expirado
@@ -56,7 +56,7 @@ describe('AuthService', () => {
 
   it('limparStorage apaga a sessão em memória', () => {
     service.autenticar('usuario@teste.com', 'Senha@123').subscribe();
-    httpMock.expectOne('https://localhost:7064/api/auth/autenticar').flush({
+    httpMock.expectOne('/api/auth/autenticar').flush({
       chave: 'token-fake',
       expiracao: new Date(Date.now() + 60_000).toISOString(),
       usuarioAutenticado: { id: '1', nomeCompleto: 'Usuário Teste', email: 'usuario@teste.com', cargo: 'Empresa' }
@@ -71,7 +71,7 @@ describe('AuthService', () => {
   it('entrarComRosto chama o endpoint de login facial e guarda o token igual ao login por senha', () => {
     service.entrarComRosto('usuario@teste.com', 'imagem-base64').subscribe();
 
-    const req = httpMock.expectOne('https://localhost:7064/api/auth/entrar-facial');
+    const req = httpMock.expectOne('/api/auth/entrar-facial');
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({ email: 'usuario@teste.com', imagemBase64: 'imagem-base64' });
     req.flush({

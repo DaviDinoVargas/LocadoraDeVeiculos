@@ -2,11 +2,12 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { FuncionarioDto } from './funcionario.model';
+import { API_BASE_URL } from '../../core/api.config';
 
 @Injectable({ providedIn: 'root' })
 export class FuncionariosService {
   // CORRIGIR: Mude de 7043 para 7064
-  private base = 'https://localhost:7064/api/funcionarios';
+  private base = `${API_BASE_URL}/funcionarios`;
 
   constructor(private http: HttpClient) {}
 

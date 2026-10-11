@@ -2,10 +2,11 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { ParceiroDto } from './parceiro.model';
+import { API_BASE_URL } from '../../core/api.config';
 
 @Injectable({ providedIn: 'root' })
 export class ParceirosService {
-  private base = 'https://localhost:7064/api/parceiros';
+  private base = `${API_BASE_URL}/parceiros`;
 
   constructor(private http: HttpClient) {}
 

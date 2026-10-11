@@ -2,10 +2,11 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { TaxaServicoDto } from './taxa-servico.model';
+import { API_BASE_URL } from '../../core/api.config';
 
 @Injectable({ providedIn: 'root' })
 export class TaxasServicosService {
-  private base = 'https://localhost:7064/api/taxas-servicos';
+  private base = `${API_BASE_URL}/taxas-servicos`;
 
   constructor(private http: HttpClient) {}
 

@@ -20,5 +20,10 @@
     "secure": false,
     "changeOrigin": true,
     "ws": true
+  },
+  "/api/**": {
+    "target": "https://localhost:7064",
+    "secure": false,
+    "changeOrigin": false
   }
 }

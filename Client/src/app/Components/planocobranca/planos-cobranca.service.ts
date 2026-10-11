@@ -2,10 +2,11 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { PlanoCobrancaDto } from './plano-cobranca.model';
+import { API_BASE_URL } from '../../core/api.config';
 
 @Injectable({ providedIn: 'root' })
 export class PlanosCobrancaService {
-  private base = 'https://localhost:7064/api/planos-cobranca';
+  private base = `${API_BASE_URL}/planos-cobranca`;
 
   constructor(private http: HttpClient) {}
 
