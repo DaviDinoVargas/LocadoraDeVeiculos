@@ -34,8 +34,8 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloConfiguracao.Handlers
             {
                 return Result.Ok(new ObterConfiguracaoResult(
                     Guid.Empty,
-                    5.50m, // Valor padrão
-                    1000m  // Valor da garantia conforme requisitos
+                    Configuracao.PrecoCombustivelPadrao,
+                    Configuracao.ValorGarantiaPadrao
                 ));
             }
 

@@ -37,6 +37,9 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
   taxasServicos: TaxaServicoDto[] = [];
   taxasSelecionadas: string[] = [];
   valorDescontoAtual = 0;
+  // Caução do aluguel em edição, vinda do servidor. Em um aluguel novo o servidor copia o valor
+  // vigente em Configuracao.ValorGarantia ao salvar (antes o front fixava 1000).
+  caucao: number | null = null;
 
   private sub: Subscription | null = null;
 
@@ -150,7 +153,7 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
     const valorPrevisto = this.form.get('valorPrevisto')?.value || 0;
     const taxasSelecionadas = this.taxasServicos.filter(t => this.taxasSelecionadas.includes(t.id!));
     const valorTaxas = taxasSelecionadas.reduce((total, taxa) => total + taxa.preco, 0);
-    return valorPrevisto + valorTaxas + 1000; // + caução de R$ 1000
+    return valorPrevisto + valorTaxas + (this.caucao ?? 0);
   }
 
   formatarMoeda(valor: number): string {
@@ -167,6 +170,7 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
         this.form.patchValue(a);
         this.taxasSelecionadas = a.taxasServicos?.map((t: any) => t.id) || [];
         this.valorDescontoAtual = a.valorDesconto || 0;
+        this.caucao = a.valorCaucao ?? null;
         this.loading = false;
       },
       error: () => {
@@ -188,7 +192,6 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
     const payload: AluguelDto = {
       ...raw,
       cupomCodigo: raw.cupomCodigo?.trim() || null,
-      valorCaucao: 1000, // Valor fixo de caução
       status: 'Reservado'
     };
 

@@ -107,7 +107,8 @@
         <span class="input-group-text">R$</span>
         <input type="text" class="form-control" [value]="calcularValorTotal() | currency:'BRL':'symbol':'1.2-2'" readonly>
       </div>
-      <small class="text-muted">Inclui caução de R$ 1.000,00</small>
+      <small class="text-muted" *ngIf="caucao !== null; else caucaoPendente">Inclui caução de {{ caucao | currency:'BRL':'symbol':'1.2-2' }}</small>
+      <ng-template #caucaoPendente><small class="text-muted">A caução vigente da locadora é aplicada ao salvar.</small></ng-template>
     </div>
 
     <!-- Botões -->

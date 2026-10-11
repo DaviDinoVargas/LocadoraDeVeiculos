@@ -11,6 +11,7 @@ using LocadoraDeVeiculos.Core.Dominio.ModuloPlanoCobranca;
 using LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
 using LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloAluguel;
 using LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloAutomovel;
+using LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloConfiguracao;
 using LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloCupom;
 using LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloTaxaServico;
 using LocadoraDeVeiculos.Infraestrutura.Orm.ModuloPlanoCobranca;
@@ -94,7 +95,7 @@ public sealed class CadastrarAluguelComCupomTests
 
         var handler = new CadastrarAluguelCommandHandler(
             contexto, repositorioAluguel, repositorioAutomovel, repositorioPlanoCobranca,
-            repositorioTaxaServico, repositorioCupom, tenantProvider,
+            repositorioTaxaServico, repositorioCupom, new RepositorioConfiguracaoEmOrm(contexto), tenantProvider,
             new CadastrarAluguelCommandValidator(),
             NullLogger<CadastrarAluguelCommandHandler>.Instance);
 
@@ -179,7 +180,7 @@ public sealed class CadastrarAluguelComCupomTests
 
         var handler = new CadastrarAluguelCommandHandler(
             contexto, repositorioAluguel, repositorioAutomovel, repositorioPlanoCobranca,
-            repositorioTaxaServico, repositorioCupom, tenantProvider,
+            repositorioTaxaServico, repositorioCupom, new RepositorioConfiguracaoEmOrm(contexto), tenantProvider,
             new CadastrarAluguelCommandValidator(),
             NullLogger<CadastrarAluguelCommandHandler>.Instance);
 

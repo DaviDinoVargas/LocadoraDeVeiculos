@@ -12,6 +12,16 @@ namespace LocadoraDeVeiculos.WebApi.Models.ModuloConfiguracao
         decimal ValorGarantia
     );
 
+    public record ConfigurarValorGarantiaRequest(
+        decimal ValorGarantia
+    );
+
+    public record ConfigurarValorGarantiaResponse(
+        Guid Id,
+        decimal PrecoCombustivel,
+        decimal ValorGarantia
+    );
+
     public record ObterConfiguracaoResponse(
         Guid Id,
         decimal PrecoCombustivel,

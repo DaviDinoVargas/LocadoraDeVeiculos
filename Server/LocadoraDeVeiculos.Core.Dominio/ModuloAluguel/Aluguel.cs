@@ -2,6 +2,7 @@
 using LocadoraDeVeiculos.Core.Dominio.ModuloAutomovel;
 using LocadoraDeVeiculos.Core.Dominio.ModuloCliente;
 using LocadoraDeVeiculos.Core.Dominio.ModuloCondutor;
+using LocadoraDeVeiculos.Core.Dominio.ModuloConfiguracao;
 using LocadoraDeVeiculos.Core.Dominio.ModuloCupom;
 using LocadoraDeVeiculos.Core.Dominio.ModuloTaxaServico;
 using System;
@@ -27,7 +28,10 @@ namespace LocadoraDeVeiculos.Core.Dominio.ModuloAluguel
 
         // Valores
         public decimal ValorPrevisto { get; set; }
-        public decimal ValorCaucao { get; set; } = 1000m; // Valor fixo conforme requisitos
+        // Caução cobrada neste aluguel: o handler de cadastro copia Configuracao.ValorGarantia
+        // vigente na empresa no momento da contratação (alterar a configuração depois não
+        // muda o valor dos aluguéis já feitos).
+        public decimal ValorCaucao { get; set; } = Configuracao.ValorGarantiaPadrao;
 
         // Status
         public StatusAluguel Status { get; set; } = StatusAluguel.Reservado;

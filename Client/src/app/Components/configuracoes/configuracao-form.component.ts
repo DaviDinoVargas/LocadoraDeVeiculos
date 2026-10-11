@@ -5,6 +5,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { ConfiguracoesService } from './configuracoes.service';
 import { ConfiguracaoDto } from './configuracao.model';
 import { CommonModule } from '@angular/common';
+import { Observable, concat, last, of } from 'rxjs';
 
 @Component({
   selector: 'app-configuracao-form',
@@ -18,6 +19,8 @@ export class ConfiguracaoFormComponent implements OnInit {
   loading = false;
   serverErrors: string[] = [];
   mensagemSucesso: string = '';
+  // Valores carregados do servidor: só chamamos o PUT do que realmente mudou.
+  private original: ConfiguracaoDto | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -26,7 +29,8 @@ export class ConfiguracaoFormComponent implements OnInit {
     private snack: MatSnackBar
   ) {
     this.form = this.fb.group({
-      precoCombustivel: [0, [Validators.required, Validators.min(0)]]
+      precoCombustivel: [0, [Validators.required, Validators.min(0.01)]],
+      valorGarantia: [0, [Validators.required, Validators.min(0), Validators.max(100000)]]
     });
   }
 
@@ -38,6 +42,7 @@ export class ConfiguracaoFormComponent implements OnInit {
     this.loading = true;
     this.svc.obter().subscribe({
       next: config => {
+        this.original = config;
         this.form.patchValue(config);
         this.loading = false;
       },
@@ -56,13 +61,25 @@ export class ConfiguracaoFormComponent implements OnInit {
       return;
     }
 
-    const precoCombustivel = this.form.get('precoCombustivel')?.value;
+    const { precoCombustivel, valorGarantia } = this.form.getRawValue();
     this.loading = true;
     this.serverErrors = [];
     this.mensagemSucesso = '';
 
-    this.svc.atualizarPrecoCombustivel(precoCombustivel).subscribe({
+    // Em sequência (e não em paralelo): os dois PUTs leem e gravam a mesma linha de
+    // configuração, e se ela ainda não existir os dois tentariam criá-la.
+    const chamadas: Observable<unknown>[] = [];
+    if (precoCombustivel !== this.original?.precoCombustivel) {
+      chamadas.push(this.svc.atualizarPrecoCombustivel(precoCombustivel));
+    }
+    if (valorGarantia !== this.original?.valorGarantia) {
+      chamadas.push(this.svc.atualizarValorGarantia(valorGarantia));
+    }
+    const salvar$ = chamadas.length ? concat(...chamadas).pipe(last()) : of(null);
+
+    salvar$.subscribe({
       next: () => {
+        this.original = { ...this.original, precoCombustivel, valorGarantia };
         this.loading = false;
         this.mensagemSucesso = 'Configurações atualizadas com sucesso!';
         this.snack.open('Configurações atualizadas', 'Fechar', { duration: 3000 });

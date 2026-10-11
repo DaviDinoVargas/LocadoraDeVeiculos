@@ -4,8 +4,12 @@ namespace LocadoraDeVeiculos.Core.Dominio.ModuloConfiguracao
 {
     public class Configuracao : EntidadeBase<Configuracao>
     {
+        // Valores usados quando a empresa ainda não gravou uma configuração própria.
+        public const decimal PrecoCombustivelPadrao = 5.50m;
+        public const decimal ValorGarantiaPadrao = 1000m;
+
         public decimal PrecoCombustivel { get; set; }
-        public decimal ValorGarantia { get; set; } = 1000m; 
+        public decimal ValorGarantia { get; set; } = ValorGarantiaPadrao;
 
         protected Configuracao() { }
 

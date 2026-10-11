@@ -6,7 +6,7 @@ export interface AluguelDto {
   dataSaida: string;
   dataRetornoPrevisto: string;
   valorPrevisto: number;
-  valorCaucao: number;
+  valorCaucao?: number; // definido pelo servidor (Configuracao.ValorGarantia)
   status: 'Reservado' | 'EmAndamento' | 'Concluido' | 'Cancelado';
   taxasServicosIds: string[];
   cupomCodigo?: string | null;

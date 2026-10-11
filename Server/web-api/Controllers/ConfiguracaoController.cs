@@ -34,6 +34,26 @@ namespace LocadoraDeVeiculos.WebApi.Controllers
             });
         }
 
+        [HttpPut("valor-garantia")]
+        public async Task<ActionResult<ConfigurarValorGarantiaResponse>> ConfigurarValorGarantia(
+            ConfigurarValorGarantiaRequest request,
+            CancellationToken cancellationToken)
+        {
+            var command = new ConfigurarValorGarantiaCommand(request.ValorGarantia);
+
+            var result = await mediator.Send(command, cancellationToken);
+
+            return ProcessarResultado(result, (valor) =>
+            {
+                var response = new ConfigurarValorGarantiaResponse(
+                    valor.Id,
+                    valor.PrecoCombustivel,
+                    valor.ValorGarantia
+                );
+                return Ok(response);
+            });
+        }
+
         [HttpGet]
         public async Task<ActionResult<ObterConfiguracaoResponse>> ObterConfiguracao(
             CancellationToken cancellationToken)

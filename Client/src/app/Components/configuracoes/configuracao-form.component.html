@@ -25,12 +25,19 @@
       <div class="input-group">
         <span class="input-group-text">R$</span>
         <input type="number"
+               step="0.01"
+               min="0"
+               max="100000"
                class="form-control"
-               [value]="1000"
-               readonly
-               disabled/>
+               formControlName="valorGarantia"/>
       </div>
-      <small class="text-muted">Valor fixo de R$ 1.000,00 para todos os aluguéis</small>
+      <div *ngIf="form.controls['valorGarantia'].invalid && form.controls['valorGarantia'].touched"
+           class="text-danger small">
+        Informe um valor entre R$ 0,00 e R$ 100.000,00.
+      </div>
+      <small class="text-muted">
+        Cobrada nos novos aluguéis. Alterar o valor não muda a caução de aluguéis já contratados.
+      </small>
     </div>
 
     <!-- Botões -->

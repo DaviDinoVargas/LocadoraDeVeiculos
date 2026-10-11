@@ -21,6 +21,11 @@ export class ConfiguracoesService {
     return this.http.get<any>(this.base).pipe(map(raw => this.extractData<ConfiguracaoDto>(raw)));
   }
 
+  atualizarValorGarantia(valor: number): Observable<ConfiguracaoDto> {
+    return this.http.put<any>(`${this.base}/valor-garantia`, { valorGarantia: valor })
+      .pipe(map(raw => this.extractData<ConfiguracaoDto>(raw)));
+  }
+
   atualizarPrecoCombustivel(preco: number): Observable<ConfiguracaoDto> {
     return this.http.put<any>(`${this.base}/preco-combustivel`, { precoCombustivel: preco })
       .pipe(map(raw => this.extractData<ConfiguracaoDto>(raw)));

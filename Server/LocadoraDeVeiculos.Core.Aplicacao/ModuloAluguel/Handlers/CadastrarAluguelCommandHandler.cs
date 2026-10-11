@@ -7,6 +7,7 @@ using LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Servicos;
 using LocadoraDeVeiculos.Core.Dominio.ModuloAluguel;
 using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
 using LocadoraDeVeiculos.Core.Dominio.ModuloAutomovel;
+using LocadoraDeVeiculos.Core.Dominio.ModuloConfiguracao;
 using LocadoraDeVeiculos.Core.Dominio.ModuloCupom;
 using LocadoraDeVeiculos.Core.Dominio.ModuloPlanoCobranca;
 using LocadoraDeVeiculos.Core.Dominio.ModuloTaxaServico;
@@ -30,6 +31,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
         private readonly IRepositorioPlanoCobranca _repositorioPlanoCobranca;
         private readonly IRepositorioTaxaServico _repositorioTaxaServico;
         private readonly IRepositorioCupom _repositorioCupom;
+        private readonly IRepositorioConfiguracao _repositorioConfiguracao;
         private readonly ITenantProvider _tenantProvider;
         private readonly IValidator<CadastrarAluguelCommand> _validator;
         private readonly ILogger<CadastrarAluguelCommandHandler> _logger;
@@ -41,6 +43,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
             IRepositorioPlanoCobranca repositorioPlanoCobranca,
             IRepositorioTaxaServico repositorioTaxaServico,
             IRepositorioCupom repositorioCupom,
+            IRepositorioConfiguracao repositorioConfiguracao,
             ITenantProvider tenantProvider,
             IValidator<CadastrarAluguelCommand> validator,
             ILogger<CadastrarAluguelCommandHandler> logger)
@@ -51,6 +54,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
             _repositorioPlanoCobranca = repositorioPlanoCobranca;
             _repositorioTaxaServico = repositorioTaxaServico;
             _repositorioCupom = repositorioCupom;
+            _repositorioConfiguracao = repositorioConfiguracao;
             _tenantProvider = tenantProvider;
             _validator = validator;
             _logger = logger;
@@ -122,6 +126,11 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
                 {
                     EmpresaId = _tenantProvider.EmpresaId.GetValueOrDefault()
                 };
+
+                // Caução vigente da empresa (Configuracao.ValorGarantia); sem configuração gravada,
+                // vale o padrão. Fica registrada no aluguel e não muda se a configuração mudar depois.
+                var configuracao = await _repositorioConfiguracao.SelecionarPorEmpresaIdAsync(_tenantProvider.EmpresaId.GetValueOrDefault());
+                aluguel.ValorCaucao = configuracao?.ValorGarantia ?? Configuracao.ValorGarantiaPadrao;
 
                 aluguel.TaxasServicos.AddRange(taxasServicos);
 

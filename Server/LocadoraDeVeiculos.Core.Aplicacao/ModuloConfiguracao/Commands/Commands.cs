@@ -14,6 +14,16 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloConfiguracao.Commands
         decimal ValorGarantia
     );
 
+    public record ConfigurarValorGarantiaCommand(
+        decimal ValorGarantia
+    ) : IRequest<Result<ConfigurarValorGarantiaResult>>;
+
+    public record ConfigurarValorGarantiaResult(
+        Guid Id,
+        decimal PrecoCombustivel,
+        decimal ValorGarantia
+    );
+
     public record ObterConfiguracaoQuery() : IRequest<Result<ObterConfiguracaoResult>>;
 
     public record ObterConfiguracaoResult(
