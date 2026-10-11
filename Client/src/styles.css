@@ -1,0 +1,240 @@
+/* Tokens Material 3 mapeados para as variáveis do shadcn/Spartan (SKILL.md §4).
+   Cor da marca: roxo baseline do M3 (#6750A4), decisão do usuário. Toda cor, raio e sombra
+   do app vem daqui — nada de hex solto dentro de componentes. */
+
+@layer theme, base, bootstrap, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+/* Bootstrap ainda alimenta as telas não migradas; fica numa camada abaixo dos utilitários do
+   Tailwind e será removido na limpeza final da migração. */
+@import "bootstrap/dist/css/bootstrap.min.css" layer(bootstrap);
+@import "tailwindcss/utilities.css";
+@import "@spartan-ng/brain/hlm-tailwind-preset.css";
+@import "@fontsource-variable/inter";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* ===== Material 3: papéis de cor (claro) ===== */
+  --md-primary: #6750a4;
+  --md-on-primary: #ffffff;
+  --md-primary-container: #eaddff;
+  --md-on-primary-container: #21005d;
+  --md-secondary: #625b71;
+  --md-on-secondary: #ffffff;
+  --md-secondary-container: #e8def8;
+  --md-on-secondary-container: #1d192b;
+  --md-tertiary: #7d5260;
+  --md-on-tertiary: #ffffff;
+  --md-tertiary-container: #ffd8e4;
+  --md-on-tertiary-container: #31111d;
+  --md-error: #b3261e;
+  --md-on-error: #ffffff;
+  --md-error-container: #f9dedc;
+  --md-on-error-container: #410e0b;
+  --md-surface: #fef7ff;
+  --md-on-surface: #1d1b20;
+  --md-on-surface-variant: #49454f;
+  --md-surface-container-lowest: #ffffff;
+  --md-surface-container-low: #f7f2fa;
+  --md-surface-container: #f3edf7;
+  --md-surface-container-high: #ece6f0;
+  --md-surface-container-highest: #e6e0e9;
+  --md-outline: #79747e;
+  --md-outline-variant: #cac4d0;
+  --md-inverse-surface: #322f35;
+  --md-inverse-on-surface: #f5eff7;
+
+  /* Extras (o M3 não define; úteis em software de negócio) */
+  --success: #1b6d3a;
+  --on-success: #ffffff;
+  --success-container: #b7f2c5;
+  --on-success-container: #00210d;
+  --warning: #8a5100;
+  --on-warning: #ffffff;
+  --warning-container: #ffddb8;
+  --on-warning-container: #2c1600;
+
+  /* ===== Variáveis semânticas shadcn/Spartan → M3 ===== */
+  --background: var(--md-surface);
+  --foreground: var(--md-on-surface);
+  --card: var(--md-surface-container-low);
+  --card-foreground: var(--md-on-surface);
+  --popover: var(--md-surface-container);
+  --popover-foreground: var(--md-on-surface);
+  --primary: var(--md-primary);
+  --primary-foreground: var(--md-on-primary);
+  --secondary: var(--md-secondary-container);
+  --secondary-foreground: var(--md-on-secondary-container);
+  --muted: var(--md-surface-container-highest);
+  --muted-foreground: var(--md-on-surface-variant);
+  --accent: var(--md-secondary-container);
+  --accent-foreground: var(--md-on-secondary-container);
+  --destructive: var(--md-error);
+  --border: var(--md-outline-variant);
+  --input: var(--md-outline);
+  --ring: var(--md-primary);
+
+  /* Gráficos (SKILL §19.3) */
+  --chart-1: var(--md-primary);
+  --chart-2: var(--md-tertiary);
+  --chart-3: var(--success);
+  --chart-4: var(--warning);
+  --chart-5: var(--md-secondary);
+
+  /* Forma: escala M3 (sm=8, md=10, lg=12, xl=16) */
+  --radius: 0.75rem;
+
+  /* Movimento M3 (§10) */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-decelerate: cubic-bezier(0, 0, 0, 1);
+  --ease-accelerate: cubic-bezier(0.3, 0, 1, 1);
+
+  color-scheme: light;
+}
+
+.dark {
+  --md-primary: #d0bcff;
+  --md-on-primary: #381e72;
+  --md-primary-container: #4f378b;
+  --md-on-primary-container: #eaddff;
+  --md-secondary: #ccc2dc;
+  --md-on-secondary: #332d41;
+  --md-secondary-container: #4a4458;
+  --md-on-secondary-container: #e8def8;
+  --md-tertiary: #efb8c8;
+  --md-on-tertiary: #492532;
+  --md-tertiary-container: #633b48;
+  --md-on-tertiary-container: #ffd8e4;
+  --md-error: #f2b8b5;
+  --md-on-error: #601410;
+  --md-error-container: #8c1d18;
+  --md-on-error-container: #f9dedc;
+  --md-surface: #141218;
+  --md-on-surface: #e6e0e9;
+  --md-on-surface-variant: #cac4d0;
+  --md-surface-container-lowest: #0f0d13;
+  --md-surface-container-low: #1d1b20;
+  --md-surface-container: #211f26;
+  --md-surface-container-high: #2b2930;
+  --md-surface-container-highest: #36343b;
+  --md-outline: #938f99;
+  --md-outline-variant: #49454f;
+  --md-inverse-surface: #e6e0e9;
+  --md-inverse-on-surface: #322f35;
+
+  --success: #7dda94;
+  --on-success: #00391a;
+  --success-container: #00522a;
+  --on-success-container: #b7f2c5;
+  --warning: #ffb86b;
+  --on-warning: #4a2800;
+  --warning-container: #6a3c00;
+  --on-warning-container: #ffddb8;
+
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: "Inter Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Camadas de superfície M3 como utilitários: bg-surface-container etc. */
+  --color-surface: var(--md-surface);
+  --color-surface-lowest: var(--md-surface-container-lowest);
+  --color-surface-low: var(--md-surface-container-low);
+  --color-surface-container: var(--md-surface-container);
+  --color-surface-high: var(--md-surface-container-high);
+  --color-surface-highest: var(--md-surface-container-highest);
+  --color-primary-container: var(--md-primary-container);
+  --color-on-primary-container: var(--md-on-primary-container);
+  --color-tertiary: var(--md-tertiary);
+  --color-tertiary-container: var(--md-tertiary-container);
+  --color-error-container: var(--md-error-container);
+  --color-on-error-container: var(--md-on-error-container);
+  --color-outline: var(--md-outline);
+  --color-outline-variant: var(--md-outline-variant);
+  --color-on-surface-variant: var(--md-on-surface-variant);
+  --color-success: var(--success);
+  --color-on-success: var(--on-success);
+  --color-success-container: var(--success-container);
+  --color-on-success-container: var(--on-success-container);
+  --color-warning: var(--warning);
+  --color-on-warning: var(--on-warning);
+  --color-warning-container: var(--warning-container);
+  --color-on-warning-container: var(--on-warning-container);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    height: 100%;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    height: 100%;
+    margin: 0;
+  }
+  /* Foco visível sempre (§7/§11). */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+/* ===== Escala tipográfica M3 (§5): só estas classes nos componentes ===== */
+@utility text-headline-l { font-size: 2rem; line-height: 2.5rem; font-weight: 400; letter-spacing: 0; }
+@utility text-headline-m { font-size: 1.75rem; line-height: 2.25rem; font-weight: 500; letter-spacing: 0; }
+@utility text-headline-s { font-size: 1.5rem; line-height: 2rem; font-weight: 500; letter-spacing: 0; }
+@utility text-title-l { font-size: 1.375rem; line-height: 1.75rem; font-weight: 500; }
+@utility text-title-m { font-size: 1rem; line-height: 1.5rem; font-weight: 500; }
+@utility text-title-s { font-size: 0.875rem; line-height: 1.25rem; font-weight: 500; }
+@utility text-body-l { font-size: 1rem; line-height: 1.5rem; font-weight: 400; }
+@utility text-body-m { font-size: 0.875rem; line-height: 1.25rem; font-weight: 400; }
+@utility text-body-s { font-size: 0.75rem; line-height: 1rem; font-weight: 400; }
+@utility text-label-l { font-size: 0.875rem; line-height: 1.25rem; font-weight: 500; }
+@utility text-label-m { font-size: 0.75rem; line-height: 1rem; font-weight: 500; }
+@utility text-label-s { font-size: 0.6875rem; line-height: 1rem; font-weight: 500; }
+@utility tabular { font-variant-numeric: tabular-nums; }
+
+/* Respeita prefers-reduced-motion (§10): sem animações nem transições longas. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
