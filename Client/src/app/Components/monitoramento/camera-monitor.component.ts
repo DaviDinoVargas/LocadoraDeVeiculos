@@ -5,9 +5,9 @@ import { AlugueisService } from '../alugueis/alugueis.service';
 import { SelecionarAlugueisDto } from '../alugueis/aluguel.model';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Subscription, interval, of } from 'rxjs';
-import { debounceTime, distinctUntilChanged, catchError } from 'rxjs/operators';
+import { Subscription, interval } from 'rxjs';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { mensagensDeErro } from '../../core/api-error';
 
 @Component({
   selector: 'app-camera-monitor',
@@ -39,8 +39,13 @@ export class CameraMonitorComponent implements OnInit, OnDestroy {
   filtroCamera: number | null = null;
   apenasNaoProcessadas: boolean = true;
 
+  // URLs do stream MJPEG por câmera (levam um ticket de uso único, ver CameraService.obterTicketStream)
+  streamUrls: Map<number, string> = new Map();
+  private tentativasStream: Map<number, number> = new Map();
+
   // Estado
   loading = false;
+  erroCameras = '';
   loadingCameras: Map<number, boolean> = new Map();
   placasComAluguel: Map<string, SelecionarAlugueisDto> = new Map();
 
@@ -58,33 +63,28 @@ export class CameraMonitorComponent implements OnInit, OnDestroy {
     this.carregarCameras();
     this.iniciarMonitoramentoDetecoes();
     this.iniciarAtualizacaoAlugueis();
-
-    // Inicializar status das câmeras
-    this.cameras.forEach(cam => {
-      this.camerasAtivas.set(cam, false);
-      this.camerasStatus.set(cam, 'stopped');
-      this.loadingCameras.set(cam, false);
-    });
   }
 
   ngOnDestroy() {
     this.subscriptions.forEach(sub => sub.unsubscribe());
-    this.pararTodasCameras();
+    this.cameraService.pararTodoMonitoramento();
+    // Sair da tela desliga o processamento no servidor (antes a câmera ficava ligada). É só uma
+    // chamada de limpeza: o componente já não existe, então não mexe no estado da tela.
+    this.cameras
+      .filter(cam => this.camerasAtivas.get(cam))
+      .forEach(cam => this.cameraService.pararCamera(cam).subscribe({ error: () => undefined }));
   }
 
   // ========== MÉTODOS DE CÂMERAS ==========
 
   carregarCameras() {
     this.loading = true;
+    this.erroCameras = '';
     this.cameraService.listarCameras().subscribe({
       next: (response) => {
-        // O serviço de ML responde { cameras: number[], count: number } (era tipado como number[] e
-        // o componente aceitava até 4 formatos, 3 deles inexistentes).
-        const camerasArray = (response?.cameras ?? []).map(Number);
+        // O serviço de ML responde { cameras: number[], count: number }
+        this.cameras = (response?.cameras ?? []).map(Number);
 
-        this.cameras = camerasArray;
-
-        // Inicializar estados das câmeras
         this.cameras.forEach(cam => {
           if (!this.camerasAtivas.has(cam)) {
             this.camerasAtivas.set(cam, false);
@@ -93,95 +93,61 @@ export class CameraMonitorComponent implements OnInit, OnDestroy {
           }
         });
 
-
         this.loading = false;
       },
       error: (err) => {
-        console.error('Erro ao carregar câmeras:', err);
+        // Antes um erro "inventava" as câmeras [0, 1, 2, 3], que não existem: melhor admitir a falha.
         this.loading = false;
-        // Fallback seguro para desenvolvimento
-        this.cameras = [0, 1, 2, 3];
-
-        // Inicializar estados
-        this.cameras.forEach(cam => {
-          this.camerasAtivas.set(cam, false);
-          this.camerasStatus.set(cam, 'stopped');
-          this.loadingCameras.set(cam, false);
-        });
+        this.cameras = [];
+        this.erroCameras = mensagensDeErro(err, 'Não foi possível consultar as câmeras do servidor.')[0];
       }
     });
   }
 
   iniciarCamera(cameraIndex: number) {
-
-    // Atualizar estado
     this.loadingCameras.set(cameraIndex, true);
     this.camerasStatus.set(cameraIndex, 'starting');
 
     this.cameraService.iniciarCamera(cameraIndex).subscribe({
-      next: (response) => {
-
-        // Atualizar estado para ativa
+      next: () => {
         this.camerasAtivas.set(cameraIndex, true);
         this.camerasStatus.set(cameraIndex, 'running');
         this.loadingCameras.set(cameraIndex, false);
 
-        // Iniciar monitoramento para esta câmera
+        // As placas chegam pela assinatura única de ngOnInit; aqui só se liga o acompanhamento.
         this.cameraService.iniciarMonitoramento(cameraIndex);
-
-        // Atualizar contador de placas para esta câmera
-        this.subscriptions.push(
-          this.cameraService.placasDetectadas$.subscribe({
-            next: (deteccao) => {
-              if (deteccao.camera === cameraIndex) {
-                this.adicionarPlacaDetectada(deteccao);
-              }
-            }
-          })
-        );
+        this.renovarStream(cameraIndex);
       },
       error: (err) => {
-        console.error(`Erro ao iniciar câmera ${cameraIndex}:`, err);
-
-        // Reverter estado
         this.camerasAtivas.set(cameraIndex, false);
         this.camerasStatus.set(cameraIndex, 'stopped');
         this.loadingCameras.set(cameraIndex, false);
 
-        this.snack.open(`Erro ao iniciar câmera ${cameraIndex}: ${err.message || 'Verifique a conexão'}`, 'Fechar', { duration: 5000 });
+        this.snack.open(`Erro ao iniciar câmera ${cameraIndex}: ${mensagensDeErro(err, 'Verifique a conexão')[0]}`, 'Fechar', { duration: 6000 });
       }
     });
   }
 
   pararCamera(cameraIndex: number) {
-
-    // Atualizar estado
     this.loadingCameras.set(cameraIndex, true);
     this.camerasStatus.set(cameraIndex, 'stopping');
+    this.cameraService.pararMonitoramento(cameraIndex);
 
     this.cameraService.pararCamera(cameraIndex).subscribe({
-      next: (response) => {
-
-        // Atualizar estado para inativa
-        this.camerasAtivas.set(cameraIndex, false);
-        this.camerasStatus.set(cameraIndex, 'stopped');
-        this.loadingCameras.set(cameraIndex, false);
-
-        // Limpar placas específicas desta câmera
-        this.limparPlacasCamera(cameraIndex);
-      },
+      next: () => this.finalizarParada(cameraIndex),
       error: (err) => {
-        console.error(`Erro ao parar câmera ${cameraIndex}:`, err);
-
-        // Mesmo com erro, marcar como parada
-        this.camerasAtivas.set(cameraIndex, false);
-        this.camerasStatus.set(cameraIndex, 'stopped');
-        this.loadingCameras.set(cameraIndex, false);
-
-        // Forçar parada local mesmo se o servidor falhar
-        this.snack.open(`Câmera ${cameraIndex} parada localmente (erro no servidor: ${err.message})`, 'Fechar', { duration: 5000 });
+        this.finalizarParada(cameraIndex);
+        this.snack.open(`Câmera ${cameraIndex} parada localmente (erro no servidor: ${mensagensDeErro(err)[0]})`, 'Fechar', { duration: 5000 });
       }
     });
+  }
+
+  private finalizarParada(cameraIndex: number) {
+    this.camerasAtivas.set(cameraIndex, false);
+    this.camerasStatus.set(cameraIndex, 'stopped');
+    this.loadingCameras.set(cameraIndex, false);
+    this.streamUrls.delete(cameraIndex);
+    this.limparPlacasCamera(cameraIndex);
   }
 
   toggleCamera(cameraIndex: number) {
@@ -219,7 +185,39 @@ export class CameraMonitorComponent implements OnInit, OnDestroy {
   }
 
   getStreamUrl(cameraIndex: number): string {
-    return this.cameraService.obterStreamUrl(cameraIndex);
+    return this.streamUrls.get(cameraIndex) ?? '';
+  }
+
+  /** Pede um ticket novo e (re)aponta o <img> do stream. Cada ticket vale uma única conexão. */
+  renovarStream(cameraIndex: number) {
+    this.cameraService.obterTicketStream().subscribe({
+      next: (ticket) => this.streamUrls.set(cameraIndex, this.cameraService.obterStreamUrl(cameraIndex, ticket)),
+      error: (err) => this.snack.open(`Não foi possível abrir o vídeo da câmera ${cameraIndex}: ${mensagensDeErro(err)[0]}`, 'Fechar', { duration: 6000 })
+    });
+  }
+
+  /** O stream caiu (ticket já usado, servidor reiniciou...): tenta reconectar poucas vezes. */
+  aoFalharStream(cameraIndex: number) {
+    if (!this.camerasAtivas.get(cameraIndex)) {
+      return;
+    }
+    const tentativas = (this.tentativasStream.get(cameraIndex) ?? 0) + 1;
+    this.tentativasStream.set(cameraIndex, tentativas);
+    if (tentativas <= 3) {
+      this.renovarStream(cameraIndex);
+    } else {
+      this.snack.open(`O vídeo da câmera ${cameraIndex} não carrega. Pare e inicie a câmera novamente.`, 'Fechar', { duration: 6000 });
+    }
+  }
+
+  aoCarregarStream(cameraIndex: number) {
+    this.tentativasStream.set(cameraIndex, 0);
+  }
+
+  /** Trocar de modo recria os <img>; como o ticket é de uso único, cada vídeo ativo ganha um novo. */
+  trocarModo(modo: 'unica' | 'multiplas') {
+    this.modoExibicao = modo;
+    this.cameras.filter(cam => this.camerasAtivas.get(cam)).forEach(cam => this.renovarStream(cam));
   }
 
   getCameraStatus(cameraIndex: number): string {
@@ -237,17 +235,9 @@ export class CameraMonitorComponent implements OnInit, OnDestroy {
   // ========== MÉTODOS DE PLACAS ==========
 
   iniciarMonitoramentoDetecoes() {
-    const sub = this.cameraService.placasDetectadas$
-      .pipe(
-        debounceTime(500),
-        distinctUntilChanged((a, b) => a.plate === b.plate &&
-          Math.abs(a.timestamp - b.timestamp) < 2000)
-      )
-      .subscribe({
-        next: (deteccao) => {
-          this.adicionarPlacaDetectada(deteccao);
-        }
-      });
+    // A deduplicação por timestamp é feita no CameraService; aqui não há debounce porque ele
+    // descartava placas de câmeras diferentes que chegavam juntas.
+    const sub = this.cameraService.placasDetectadas$.subscribe(deteccao => this.adicionarPlacaDetectada(deteccao));
     this.subscriptions.push(sub);
   }
 
@@ -264,7 +254,7 @@ export class CameraMonitorComponent implements OnInit, OnDestroy {
 
     this.placasDetectadas.unshift({
       ...deteccao,
-      timestamp: Date.now()
+      timestamp: deteccao.timestamp * 1000 // o servidor manda segundos; a tela usa milissegundos
     });
 
     if (this.placasDetectadas.length > 20) {
@@ -277,6 +267,7 @@ export class CameraMonitorComponent implements OnInit, OnDestroy {
     }, 30000);
 
     this.buscarAluguelPorPlaca(deteccao.plate);
+    this.aplicarFiltros();
   }
 
   limparPlacasCamera(cameraIndex: number) {
