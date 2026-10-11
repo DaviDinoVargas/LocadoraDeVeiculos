@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { NotificacaoService } from '../../core/notificacao.service';
+import { criarNotificacaoFalsa } from '../../core/testing/notificacao-fake.spec';
 import { of } from 'rxjs';
 import { ClientesListComponent } from './clientes-list.component';
 import { ClientesService } from './clientes.service';
@@ -9,8 +10,8 @@ describe('ClientesListComponent — menu "Novo Cliente"', () => {
   let fixture: ComponentFixture<ClientesListComponent>;
   let router: Router;
 
-  const menu = () => fixture.nativeElement.querySelector('.dropdown-menu') as HTMLElement;
-  const botao = () => fixture.nativeElement.querySelector('.dropdown-toggle') as HTMLButtonElement;
+  const botaoNovo = () => fixture.nativeElement.querySelector('button[aria-haspopup="menu"]') as HTMLButtonElement;
+  const itensDoMenu = () => Array.from<HTMLElement>(document.querySelectorAll('[data-slot="dropdown-menu-item"]'));
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -18,7 +19,7 @@ describe('ClientesListComponent — menu "Novo Cliente"', () => {
       providers: [
         provideRouter([]),
         { provide: ClientesService, useValue: { listar: () => of([]) } },
-        { provide: MatSnackBar, useValue: { open: () => {} } }
+        { provide: NotificacaoService, useValue: criarNotificacaoFalsa() }
       ]
     }).compileComponents();
 
@@ -28,29 +29,23 @@ describe('ClientesListComponent — menu "Novo Cliente"', () => {
     fixture.detectChanges();
   });
 
-  it('abre o menu ao clicar no botão (sem depender do JS do Bootstrap)', () => {
-    expect(menu().classList).not.toContain('show');
+  it('o botão "Novo cliente" abre um menu com Pessoa física e Pessoa jurídica (Spartan, sem depender do JS do Bootstrap)', () => {
+    expect(itensDoMenu().length).toBe(0);
 
-    botao().click();
+    botaoNovo().click();
     fixture.detectChanges();
 
-    expect(menu().classList).toContain('show');
-    expect(botao().getAttribute('aria-expanded')).toBe('true');
+    expect(itensDoMenu().map(i => i.textContent?.trim())).toEqual(['Pessoa física', 'Pessoa jurídica']);
+    expect(botaoNovo().getAttribute('aria-expanded')).toBe('true');
   });
 
-  it('fecha o menu ao clicar fora ou apertar Esc', () => {
-    botao().click();
+  it('escolher um item do menu leva ao formulário certo', () => {
+    botaoNovo().click();
     fixture.detectChanges();
 
-    document.body.click();
-    fixture.detectChanges();
-    expect(menu().classList).not.toContain('show');
+    itensDoMenu()[1].click();
 
-    botao().click();
-    fixture.detectChanges();
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-    fixture.detectChanges();
-    expect(menu().classList).not.toContain('show');
+    expect(router.navigate).toHaveBeenCalledWith(['/clientes/new/pj']);
   });
 
   it('navega para as rotas que existem em app.routes (pf / pj)', () => {

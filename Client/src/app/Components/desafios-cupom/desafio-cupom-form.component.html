@@ -1,70 +1,50 @@
-<div class="container mt-3">
-  <h4 *ngIf="!editMode">Novo Desafio de Cupom</h4>
-  <h4 *ngIf="editMode">Editar Desafio de Cupom</h4>
+<form [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+  <app-page largura="form">
+    <app-page-header
+      [titulo]="editMode() ? 'Editar desafio de cupom' : 'Novo desafio de cupom'"
+      descricao="Quando o cliente cumpre a meta no período, o cupom de recompensa é liberado para ele."
+      voltarPara="/desafios-cupom"
+      rotuloVoltar="Desafios de cupom"
+    />
 
-  <form [formGroup]="form" (ngSubmit)="salvar()">
-    <div class="mb-3">
-      <label class="form-label">Nome</label>
-      <input class="form-control" formControlName="nome"/>
-      <div *ngIf="form.controls['nome'].invalid && form.controls['nome'].touched" class="text-danger small">
-        Nome é obrigatório.
-      </div>
-    </div>
+    <app-form-errors [erros]="erros()" />
 
-    <div class="mb-3">
-      <label class="form-label">Descrição</label>
-      <input class="form-control" formControlName="descricao"/>
-      <div *ngIf="form.controls['descricao'].invalid && form.controls['descricao'].touched" class="text-danger small">
-        Descrição é obrigatória.
-      </div>
-    </div>
+    @if (carregando()) {
+      <app-form-skeleton />
+    } @else {
+      <app-form-section titulo="Desafio">
+        <app-form-field class="col-span-12 sm:col-span-5" label="Nome" required>
+          <input hlmInput formControlName="nome" autocomplete="off" />
+        </app-form-field>
+        <app-form-field class="col-span-12 sm:col-span-7" label="Descrição" required>
+          <input hlmInput formControlName="descricao" autocomplete="off" />
+        </app-form-field>
+        <app-form-field class="col-span-12 sm:col-span-6" label="Meta de aluguéis" required [mensagens]="mensagensMeta">
+          <input hlmInput type="number" formControlName="metaQuantidadeAlugueis" min="1" inputmode="numeric" />
+        </app-form-field>
+        <app-form-field class="col-span-12 sm:col-span-6" label="Período (dias)" required [mensagens]="mensagensPeriodo">
+          <input hlmInput type="number" formControlName="periodoDias" min="1" inputmode="numeric" />
+        </app-form-field>
+      </app-form-section>
 
-    <div class="mb-3">
-      <label class="form-label">Meta de Aluguéis</label>
-      <input type="number" min="1" class="form-control" formControlName="metaQuantidadeAlugueis"/>
-      <div *ngIf="form.controls['metaQuantidadeAlugueis'].invalid && form.controls['metaQuantidadeAlugueis'].touched" class="text-danger small">
-        Meta deve ser pelo menos 1.
-      </div>
-    </div>
+      <app-form-section titulo="Recompensa">
+        <app-form-field class="col-span-12 sm:col-span-8" label="Cupom de recompensa" required [mensagens]="mensagensCupom">
+          <hlm-native-select class="w-full" formControlName="cupomRecompensaId">
+            <option hlmNativeSelectOption value="">Selecione o cupom</option>
+            @for (c of cupons(); track c.id) {
+              <option hlmNativeSelectOption [value]="c.id">{{ c.codigo }} — {{ c.descricao }}</option>
+            }
+          </hlm-native-select>
+        </app-form-field>
+        @if (editMode()) {
+          <div class="col-span-12 flex items-center gap-3">
+            <hlm-checkbox inputId="desafio-ativo" formControlName="ativo" />
+            <label hlmLabel for="desafio-ativo">Desafio ativo</label>
+          </div>
+        }
+      </app-form-section>
+    }
 
-    <div class="mb-3">
-      <label class="form-label">Período (dias)</label>
-      <input type="number" min="1" class="form-control" formControlName="periodoDias"/>
-      <div *ngIf="form.controls['periodoDias'].invalid && form.controls['periodoDias'].touched" class="text-danger small">
-        Período deve ser pelo menos 1 dia.
-      </div>
-    </div>
-
-    <div class="mb-3">
-      <label class="form-label">Cupom de Recompensa</label>
-      <select class="form-select" formControlName="cupomRecompensaId">
-        <option value="">Selecione o cupom</option>
-        <option *ngFor="let c of cupons" [value]="c.id">{{ c.codigo }} — {{ c.descricao }}</option>
-      </select>
-      <div *ngIf="form.controls['cupomRecompensaId'].invalid && form.controls['cupomRecompensaId'].touched" class="text-danger small">
-        Cupom de recompensa é obrigatório.
-      </div>
-    </div>
-
-    <div class="mb-3 form-check" *ngIf="editMode">
-      <input type="checkbox" class="form-check-input" id="ativoCheck" formControlName="ativo"/>
-      <label class="form-check-label" for="ativoCheck">Desafio ativo</label>
-    </div>
-
-    <div class="d-flex gap-2">
-      <button class="btn btn-primary" type="submit" [disabled]="loading">
-        <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
-        {{ editMode ? 'Salvar' : 'Criar' }}
-      </button>
-      <button class="btn btn-secondary" type="button" (click)="cancelar()" [disabled]="loading">
-        Cancelar
-      </button>
-    </div>
-
-    <div *ngIf="serverErrors.length > 0" class="alert alert-danger mt-3">
-      <ul class="mb-0">
-        <li *ngFor="let error of serverErrors">{{ error }}</li>
-      </ul>
-    </div>
-  </form>
-</div>
+    <app-form-actions [salvando]="salvando()" [alterado]="form.dirty" [rotuloSalvar]="editMode() ? 'Salvar alterações' : 'Criar desafio'" (cancelar)="cancelar()" />
+  </app-page>
+</form>

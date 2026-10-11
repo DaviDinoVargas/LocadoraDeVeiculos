@@ -1,80 +1,61 @@
-import { Component, inject } from '@angular/core';
-import { Router } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { PlanosCobrancaService } from './planos-cobranca.service';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
+import { NgIcon } from '@ng-icons/core';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { crudLista } from '../../shared/data-table/crud-lista';
+import { DataTableComponent } from '../../shared/data-table/data-table.component';
+import { AcaoLinha, ColunaTabela } from '../../shared/data-table/data-table.types';
+import { formatarMoeda } from '../../shared/data-table/data-table.util';
+import { PageHeaderComponent } from '../../shared/layout/page-header.component';
+import { PageComponent } from '../../shared/layout/page.component';
 import { PlanoCobrancaDto } from './plano-cobranca.model';
-import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule } from '@angular/forms';
-import { ConfirmacaoService } from '../../core/confirmacao.service';
-import { filter } from 'rxjs/operators';
+import { PlanosCobrancaService } from './planos-cobranca.service';
 
 @Component({
   selector: 'app-planos-cobranca-list',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
-  templateUrl: './planos-cobranca-list.component.html',
-  styleUrls: ['../scss/global.scss']
+  imports: [RouterLink, NgIcon, HlmButtonImports, PageComponent, PageHeaderComponent, DataTableComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './planos-cobranca-list.component.html'
 })
 export class PlanosCobrancaListComponent {
-  private readonly confirmacao = inject(ConfirmacaoService);
+  private readonly svc = inject(PlanosCobrancaService);
+  private readonly router = inject(Router);
 
-  planos: PlanoCobrancaDto[] = [];
-  loading = false;
+  private readonly lista = crudLista<PlanoCobrancaDto>({
+    listar: () => this.svc.listar(),
+    excluir: id => this.svc.excluir(id),
+    singular: 'plano de cobrança'
+  });
+  readonly planos = this.lista.dados;
+  readonly carregando = this.lista.carregando;
+  readonly erro = this.lista.erro;
+  readonly carregar = this.lista.carregar;
+  readonly excluir = this.lista.excluir;
 
-  constructor(
-    private svc: PlanosCobrancaService,
-    private router: Router,
-    private snack: MatSnackBar
-  ) {
-    this.carregar();
-  }
+  readonly colunas: ColunaTabela<PlanoCobrancaDto>[] = [
+    { id: 'nome', cabecalho: 'Nome' },
+    { id: 'grupo', cabecalho: 'Grupo de veículo', valor: p => p.grupoAutomovelNome, filtravel: true },
+    { id: 'precoDiaria', cabecalho: 'Diária', tipo: 'moeda' },
+    { id: 'precoPorKm', cabecalho: 'Preço por km', tipo: 'moeda', formatar: p => (p.precoPorKm ? formatarMoeda(p.precoPorKm) : '—') },
+    { id: 'kmLivreLimite', cabecalho: 'Km livre', tipo: 'numero', formatar: p => (p.kmLivreLimite != null ? String(p.kmLivreLimite) : '—') }
+  ];
 
-  carregar() {
-    this.loading = true;
-    this.svc.listar().subscribe({
-      next: p => {
-        this.planos = p;
-        this.loading = false;
-      },
-      error: (err) => {
-        this.loading = false;
-        console.error('Erro ao listar planos de cobrança:', err);
-        this.snack.open('Erro ao listar planos de cobrança', 'Fechar', { duration: 4000 });
-      }
-    });
-  }
+  readonly acoes: AcaoLinha<PlanoCobrancaDto>[] = [
+    { rotulo: 'Editar', icone: 'lucidePencil', executar: p => this.editar(p.id) },
+    { rotulo: 'Excluir', icone: 'lucideTrash2', destrutiva: true, executar: p => this.excluir(p.id) }
+  ];
+
+  readonly tituloLinha = (p: PlanoCobrancaDto) => p.nome;
 
   formatarMoeda(valor: number): string {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(valor);
+    return formatarMoeda(valor);
   }
 
-  novo() {
-    this.router.navigate(['/planos-cobranca/new']);
+  novo(): void {
+    void this.router.navigate(['/planos-cobranca/new']);
   }
 
-  editar(id?: string) {
-    if (id) this.router.navigate([`/planos-cobranca/${id}/edit`]);
-  }
-
-  excluir(id?: string) {
-    if (!id) return;
-
-    this.confirmacao.confirmar({ titulo: 'Confirmar exclusão', mensagem: 'Deseja realmente excluir este plano de cobrança?', confirmar: 'Excluir', destrutivo: true })
-      .pipe(filter(Boolean))
-      .subscribe(() => {
-        this.svc.excluir(id).subscribe({
-          next: () => {
-            this.snack.open('Plano de cobrança excluído', 'Fechar', { duration: 3000 });
-            this.carregar();
-          },
-          error: (err) => {
-            console.error('Erro ao excluir plano de cobrança:', err);
-            this.snack.open('Falha ao excluir plano de cobrança', 'Fechar', { duration: 4000 });
-          }
-        });
-      });
+  editar(id?: string): void {
+    if (id) void this.router.navigate([`/planos-cobranca/${id}/edit`]);
   }
 }

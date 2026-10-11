@@ -38,7 +38,7 @@ describe('VerificacaoFacialComponent', () => {
     criar(true);
 
     expect(auth.statusRosto).toHaveBeenCalled();
-    expect(fixture.componentInstance.cadastrado).toBeTrue();
+    expect(fixture.componentInstance.cadastrado()).toBeTrue();
     expect(botao('Apagar meu rosto')).toBeDefined();
   });
 
@@ -58,8 +58,8 @@ describe('VerificacaoFacialComponent', () => {
 
     expect(confirmacao.confirmar).toHaveBeenCalledWith(jasmine.objectContaining({ destrutivo: true }));
     expect(auth.removerRosto).toHaveBeenCalledTimes(1);
-    expect(fixture.componentInstance.cadastrado).toBeFalse();
-    expect(fixture.componentInstance.mensagemTipo).toBe('sucesso');
+    expect(fixture.componentInstance.cadastrado()).toBeFalse();
+    expect(fixture.componentInstance.mensagemTipo()).toBe('sucesso');
     expect(botao('Apagar meu rosto')).toBeUndefined();
   });
 
@@ -70,7 +70,7 @@ describe('VerificacaoFacialComponent', () => {
     botao('Apagar meu rosto')!.click();
 
     expect(auth.removerRosto).not.toHaveBeenCalled();
-    expect(fixture.componentInstance.cadastrado).toBeTrue();
+    expect(fixture.componentInstance.cadastrado()).toBeTrue();
   });
 
   it('mantém o rosto como cadastrado e mostra o erro quando o servidor falha', () => {
@@ -80,8 +80,8 @@ describe('VerificacaoFacialComponent', () => {
 
     botao('Apagar meu rosto')!.click();
 
-    expect(fixture.componentInstance.cadastrado).toBeTrue();
-    expect(fixture.componentInstance.mensagemTipo).toBe('erro');
-    expect(fixture.componentInstance.mensagem).toBe('Não foi possível apagar o rosto agora.');
+    expect(fixture.componentInstance.cadastrado()).toBeTrue();
+    expect(fixture.componentInstance.mensagemTipo()).toBe('erro');
+    expect(fixture.componentInstance.mensagem()).toBe('Não foi possível apagar o rosto agora.');
   });
 });

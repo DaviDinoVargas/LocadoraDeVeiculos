@@ -1,109 +1,104 @@
-import { Component, OnInit, inject } from '@angular/core';
-import { Router } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { CondutoresService } from './condutores.service';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
+import { NgIcon } from '@ng-icons/core';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
+import { crudLista } from '../../shared/data-table/crud-lista';
+import { DataTableComponent } from '../../shared/data-table/data-table.component';
+import { AcaoLinha, ColunaTabela } from '../../shared/data-table/data-table.types';
+import { formatarData } from '../../shared/data-table/data-table.util';
+import { PageHeaderComponent } from '../../shared/layout/page-header.component';
+import { PageComponent } from '../../shared/layout/page.component';
+import { mascararCpf } from '../../shared/mascaras/mascara.directive';
+import { ClienteDto } from '../clientes/cliente.model';
 import { ClientesService } from '../clientes/clientes.service';
 import { CondutorDto } from './condutor.model';
-import { ClienteDto } from '../clientes/cliente.model';
-import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule } from '@angular/forms';
-import { ConfirmacaoService } from '../../core/confirmacao.service';
-import { filter } from 'rxjs/operators';
+import { CondutoresService } from './condutores.service';
 
 @Component({
   selector: 'app-condutores-list',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
-  templateUrl: './condutores-list.component.html',
-  styleUrls: ['../scss/global.scss']
+  imports: [RouterLink, NgIcon, HlmButtonImports, HlmNativeSelectImports, PageComponent, PageHeaderComponent, DataTableComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './condutores-list.component.html'
 })
 export class CondutoresListComponent implements OnInit {
-  private readonly confirmacao = inject(ConfirmacaoService);
+  private readonly svc = inject(CondutoresService);
+  private readonly clientesSvc = inject(ClientesService);
+  private readonly router = inject(Router);
 
-  condutores: CondutorDto[] = [];
-  condutoresFiltrados: CondutorDto[] = [];
-  clientes: ClienteDto[] = [];
-  loading = false;
+  private readonly lista = crudLista<CondutorDto>({
+    listar: () => this.svc.listar(),
+    excluir: id => this.svc.excluir(id),
+    singular: 'condutor',
+    carregarAoCriar: false
+  });
+  readonly condutores = this.lista.dados;
+  readonly carregando = this.lista.carregando;
+  readonly erro = this.lista.erro;
+  readonly carregar = this.lista.carregar;
+  readonly excluir = this.lista.excluir;
 
-  constructor(
-    private svc: CondutoresService,
-    private clientesSvc: ClientesService,
-    private router: Router,
-    private snack: MatSnackBar
-  ) {}
+  readonly clientes = signal<ClienteDto[]>([]);
+  private readonly clienteFiltroId = signal('');
+  readonly condutoresFiltrados = computed(() => {
+    const clienteId = this.clienteFiltroId();
+    return clienteId ? this.condutores().filter(c => c.clienteId === clienteId) : this.condutores();
+  });
 
-  ngOnInit() {
-    this.carregarClientes();
+  readonly colunas: ColunaTabela<CondutorDto>[] = [
+    { id: 'nome', cabecalho: 'Nome' },
+    { id: 'cpf', cabecalho: 'CPF', formatar: c => this.formatarCPF(c.cpf), prioridade: 'baixa' },
+    { id: 'cnh', cabecalho: 'CNH' },
+    { id: 'validadeCnh', cabecalho: 'Validade da CNH', tipo: 'data' },
+    {
+      id: 'situacaoCnh',
+      cabecalho: 'Situação da CNH',
+      tipo: 'enum',
+      valor: c => (this.cnhVencida(c) ? 'Vencida' : 'EmDia'),
+      opcoes: [
+        { valor: 'EmDia', rotulo: 'Em dia', tom: 'success' },
+        { valor: 'Vencida', rotulo: 'Vencida', tom: 'error' }
+      ]
+    },
+    { id: 'telefone', cabecalho: 'Telefone', prioridade: 'baixa' },
+    { id: 'email', cabecalho: 'E-mail', truncar: 28, prioridade: 'baixa' },
+    { id: 'clienteNome', cabecalho: 'Cliente' }
+  ];
+
+  readonly acoes: AcaoLinha<CondutorDto>[] = [
+    { rotulo: 'Editar', icone: 'lucidePencil', executar: c => this.editar(c.id) },
+    { rotulo: 'Excluir', icone: 'lucideTrash2', destrutiva: true, executar: c => this.excluir(c.id) }
+  ];
+
+  readonly tituloLinha = (c: CondutorDto) => c.nome;
+
+  ngOnInit(): void {
+    this.clientesSvc.listar().subscribe({ next: clientes => this.clientes.set(clientes) });
     this.carregar();
   }
 
-  carregarClientes() {
-    this.clientesSvc.listar().subscribe({
-      next: clientes => this.clientes = clientes,
-      error: () => this.snack.open('Erro ao carregar clientes', 'Fechar', { duration: 4000 })
-    });
+  filtrarPorCliente(clienteId: string): void {
+    this.clienteFiltroId.set(clienteId);
   }
 
-  carregar() {
-    this.loading = true;
-    this.svc.listar().subscribe({
-      next: c => {
-        this.condutores = c;
-        this.condutoresFiltrados = [...c];
-        this.loading = false;
-      },
-      error: (err) => {
-        this.loading = false;
-        console.error('Erro ao listar condutores:', err);
-        this.snack.open('Erro ao listar condutores', 'Fechar', { duration: 4000 });
-      }
-    });
-  }
-
-  filtrarPorCliente(event: Event) {
-    const clienteId = (event.target as HTMLSelectElement).value;
-    if (!clienteId) {
-      this.condutoresFiltrados = [...this.condutores];
-    } else {
-      this.condutoresFiltrados = this.condutores.filter(c => c.clienteId === clienteId);
-    }
+  cnhVencida(condutor: CondutorDto): boolean {
+    const validade = new Date(condutor.validadeCnh);
+    return !Number.isNaN(validade.getTime()) && validade.getTime() < new Date().setHours(0, 0, 0, 0);
   }
 
   formatarCPF(cpf: string): string {
-    if (!cpf) return '';
-    return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    return mascararCpf(cpf);
   }
 
   formatarData(dataString: string): string {
-    if (!dataString) return '';
-    const data = new Date(dataString);
-    return data.toLocaleDateString('pt-BR');
+    return formatarData(dataString);
   }
 
-  novo() {
-    this.router.navigate(['/condutores/new']);
+  novo(): void {
+    void this.router.navigate(['/condutores/new']);
   }
 
-  editar(id?: string) {
-    if (id) this.router.navigate([`/condutores/${id}/edit`]);
-  }
-
-  excluir(id?: string) {
-    if (!id) return;
-
-    this.confirmacao.confirmar({ titulo: 'Confirmar exclusão', mensagem: 'Deseja realmente excluir este condutor?', confirmar: 'Excluir', destrutivo: true })
-      .pipe(filter(Boolean))
-      .subscribe(() => {
-        this.svc.excluir(id).subscribe({
-          next: () => {
-            this.snack.open('Condutor excluído', 'Fechar', { duration: 3000 });
-            this.carregar();
-          },
-          error: (err) => {
-            console.error('Erro ao excluir condutor:', err);
-            this.snack.open('Falha ao excluir condutor', 'Fechar', { duration: 4000 });
-          }
-        });
-      });
+  editar(id?: string): void {
+    if (id) void this.router.navigate([`/condutores/${id}/edit`]);
   }
 }

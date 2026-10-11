@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { NotificacaoService } from '../../core/notificacao.service';
+import { criarNotificacaoFalsa } from '../../core/testing/notificacao-fake.spec';
 import { of } from 'rxjs';
 import { VeiculosListComponent } from './veiculos-list.component';
 import { VeiculosService } from './veiculos.service';
@@ -34,7 +35,7 @@ describe('VeiculosListComponent', () => {
         { provide: GruposVeiculoService, useValue: grupos },
         { provide: AuthService, useValue: { getUsuario: () => ({ cargo }) } },
         { provide: ConfirmacaoService, useValue: { confirmar: () => of(true) } },
-        { provide: MatSnackBar, useValue: { open: () => {} } }
+        { provide: NotificacaoService, useValue: criarNotificacaoFalsa() }
       ]
     });
     fixture = TestBed.createComponent(VeiculosListComponent);
@@ -43,13 +44,12 @@ describe('VeiculosListComponent', () => {
   };
 
   const linhas = () => fixture.nativeElement.querySelectorAll('tbody tr').length;
-  const evento = (valor: string) => ({ target: { value: valor } }) as unknown as Event;
 
   it('filtro por grupo consulta o servidor e a tabela mostra só o resultado (antes o filtro não aparecia na tela)', () => {
     montar('Empresa');
     expect(linhas()).toBe(2);
 
-    component.filtrarPorGrupo(evento('g1'));
+    component.filtrarPorGrupo('g1');
     fixture.detectChanges();
 
     expect(veiculos.listarPorGrupo).toHaveBeenCalledOnceWith('g1');
@@ -60,9 +60,9 @@ describe('VeiculosListComponent', () => {
 
   it('voltar para "Todos os grupos" lista tudo de novo', () => {
     montar('Empresa');
-    component.filtrarPorGrupo(evento('g1'));
+    component.filtrarPorGrupo('g1');
 
-    component.filtrarPorGrupo(evento(''));
+    component.filtrarPorGrupo('');
     fixture.detectChanges();
 
     expect(linhas()).toBe(2);
@@ -71,7 +71,7 @@ describe('VeiculosListComponent', () => {
   it('excluir mantém o filtro de grupo ativo ao recarregar', () => {
     montar('Empresa');
     veiculos.excluir.and.returnValue(of(undefined));
-    component.filtrarPorGrupo(evento('g1'));
+    component.filtrarPorGrupo('g1');
     veiculos.listarPorGrupo.calls.reset();
 
     component.excluir('v1');

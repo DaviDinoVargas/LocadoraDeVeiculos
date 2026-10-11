@@ -1,109 +1,52 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, ActivatedRoute, ParamMap } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { TaxasServicosService } from './taxas-servicos.service';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { HlmInputImports } from '@spartan-ng/helm/input';
+import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
+import { FormProtegido } from '../../core/form-guard';
+import { crudForm } from '../../shared/form-fields/crud-form';
+import { FormActionsComponent } from '../../shared/form-fields/form-actions.component';
+import { FormErrorsComponent } from '../../shared/form-fields/form-errors.component';
+import { FormFieldComponent } from '../../shared/form-fields/form-field.component';
+import { FormSectionComponent } from '../../shared/form-fields/form-section.component';
+import { FormSkeletonComponent } from '../../shared/form-fields/form-skeleton.component';
+import { PageHeaderComponent } from '../../shared/layout/page-header.component';
+import { PageComponent } from '../../shared/layout/page.component';
 import { TaxaServicoDto } from './taxa-servico.model';
-import { Subscription } from 'rxjs';
-import { CommonModule } from '@angular/common';
-import { mensagensDeErro } from '../../core/api-error';
+import { TaxasServicosService } from './taxas-servicos.service';
 
 @Component({
   selector: 'app-taxa-servico-form',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
-  templateUrl: './taxa-servico-form.component.html',
-  styleUrls: ['../scss/global.scss']
+  imports: [
+    ReactiveFormsModule, HlmInputImports, HlmNativeSelectImports, PageComponent, PageHeaderComponent, FormSectionComponent,
+    FormFieldComponent, FormActionsComponent, FormErrorsComponent, FormSkeletonComponent
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './taxa-servico-form.component.html'
 })
-export class TaxaServicoFormComponent implements OnInit, OnDestroy {
-  form!: FormGroup;
-  id?: string | null = null;
-  loading = false;
-  editMode = false;
-  serverErrors: string[] = [];
+export class TaxaServicoFormComponent implements FormProtegido {
+  private readonly svc = inject(TaxasServicosService);
 
-  private sub: Subscription | null = null;
+  readonly mensagensPreco = { min: 'O preço deve ser maior ou igual a 0.' };
 
-  constructor(
-    private fb: FormBuilder,
-    private svc: TaxasServicosService,
-    private route: ActivatedRoute,
-    private router: Router,
-    private snack: MatSnackBar
-  ) {
-    this.form = this.fb.group({
-      nome: ['', Validators.required],
-      preco: [0, [Validators.required, Validators.min(0)]],
-      tipoCalculo: ['', Validators.required]
-    });
-  }
+  readonly form = inject(NonNullableFormBuilder).group({
+    nome: ['', Validators.required],
+    preco: [0, [Validators.required, Validators.min(0)]],
+    tipoCalculo: ['', Validators.required]
+  });
 
-  ngOnInit() {
-    this.sub = this.route.paramMap.subscribe((params: ParamMap) => {
-      this.id = params.get('id');
-      this.editMode = !!this.id;
-
-      if (this.editMode && this.id) {
-        this.carregar(this.id);
-      }
-    });
-  }
-
-  ngOnDestroy() {
-    this.sub?.unsubscribe();
-  }
-
-  carregar(id: string) {
-    this.loading = true;
-    this.svc.obter(id).subscribe({
-      next: t => {
-        this.form.patchValue(t);
-        this.loading = false;
-      },
-      error: () => {
-        this.loading = false;
-        this.snack.open('Erro ao carregar taxa/serviço', 'Fechar', { duration: 4000 });
-        this.router.navigate(['/taxas-servicos']);
-      }
-    });
-  }
-
-  salvar() {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      this.snack.open('Verifique os campos obrigatórios', 'Fechar', { duration: 3500 });
-      return;
-    }
-
-    const payload: TaxaServicoDto = this.form.getRawValue();
-    this.loading = true;
-
-    const successHandler = () => {
-      this.loading = false;
-      this.snack.open(this.editMode ? 'Taxa/serviço atualizado' : 'Taxa/serviço criado', 'Fechar', { duration: 3000 });
-      this.router.navigate(['/taxas-servicos']);
-    };
-
-    const errorHandler = (err: unknown) => {
-      this.loading = false;
-      this.serverErrors = mensagensDeErro(err);
-      this.snack.open(this.serverErrors[0], 'Fechar', { duration: 4000 });
-    };
-
-    if (this.editMode && this.id) {
-      this.svc.atualizar(this.id, payload).subscribe({
-        next: successHandler,
-        error: errorHandler
-      });
-    } else {
-      this.svc.criar(payload).subscribe({
-        next: successHandler,
-        error: errorHandler
-      });
-    }
-  }
-
-  cancelar() {
-    this.router.navigate(['/taxas-servicos']);
-  }
+  private readonly crud = crudForm<TaxaServicoDto, typeof this.form.controls>({
+    form: this.form,
+    obter: id => this.svc.obter(id),
+    criar: payload => this.svc.criar(payload),
+    atualizar: (id, payload) => this.svc.atualizar(id, payload),
+    rotaLista: '/taxas-servicos',
+    singular: 'taxa ou serviço',
+    genero: 'f'
+  });
+  readonly editMode = this.crud.editMode;
+  readonly carregando = this.crud.carregando;
+  readonly salvando = this.crud.salvando;
+  readonly erros = this.crud.erros;
+  readonly salvar = this.crud.salvar;
+  readonly cancelar = this.crud.cancelar;
 }

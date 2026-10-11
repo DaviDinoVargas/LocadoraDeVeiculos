@@ -1,59 +1,100 @@
-import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { DevolucoesService } from './devolucoes.service';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
+import { HlmInputImports } from '@spartan-ng/helm/input';
+import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
+import { startWith } from 'rxjs';
+import { mensagensDeErro } from '../../core/api-error';
+import { FormProtegido } from '../../core/form-guard';
+import { NotificacaoService } from '../../core/notificacao.service';
+import { formatarData, formatarMoeda } from '../../shared/data-table/data-table.util';
+import { focarPrimeiroInvalido } from '../../shared/form-fields/crud-form';
+import { FormActionsComponent } from '../../shared/form-fields/form-actions.component';
+import { FormErrorsComponent } from '../../shared/form-fields/form-errors.component';
+import { FormFieldComponent } from '../../shared/form-fields/form-field.component';
+import { FormSectionComponent } from '../../shared/form-fields/form-section.component';
+import { FormSkeletonComponent } from '../../shared/form-fields/form-skeleton.component';
+import { PageHeaderComponent } from '../../shared/layout/page-header.component';
+import { PageComponent } from '../../shared/layout/page.component';
+import { AluguelCompletoDto, SelecionarAlugueisDto, TaxaServicoAluguelDto } from '../alugueis/aluguel.model';
 import { AlugueisService } from '../alugueis/alugueis.service';
+import { ConfiguracaoDto } from '../configuracoes/configuracao.model';
 import { ConfiguracoesService } from '../configuracoes/configuracoes.service';
 import { DevolucaoDto, NIVEL_COMBUSTIVEL_OPTIONS } from './devolucao.model';
-import { AluguelCompletoDto, SelecionarAlugueisDto, TaxaServicoAluguelDto } from '../alugueis/aluguel.model';
-import { ConfiguracaoDto } from '../configuracoes/configuracao.model';
-import { CommonModule } from '@angular/common';
-import { mensagensDeErro } from '../../core/api-error';
+import { DevolucoesService } from './devolucoes.service';
+
+// Litros que o tanque tem quando está "cheio" para o cálculo do adicional de combustível.
+const TANQUE_REFERENCIA_LITROS = 50;
+const PERCENTUAL_POR_NIVEL: Record<string, number> = { Cheio: 100, TresQuartos: 75, Metade: 50, UmQuarto: 25, Vazio: 0 };
 
 @Component({
   selector: 'app-devolucao-form',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
-  templateUrl: './devolucao-form.component.html',
-  styleUrls: ['../scss/global.scss']
+  imports: [
+    ReactiveFormsModule, HlmInputImports, HlmNativeSelectImports, PageComponent, PageHeaderComponent, FormSectionComponent,
+    FormFieldComponent, FormActionsComponent, FormErrorsComponent, FormSkeletonComponent
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './devolucao-form.component.html'
 })
-export class DevolucaoFormComponent implements OnInit {
-  form!: FormGroup;
-  aluguelId?: string | null = null;
-  loading = false;
-  loadingAluguel = false;
-  serverErrors: string[] = [];
-  aluguel?: AluguelCompletoDto;
-  configuracao?: ConfiguracaoDto;
+export class DevolucaoFormComponent implements OnInit, FormProtegido {
+  private readonly svc = inject(DevolucoesService);
+  private readonly aluguelSvc = inject(AlugueisService);
+  private readonly configSvc = inject(ConfiguracoesService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly notificacao = inject(NotificacaoService);
 
-  multa: number = 0;
-  valorTaxas: number = 0;
-  valorCombustivel: number = 0;
-  dataAtual: string;
-  nivelCombustivelOptions = NIVEL_COMBUSTIVEL_OPTIONS;
+  readonly form = inject(NonNullableFormBuilder).group({
+    dataDevolucao: ['', [Validators.required]],
+    quilometragemFinal: [0, [Validators.required, Validators.min(0)]],
+    nivelCombustivel: ['', Validators.required],
+    combustivelNoTanque: [0, [Validators.required, Validators.min(0)]]
+  });
 
-  constructor(
-    private fb: FormBuilder,
-    private svc: DevolucoesService,
-    private aluguelSvc: AlugueisService,
-    private configSvc: ConfiguracoesService,
-    private route: ActivatedRoute,
-    private router: Router,
-    private snack: MatSnackBar
-  ) {
-    this.form = this.fb.group({
-      dataDevolucao: ['', [Validators.required]],
-      quilometragemFinal: [0, [Validators.required, Validators.min(0)]],
-      nivelCombustivel: ['', Validators.required],
-      combustivelNoTanque: [0, [Validators.required, Validators.min(0)]]
-    });
+  readonly aluguelId = signal<string | null>(null);
+  readonly carregandoAluguel = signal(false);
+  readonly salvando = signal(false);
+  readonly erros = signal<string[]>([]);
+  readonly aluguel = signal<AluguelCompletoDto | undefined>(undefined);
+  readonly configuracao = signal<ConfiguracaoDto | undefined>(undefined);
 
-    const hoje = new Date();
-    this.dataAtual = hoje.toISOString().split('T')[0];
-  }
+  readonly dataAtual = new Date().toISOString().split('T')[0];
+  readonly nivelCombustivelOptions = NIVEL_COMBUSTIVEL_OPTIONS;
+  readonly mensagensData = { required: 'Informe a data da devolução.' };
+  readonly mensagensKm = { min: 'A quilometragem deve ser maior ou igual a 0.' };
+  readonly mensagensTanque = { min: 'O combustível deve ser maior ou igual a 0.' };
 
-  ngOnInit() {
+  private readonly valores = toSignal(this.form.valueChanges.pipe(startWith(this.form.getRawValue())), {
+    initialValue: this.form.getRawValue()
+  });
+
+  readonly valorTaxas = computed(
+    () => this.aluguel()?.taxasServicos?.reduce((total: number, taxa: TaxaServicoAluguelDto) => total + taxa.preco, 0) ?? 0
+  );
+
+  readonly multa = computed(() => {
+    const aluguel = this.aluguel();
+    const dataDevolucao = this.valores().dataDevolucao;
+    if (!aluguel || !dataDevolucao) return 0;
+    return new Date(dataDevolucao) > new Date(aluguel.dataRetornoPrevisto) ? aluguel.valorPrevisto * 0.1 : 0;
+  });
+
+  readonly valorCombustivel = computed(() => {
+    const config = this.configuracao();
+    const { nivelCombustivel, combustivelNoTanque } = this.valores();
+    if (!this.aluguel() || !config || !combustivelNoTanque) return 0;
+
+    const esperado = TANQUE_REFERENCIA_LITROS * ((PERCENTUAL_POR_NIVEL[nivelCombustivel ?? ''] ?? 100) / 100);
+    return combustivelNoTanque < esperado ? (esperado - combustivelNoTanque) * (config.precoCombustivel || 5.0) : 0;
+  });
+
+  readonly valorTotal = computed(() => {
+    const aluguel = this.aluguel();
+    return aluguel ? aluguel.valorPrevisto + this.valorTaxas() + this.multa() + this.valorCombustivel() : 0;
+  });
+
+  ngOnInit(): void {
     this.route.queryParams.subscribe(params => {
       const placa = params['placa'];
       if (placa) {
@@ -61,157 +102,95 @@ export class DevolucaoFormComponent implements OnInit {
       }
     });
 
-    this.aluguelId = this.route.snapshot.paramMap.get('id');
-    if (this.aluguelId) {
-      this.carregarAluguel(this.aluguelId);
+    const id = this.route.snapshot.paramMap.get('id');
+    this.aluguelId.set(id);
+    if (id) {
+      this.carregarAluguel(id);
       this.carregarConfiguracao();
     }
   }
 
-  buscarAluguelPorPlaca(placa: string) {
+  buscarAluguelPorPlaca(placa: string): void {
     this.aluguelSvc.selecionarEmAberto().subscribe({
       next: (alugueis: SelecionarAlugueisDto[]) => {
-        const aluguel = alugueis.find(a =>
-          a.automovelPlaca && a.automovelPlaca.toUpperCase() === placa.toUpperCase()
-        );
+        const aluguel = alugueis.find(a => a.automovelPlaca && a.automovelPlaca.toUpperCase() === placa.toUpperCase());
         if (aluguel) {
-          this.aluguelId = aluguel.id;
+          this.aluguelId.set(aluguel.id);
           this.carregarAluguel(aluguel.id);
+          this.carregarConfiguracao();
         } else {
-          this.snack.open(`Nenhum aluguel em aberto encontrado para a placa ${placa}`, 'Fechar', { duration: 4000 });
+          this.notificacao.aviso(`Nenhum aluguel em aberto encontrado para a placa ${placa}`);
         }
-      },
-      error: () => {
-        this.snack.open('Erro ao buscar aluguel pela placa', 'Fechar', { duration: 4000 });
       }
     });
   }
 
-  carregarAluguel(id: string) {
-    this.loadingAluguel = true;
+  carregarAluguel(id: string): void {
+    this.carregandoAluguel.set(true);
     this.aluguelSvc.obter(id).subscribe({
       next: (a: AluguelCompletoDto) => {
-        this.aluguel = a;
-        this.valorTaxas = a.taxasServicos?.reduce((total: number, taxa: TaxaServicoAluguelDto) => total + taxa.preco, 0) || 0;
-        this.loadingAluguel = false;
+        this.aluguel.set(a);
+        this.carregandoAluguel.set(false);
       },
       error: () => {
-        this.loadingAluguel = false;
-        this.snack.open('Erro ao carregar aluguel', 'Fechar', { duration: 4000 });
-        this.router.navigate(['/alugueis']);
+        this.carregandoAluguel.set(false);
+        void this.router.navigate(['/alugueis']);
       }
     });
   }
 
-  carregarConfiguracao() {
-    this.configSvc.obter().subscribe({
-      next: (config: ConfiguracaoDto) => this.configuracao = config,
-      error: () => this.snack.open('Erro ao carregar configurações', 'Fechar', { duration: 4000 })
-    });
-  }
-
-  calcularMulta(): number {
-    if (!this.aluguel || !this.form.get('dataDevolucao')?.value) return 0;
-
-    const dataRetornoPrevisto = new Date(this.aluguel.dataRetornoPrevisto);
-    const dataDevolucao = new Date(this.form.get('dataDevolucao')?.value);
-
-    if (dataDevolucao > dataRetornoPrevisto) {
-      return this.aluguel.valorPrevisto * 0.1;
-    }
-
-    return 0;
-  }
-
-  calcularValorCombustivel(): number {
-    if (!this.aluguel || !this.configuracao || !this.form.get('combustivelNoTanque')?.value) return 0;
-
-    const nivel = this.form.get('nivelCombustivel')?.value;
-    let percentualEsperado = 100;
-
-    switch (nivel) {
-      case 'Cheio': percentualEsperado = 100; break;
-      case 'TresQuartos': percentualEsperado = 75; break;
-      case 'Metade': percentualEsperado = 50; break;
-      case 'UmQuarto': percentualEsperado = 25; break;
-      case 'Vazio': percentualEsperado = 0; break;
-    }
-
-    const combustivelAtual = this.form.get('combustivelNoTanque')?.value;
-    const combustivelEsperado = 50 * (percentualEsperado / 100);
-
-    if (combustivelAtual < combustivelEsperado) {
-      const litrosFaltantes = combustivelEsperado - combustivelAtual;
-      return litrosFaltantes * (this.configuracao?.precoCombustivel || 5.00);
-    }
-
-    return 0;
-  }
-
-  calcularValorTotal(): number {
-    if (!this.aluguel) return 0;
-
-    this.multa = this.calcularMulta();
-    this.valorCombustivel = this.calcularValorCombustivel();
-
-    return this.aluguel.valorPrevisto + this.valorTaxas + this.multa + this.valorCombustivel;
+  carregarConfiguracao(): void {
+    this.configSvc.obter().subscribe({ next: (config: ConfiguracaoDto) => this.configuracao.set(config) });
   }
 
   formatarData(dataString: string): string {
-    if (!dataString) return '';
-    const data = new Date(dataString);
-    return data.toLocaleDateString('pt-BR');
+    return formatarData(dataString);
   }
 
   formatarMoeda(valor: number): string {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(valor);
+    return formatarMoeda(valor);
   }
 
-  salvar() {
+  salvar(): void {
+    this.erros.set([]);
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.snack.open('Verifique os campos obrigatórios', 'Fechar', { duration: 3500 });
+      this.notificacao.aviso('Verifique os campos destacados.');
+      queueMicrotask(focarPrimeiroInvalido);
       return;
     }
 
-    if (!this.aluguelId) return;
+    const aluguelId = this.aluguelId();
+    if (!aluguelId) return;
 
+    const v = this.form.getRawValue();
     const payload: DevolucaoDto = {
-      aluguelId: this.aluguelId,
-      dataDevolucao: this.form.get('dataDevolucao')?.value,
-      quilometragemFinal: this.form.get('quilometragemFinal')?.value,
-      nivelCombustivel: this.form.get('nivelCombustivel')?.value,
-      combustivelNoTanque: this.form.get('combustivelNoTanque')?.value,
-      valorMultas: this.multa,
-      valorAdicionalCombustivel: this.valorCombustivel,
-      valorTotal: this.calcularValorTotal()
+      aluguelId,
+      dataDevolucao: v.dataDevolucao,
+      quilometragemFinal: v.quilometragemFinal,
+      nivelCombustivel: v.nivelCombustivel as DevolucaoDto['nivelCombustivel'],
+      combustivelNoTanque: v.combustivelNoTanque,
+      valorMultas: this.multa(),
+      valorAdicionalCombustivel: this.valorCombustivel(),
+      valorTotal: this.valorTotal()
     };
 
-    this.loading = true;
-    this.serverErrors = [];
-
+    this.salvando.set(true);
     this.svc.registrar(payload).subscribe({
       next: (resp: DevolucaoDto) => {
-        this.loading = false;
-        this.snack.open('Devolução registrada com sucesso', 'Fechar', { duration: 3000 });
-        if (resp.id) {
-          this.router.navigate(['/devolucoes', resp.id]);
-        } else {
-          this.router.navigate(['/devolucoes']);
-        }
+        this.salvando.set(false);
+        this.form.markAsPristine();
+        this.notificacao.sucesso('Devolução registrada com sucesso');
+        void this.router.navigate(resp.id ? ['/devolucoes', resp.id] : ['/devolucoes']);
       },
       error: (err: unknown) => {
-        this.loading = false;
-        this.serverErrors = mensagensDeErro(err);
-        this.snack.open(this.serverErrors[0], 'Fechar', { duration: 4000 });
+        this.salvando.set(false);
+        this.erros.set(mensagensDeErro(err));
       }
     });
   }
 
-  cancelar() {
-    this.router.navigate(['/alugueis']);
+  cancelar(): void {
+    void this.router.navigate(['/alugueis']);
   }
 }

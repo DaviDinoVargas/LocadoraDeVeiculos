@@ -1,106 +1,77 @@
-import { Component, OnInit, inject } from '@angular/core';
-import { Router } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { TaxasServicosService } from './taxas-servicos.service';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
+import { NgIcon } from '@ng-icons/core';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
+import { crudLista } from '../../shared/data-table/crud-lista';
+import { DataTableComponent } from '../../shared/data-table/data-table.component';
+import { AcaoLinha, ColunaTabela } from '../../shared/data-table/data-table.types';
+import { formatarMoeda } from '../../shared/data-table/data-table.util';
+import { PageHeaderComponent } from '../../shared/layout/page-header.component';
+import { PageComponent } from '../../shared/layout/page.component';
 import { TaxaServicoDto } from './taxa-servico.model';
-import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule } from '@angular/forms';
-import { ConfirmacaoService } from '../../core/confirmacao.service';
-import { filter } from 'rxjs/operators';
+import { TaxasServicosService } from './taxas-servicos.service';
 
 @Component({
   selector: 'app-taxas-servicos-list',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
-  templateUrl: './taxas-servicos-list.component.html',
-  styleUrls: ['../scss/global.scss']
+  imports: [RouterLink, NgIcon, HlmButtonImports, HlmNativeSelectImports, PageComponent, PageHeaderComponent, DataTableComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './taxas-servicos-list.component.html'
 })
-export class TaxasServicosListComponent implements OnInit {
-  private readonly confirmacao = inject(ConfirmacaoService);
+export class TaxasServicosListComponent {
+  private readonly svc = inject(TaxasServicosService);
+  private readonly router = inject(Router);
 
-  taxas: TaxaServicoDto[] = [];
-  taxasFiltradas: TaxaServicoDto[] = [];
-  loading = false;
+  // Tipo escolhido no filtro ('' = todos). A consulta é feita no servidor (GET /taxas-servicos/tipo/{tipo}).
+  private tipoFiltro = '';
 
-  constructor(
-    private svc: TaxasServicosService,
-    private router: Router,
-    private snack: MatSnackBar
-  ) {}
+  private readonly lista = crudLista<TaxaServicoDto>({
+    listar: () => (this.tipoFiltro ? this.svc.listarPorTipo(this.tipoFiltro) : this.svc.listar()),
+    excluir: id => this.svc.excluir(id),
+    singular: 'taxa ou serviço',
+    genero: 'f'
+  });
+  readonly taxas = this.lista.dados;
+  readonly carregando = this.lista.carregando;
+  readonly erro = this.lista.erro;
+  readonly carregar = this.lista.carregar;
+  readonly excluir = this.lista.excluir;
 
-  ngOnInit() {
+  readonly colunas: ColunaTabela<TaxaServicoDto>[] = [
+    { id: 'nome', cabecalho: 'Nome' },
+    { id: 'preco', cabecalho: 'Preço', tipo: 'moeda' },
+    {
+      id: 'tipoCalculo',
+      cabecalho: 'Tipo de cálculo',
+      tipo: 'enum',
+      opcoes: [
+        { valor: 'Fixo', rotulo: 'Fixo', tom: 'info' },
+        { valor: 'Diario', rotulo: 'Diário', tom: 'success' }
+      ]
+    }
+  ];
+
+  readonly acoes: AcaoLinha<TaxaServicoDto>[] = [
+    { rotulo: 'Editar', icone: 'lucidePencil', executar: t => this.editar(t.id) },
+    { rotulo: 'Excluir', icone: 'lucideTrash2', destrutiva: true, executar: t => this.excluir(t.id) }
+  ];
+
+  readonly tituloLinha = (t: TaxaServicoDto) => t.nome;
+
+  filtrarPorTipo(tipo: string): void {
+    this.tipoFiltro = tipo;
     this.carregar();
   }
 
-  carregar() {
-    this.loading = true;
-    this.svc.listar().subscribe({
-      next: t => {
-        this.taxas = t;
-        this.taxasFiltradas = [...t];
-        this.loading = false;
-      },
-      error: (err) => {
-        this.loading = false;
-        console.error('Erro ao listar taxas e serviços:', err);
-        this.snack.open('Erro ao listar taxas e serviços', 'Fechar', { duration: 4000 });
-      }
-    });
-  }
-
-  // Filtro no servidor (GET /taxas-servicos/tipo/{tipo}); "todos" reaproveita a lista já carregada.
-  filtrarPorTipo(event: Event) {
-    const tipo = (event.target as HTMLSelectElement).value;
-    if (!tipo) {
-      this.taxasFiltradas = [...this.taxas];
-      return;
-    }
-
-    this.loading = true;
-    this.svc.listarPorTipo(tipo).subscribe({
-      next: t => {
-        this.taxasFiltradas = t;
-        this.loading = false;
-      },
-      error: (err) => {
-        this.loading = false;
-        console.error('Erro ao filtrar taxas e serviços:', err);
-        this.snack.open('Erro ao filtrar taxas e serviços', 'Fechar', { duration: 4000 });
-      }
-    });
-  }
-
   formatarMoeda(valor: number): string {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(valor);
+    return formatarMoeda(valor);
   }
 
-  novo() {
-    this.router.navigate(['/taxas-servicos/new']);
+  novo(): void {
+    void this.router.navigate(['/taxas-servicos/new']);
   }
 
-  editar(id?: string) {
-    if (id) this.router.navigate([`/taxas-servicos/${id}/edit`]);
-  }
-
-  excluir(id?: string) {
-    if (!id) return;
-
-    this.confirmacao.confirmar({ titulo: 'Confirmar exclusão', mensagem: 'Deseja realmente excluir esta taxa/serviço?', confirmar: 'Excluir', destrutivo: true })
-      .pipe(filter(Boolean))
-      .subscribe(() => {
-        this.svc.excluir(id).subscribe({
-          next: () => {
-            this.snack.open('Taxa/serviço excluído', 'Fechar', { duration: 3000 });
-            this.carregar();
-          },
-          error: (err) => {
-            console.error('Erro ao excluir taxa/serviço:', err);
-            this.snack.open('Falha ao excluir taxa/serviço', 'Fechar', { duration: 4000 });
-          }
-        });
-      });
+  editar(id?: string): void {
+    if (id) void this.router.navigate([`/taxas-servicos/${id}/edit`]);
   }
 }

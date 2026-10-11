@@ -1,97 +1,90 @@
-import { Component, HostListener, OnInit, inject } from '@angular/core';
-import { Router, ActivatedRoute } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@angular/core';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { NgIcon } from '@ng-icons/core';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmDropdownMenuImports } from '@spartan-ng/helm/dropdown-menu';
+import { crudLista } from '../../shared/data-table/crud-lista';
+import { DataTableComponent } from '../../shared/data-table/data-table.component';
+import { AcaoLinha, ColunaTabela } from '../../shared/data-table/data-table.types';
+import { PageHeaderComponent } from '../../shared/layout/page-header.component';
+import { PageComponent } from '../../shared/layout/page.component';
+import { mascararCnpj, mascararCpf } from '../../shared/mascaras/mascara.directive';
+import { ClienteDto } from './cliente.model';
 import { ClientesService } from './clientes.service';
-import { ClienteDto, ClientePessoaFisicaDto, ClientePessoaJuridicaDto } from './cliente.model';
-import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule } from '@angular/forms';
-import { ConfirmacaoService } from '../../core/confirmacao.service';
-import { filter } from 'rxjs/operators';
+
+type ModoLista = 'todos' | 'pf' | 'pj';
 
 @Component({
   selector: 'app-clientes-list',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
-  templateUrl: './clientes-list.component.html',
-  styleUrls: ['../scss/global.scss']
+  imports: [RouterLink, RouterLinkActive, NgIcon, HlmButtonImports, HlmDropdownMenuImports, PageComponent, PageHeaderComponent, DataTableComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './clientes-list.component.html'
 })
 export class ClientesListComponent implements OnInit {
-  private readonly confirmacao = inject(ConfirmacaoService);
+  private readonly svc = inject(ClientesService);
+  readonly router = inject(Router);
 
-  clientes: ClienteDto[] = [];
-  loading = false;
-  modoLista: 'todos' | 'pf' | 'pj' = 'todos';
-  titulo: string = 'Clientes';
+  // O modo (todos / pessoas físicas / pessoas jurídicas) vem da URL: cada um tem o seu endpoint.
+  modoLista: ModoLista = 'todos';
+  titulo = 'Clientes';
 
-  constructor(
-    private svc: ClientesService,
-    public router: Router, // Alterado para public para usar no template
-    private route: ActivatedRoute,
-    private snack: MatSnackBar
-  ) {}
+  private readonly lista = crudLista<ClienteDto>({
+    listar: () => {
+      if (this.modoLista === 'pf') return this.svc.listarPessoasFisicas();
+      if (this.modoLista === 'pj') return this.svc.listarPessoasJuridicas();
+      return this.svc.listar();
+    },
+    excluir: id => this.svc.excluir(id),
+    singular: 'cliente',
+    carregarAoCriar: false
+  });
+  readonly clientes = this.lista.dados;
+  readonly carregando = this.lista.carregando;
+  readonly erro = this.lista.erro;
+  readonly carregar = this.lista.carregar;
+  readonly excluir = this.lista.excluir;
 
-  ngOnInit() {
+  readonly colunas = computed<ColunaTabela<ClienteDto>[]>(() => {
+    const base: ColunaTabela<ClienteDto>[] = [
+      { id: 'nome', cabecalho: 'Nome' },
+      { id: 'documento', cabecalho: 'Documento', valor: c => this.obterDocumentoPrincipal(c) },
+      { id: 'telefone', cabecalho: 'Telefone' },
+      { id: 'email', cabecalho: 'E-mail', truncar: 30, prioridade: 'baixa' }
+    ];
+    if (this.modoLista !== 'todos') return base;
+    return [
+      ...base,
+      {
+        id: 'tipo',
+        cabecalho: 'Tipo',
+        tipo: 'enum',
+        valor: c => this.obterTipoCliente(c),
+        opcoes: [
+          { valor: 'Pessoa Física', rotulo: 'Pessoa física', tom: 'info', },
+          { valor: 'Pessoa Jurídica', rotulo: 'Pessoa jurídica', tom: 'warning' }
+        ]
+      }
+    ];
+  });
+
+  readonly acoes: AcaoLinha<ClienteDto>[] = [
+    { rotulo: 'Editar', icone: 'lucidePencil', executar: c => this.editar(c) },
+    { rotulo: 'Excluir', icone: 'lucideTrash2', destrutiva: true, executar: c => this.excluir(c.id) }
+  ];
+
+  readonly tituloLinha = (c: ClienteDto) => c.nome;
+
+  ngOnInit(): void {
     // Detecta o modo da lista com base na URL
-    const currentUrl = this.router.url;
-
-    if (currentUrl.includes('/clientes/pf')) {
+    const urlAtual = this.router.url;
+    if (urlAtual.includes('/clientes/pf')) {
       this.modoLista = 'pf';
-      this.titulo = 'Pessoas Físicas';
-      this.carregarPessoasFisicas();
-    } else if (currentUrl.includes('/clientes/pj')) {
+      this.titulo = 'Pessoas físicas';
+    } else if (urlAtual.includes('/clientes/pj')) {
       this.modoLista = 'pj';
-      this.titulo = 'Pessoas Jurídicas';
-      this.carregarPessoasJuridicas();
-    } else {
-      this.modoLista = 'todos';
-      this.titulo = 'Clientes';
-      this.carregarTodos();
+      this.titulo = 'Pessoas jurídicas';
     }
-  }
-
-  carregarTodos() {
-    this.loading = true;
-    this.svc.listar().subscribe({
-      next: c => {
-        this.clientes = c;
-        this.loading = false;
-      },
-      error: (err) => {
-        this.loading = false;
-        console.error('Erro ao listar clientes:', err);
-        this.snack.open('Erro ao listar clientes', 'Fechar', { duration: 4000 });
-      }
-    });
-  }
-
-  carregarPessoasFisicas() {
-    this.loading = true;
-    this.svc.listarPessoasFisicas().subscribe({
-      next: c => {
-        this.clientes = c;
-        this.loading = false;
-      },
-      error: (err) => {
-        this.loading = false;
-        console.error('Erro ao listar pessoas físicas:', err);
-        this.snack.open('Erro ao listar pessoas físicas', 'Fechar', { duration: 4000 });
-      }
-    });
-  }
-
-  carregarPessoasJuridicas() {
-    this.loading = true;
-    this.svc.listarPessoasJuridicas().subscribe({
-      next: c => {
-        this.clientes = c;
-        this.loading = false;
-      },
-      error: (err) => {
-        this.loading = false;
-        console.error('Erro ao listar pessoas jurídicas:', err);
-        this.snack.open('Erro ao listar pessoas jurídicas', 'Fechar', { duration: 4000 });
-      }
-    });
+    this.carregar();
   }
 
   // A lista geral (GET /clientes) devolve só `documentoPrincipal`; cpf/cnpj só existem nas listas
@@ -100,8 +93,8 @@ export class ClientesListComponent implements OnInit {
     const documento: string = cliente.documentoPrincipal || cliente.cpf || cliente.cnpj || '';
     const digitos = documento.replace(/\D/g, '');
 
-    if (digitos.length === 11) return this.formatarCPF(digitos);
-    if (digitos.length === 14) return this.formatarCNPJ(digitos);
+    if (digitos.length === 11) return mascararCpf(digitos);
+    if (digitos.length === 14) return mascararCnpj(digitos);
     return documento || '—';
   }
 
@@ -109,133 +102,34 @@ export class ClientesListComponent implements OnInit {
     if (this.modoLista === 'pf') return 'Pessoa Física';
     if (this.modoLista === 'pj') return 'Pessoa Jurídica';
 
-    // Verifica se existe a propriedade tipoCliente (para ClienteDto)
     if (cliente.tipoCliente) {
       return cliente.tipoCliente === 'PessoaFisica' ? 'Pessoa Física' : 'Pessoa Jurídica';
     }
 
-    // Se não tem tipoCliente, verifica por outras propriedades
+    // Sem tipoCliente, deduz pelo documento
     if (cliente.cpf) return 'Pessoa Física';
     if (cliente.cnpj) return 'Pessoa Jurídica';
 
     return 'Desconhecido';
   }
 
-  formatarCPF(cpf: string): string {
-    if (!cpf) return '';
-    return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-  }
-
-  formatarCNPJ(cnpj: string): string {
-    if (!cnpj) return '';
-    return cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
-  }
-
-  filtrarPorTipo(tipo: string) {
-    if (this.modoLista === 'todos') {
-      // Só aplica filtro se estiver na lista geral
-      if (tipo === 'todos') {
-        this.carregarTodos();
-      } else {
-        this.carregarTodosComFiltro(tipo);
-      }
-    } else {
-      // Se estiver em uma lista específica, navega para a lista geral com filtro
-      this.router.navigate(['/clientes']);
-    }
-  }
-
-  private carregarTodosComFiltro(tipo: string) {
-    this.loading = true;
-    this.svc.listar().subscribe({
-      next: c => {
-        this.clientes = c.filter(cliente => {
-          // Para ClienteDto com tipoCliente
-          if (cliente.tipoCliente) {
-            return cliente.tipoCliente === tipo;
-          }
-          // Para outros tipos, inferir pelo documento
-          if (tipo === 'PessoaFisica' && cliente.cpf) return true;
-          if (tipo === 'PessoaJuridica' && cliente.cnpj) return true;
-          return false;
-        });
-        this.loading = false;
-      },
-      error: (err) => {
-        this.loading = false;
-        console.error('Erro ao listar clientes:', err);
-        this.snack.open('Erro ao listar clientes', 'Fechar', { duration: 4000 });
-      }
-    });
-  }
-
-  novo() {
+  novo(): void {
     if (this.modoLista === 'pf') {
-      this.router.navigate(['/clientes/new/pf']);
+      void this.router.navigate(['/clientes/new/pf']);
     } else if (this.modoLista === 'pj') {
-      this.router.navigate(['/clientes/new/pj']);
+      void this.router.navigate(['/clientes/new/pj']);
     }
   }
 
-  // O menu "Novo Cliente" é controlado pelo Angular: o JS do Bootstrap não é carregado
-  // no projeto (angular.json só inclui o CSS), então data-bs-toggle nunca abria o menu.
-  menuNovoAberto = false;
-
-  alternarMenuNovo(event: Event) {
-    event.stopPropagation();
-    this.menuNovoAberto = !this.menuNovoAberto;
+  novoCliente(tipo: 'pf' | 'pj'): void {
+    void this.router.navigate([`/clientes/new/${tipo}`]);
   }
 
-  @HostListener('document:click')
-  @HostListener('document:keydown.escape')
-  fecharMenuNovo() {
-    this.menuNovoAberto = false;
-  }
-
-  novoCliente(tipo: 'pf' | 'pj') {
-    this.menuNovoAberto = false;
-    this.router.navigate([`/clientes/new/${tipo}`]);
-  }
-
-  editar(cliente: ClienteDto) {
+  editar(cliente: ClienteDto): void {
     if (this.modoLista === 'pf' || cliente.tipoCliente === 'PessoaFisica' || cliente.cpf) {
-      this.router.navigate([`/clientes/${cliente.id}/edit/pessoa-fisica`]);
+      void this.router.navigate([`/clientes/${cliente.id}/edit/pessoa-fisica`]);
     } else if (this.modoLista === 'pj' || cliente.tipoCliente === 'PessoaJuridica' || cliente.cnpj) {
-      this.router.navigate([`/clientes/${cliente.id}/edit/pessoa-juridica`]);
+      void this.router.navigate([`/clientes/${cliente.id}/edit/pessoa-juridica`]);
     }
-  }
-
-  excluir(id?: string) {
-    if (!id) return;
-
-    this.confirmacao.confirmar({ titulo: 'Confirmar exclusão', mensagem: 'Deseja realmente excluir este cliente?', confirmar: 'Excluir', destrutivo: true })
-      .pipe(filter(Boolean))
-      .subscribe(() => {
-        this.svc.excluir(id).subscribe({
-          next: () => {
-            this.snack.open('Cliente excluído', 'Fechar', { duration: 3000 });
-            // Recarrega a lista apropriada
-            if (this.modoLista === 'pf') {
-              this.carregarPessoasFisicas();
-            } else if (this.modoLista === 'pj') {
-              this.carregarPessoasJuridicas();
-            } else {
-              this.carregarTodos();
-            }
-          },
-          error: (err) => {
-            console.error('Erro ao excluir cliente:', err);
-            this.snack.open('Falha ao excluir cliente', 'Fechar', { duration: 4000 });
-          }
-        });
-      });
-  }
-
-  navegarParaPf() {
-    this.router.navigate(['/clientes/pf']);
-  }
-
-  navegarParaPj() {
-    this.router.navigate(['/clientes/pj']);
   }
 }

@@ -1,71 +1,35 @@
-<div class="container mt-3">
-  <h4>Configurações</h4>
+<form [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+  <app-page largura="estreita">
+    <app-page-header titulo="Preço do combustível e caução" descricao="Parâmetros gerais usados no cálculo dos aluguéis e das devoluções." />
 
-  <form [formGroup]="form" (ngSubmit)="salvar()">
-    <!-- Preço do Combustível -->
-    <div class="mb-3">
-      <label class="form-label">Preço do Combustível (R$/L)</label>
-      <div class="input-group">
-        <span class="input-group-text">R$</span>
-        <input type="number"
-               step="0.01"
-               min="0"
-               class="form-control"
-               formControlName="precoCombustivel"/>
+    <app-form-errors [erros]="erros()" />
+
+    @if (mensagemSucesso()) {
+      <div hlmAlert role="status">
+        <ng-icon name="lucideCircleCheck" aria-hidden="true" />
+        <p hlmAlertDescription>{{ mensagemSucesso() }}</p>
       </div>
-      <div *ngIf="form.controls['precoCombustivel'].invalid && form.controls['precoCombustivel'].touched"
-           class="text-danger small">
-        Preço do combustível deve ser maior que 0.
-      </div>
-    </div>
+    }
 
-    <!-- Valor da Garantia -->
-    <div class="mb-3">
-      <label class="form-label">Valor da Garantia/Caução</label>
-      <div class="input-group">
-        <span class="input-group-text">R$</span>
-        <input type="number"
-               step="0.01"
-               min="0"
-               max="100000"
-               class="form-control"
-               formControlName="valorGarantia"/>
-      </div>
-      <div *ngIf="form.controls['valorGarantia'].invalid && form.controls['valorGarantia'].touched"
-           class="text-danger small">
-        Informe um valor entre R$ 0,00 e R$ 100.000,00.
-      </div>
-      <small class="text-muted">
-        Cobrada nos novos aluguéis. Alterar o valor não muda a caução de aluguéis já contratados.
-      </small>
-    </div>
+    @if (carregando()) {
+      <app-form-skeleton />
+    } @else {
+      <app-form-section titulo="Valores" descricao="A caução vale para os novos aluguéis; alterar o valor não muda a caução de aluguéis já contratados.">
+        <app-form-field class="col-span-12 sm:col-span-6" label="Preço do combustível (por litro)" required [mensagens]="mensagensCombustivel">
+          <div class="relative">
+            <span class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2" aria-hidden="true">R$</span>
+            <input hlmInput type="number" formControlName="precoCombustivel" step="0.01" min="0" inputmode="decimal" class="pl-10" />
+          </div>
+        </app-form-field>
+        <app-form-field class="col-span-12 sm:col-span-6" label="Caução (garantia)" required [mensagens]="mensagensGarantia">
+          <div class="relative">
+            <span class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2" aria-hidden="true">R$</span>
+            <input hlmInput type="number" formControlName="valorGarantia" step="0.01" min="0" max="100000" inputmode="decimal" class="pl-10" />
+          </div>
+        </app-form-field>
+      </app-form-section>
+    }
 
-    <!-- Botões -->
-    <div class="d-flex gap-2">
-      <button class="btn btn-primary"
-              type="submit"
-              [disabled]="loading">
-        <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
-        Salvar Configurações
-      </button>
-      <button class="btn btn-secondary"
-              type="button"
-              (click)="cancelar()"
-              [disabled]="loading">
-        Cancelar
-      </button>
-    </div>
-
-    <!-- Erros do servidor -->
-    <div *ngIf="serverErrors.length > 0" class="alert alert-danger mt-3">
-      <ul class="mb-0">
-        <li *ngFor="let error of serverErrors">{{ error }}</li>
-      </ul>
-    </div>
-
-    <!-- Mensagem de sucesso -->
-    <div *ngIf="mensagemSucesso" class="alert alert-success mt-3">
-      {{ mensagemSucesso }}
-    </div>
-  </form>
-</div>
+    <app-form-actions [salvando]="salvando()" [alterado]="form.dirty" rotuloSalvar="Salvar configurações" (cancelar)="cancelar()" />
+  </app-page>
+</form>

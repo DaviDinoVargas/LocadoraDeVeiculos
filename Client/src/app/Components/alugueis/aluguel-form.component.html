@@ -1,193 +1,203 @@
-<div class="container mt-3">
-  <h4 *ngIf="!editMode">Novo Aluguel</h4>
-  <h4 *ngIf="editMode">Editar Aluguel</h4>
+<form [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+  <app-page largura="total">
+    <app-page-header
+      [titulo]="editMode ? 'Editar aluguel' : 'Novo aluguel'"
+      descricao="Escolha o cliente, o veículo e o período. O valor é calculado no servidor."
+      voltarPara="/alugueis"
+      rotuloVoltar="Aluguéis"
+    />
 
-  <form [formGroup]="form" (ngSubmit)="salvar()">
-    <!-- Cliente -->
-    <div class="mb-3">
-      <label class="form-label">Cliente</label>
-      <select class="form-select" formControlName="clienteId">
-        <option value="">Selecione um cliente</option>
-        <option *ngFor="let cliente of clientes" [value]="cliente.id">{{ cliente.nome }}</option>
-      </select>
-      <div *ngIf="form.controls['clienteId'].invalid && form.controls['clienteId'].touched"
-           class="text-danger small">
-        Cliente é obrigatório.
-      </div>
-    </div>
+    <app-form-errors [erros]="serverErrors" />
 
-    <!-- Condutor -->
-    <div class="mb-3">
-      <label class="form-label">Condutor</label>
-      <select class="form-select" formControlName="condutorId">
-        <option value="">{{ form.controls['clienteId'].value ? 'Selecione um condutor' : 'Selecione um cliente primeiro' }}</option>
-        <option *ngFor="let condutor of condutoresFiltrados" [value]="condutor.id">{{ condutor.nome }} ({{ condutor.cpf }})</option>
-      </select>
-      <div *ngIf="form.controls['condutorId'].invalid && form.controls['condutorId'].touched"
-           class="text-danger small">
-        Condutor é obrigatório.
-      </div>
-    </div>
+    @if (loading && editMode) {
+      <app-form-skeleton />
+    } @else {
+      <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <div class="flex min-w-0 flex-col gap-6">
+          <app-form-section titulo="Cliente e condutor" descricao="O condutor precisa pertencer ao cliente e ter a CNH em dia.">
+            <app-form-field class="col-span-12 sm:col-span-6" label="Cliente" required>
+              <hlm-native-select class="w-full" formControlName="clienteId">
+                <option hlmNativeSelectOption value="">Selecione um cliente</option>
+                @for (cliente of clientes; track cliente.id) {
+                  <option hlmNativeSelectOption [value]="cliente.id">{{ cliente.nome }}</option>
+                }
+              </hlm-native-select>
+            </app-form-field>
+            <app-form-field class="col-span-12 sm:col-span-6" label="Condutor" required>
+              <hlm-native-select class="w-full" formControlName="condutorId">
+                <option hlmNativeSelectOption value="">{{ form.controls['clienteId'].value ? 'Selecione um condutor' : 'Selecione um cliente primeiro' }}</option>
+                @for (condutor of condutoresFiltrados; track condutor.id) {
+                  <option hlmNativeSelectOption [value]="condutor.id">{{ condutor.nome }} ({{ formatarCpf(condutor.cpf) }})</option>
+                }
+              </hlm-native-select>
+            </app-form-field>
+          </app-form-section>
 
-    <!-- Datas -->
-    <div class="row mb-3">
-      <div class="col-md-6">
-        <label class="form-label">Data de Saída</label>
-        <input type="date" class="form-control" formControlName="dataSaida"/>
-        <div *ngIf="form.controls['dataSaida'].invalid && form.controls['dataSaida'].touched"
-             class="text-danger small">
-          Data de saída é obrigatória.
-        </div>
-      </div>
-      <div class="col-md-6">
-        <label class="form-label">Data de Retorno Previsto</label>
-        <input type="date" class="form-control" formControlName="dataRetornoPrevisto"/>
-        <div *ngIf="form.controls['dataRetornoPrevisto'].invalid && form.controls['dataRetornoPrevisto'].touched"
-             class="text-danger small">
-          Data de retorno previsto é obrigatória.
-        </div>
-      </div>
-    </div>
+          <app-form-section titulo="Período e veículo" descricao="Informe as datas para ver só os veículos disponíveis no período.">
+            <app-form-field class="col-span-12 sm:col-span-6" label="Data de saída" required>
+              <input hlmInput type="date" formControlName="dataSaida" />
+            </app-form-field>
+            <app-form-field class="col-span-12 sm:col-span-6" label="Data de retorno previsto" required>
+              <input hlmInput type="date" formControlName="dataRetornoPrevisto" />
+            </app-form-field>
+            <app-form-field class="col-span-12" label="Veículo" required>
+              <hlm-native-select class="w-full" formControlName="automovelId">
+                <option hlmNativeSelectOption value="">Selecione um veículo</option>
+                @for (veiculo of veiculosDisponiveis; track veiculo.id) {
+                  <option hlmNativeSelectOption [value]="veiculo.id">{{ veiculo.placa }} - {{ veiculo.marca }} {{ veiculo.modelo }}</option>
+                }
+              </hlm-native-select>
+            </app-form-field>
+            @if (avisoDisponibilidade) {
+              <p class="text-body-s text-warning col-span-12 flex items-center gap-1.5" role="status">
+                <ng-icon name="lucideTriangleAlert" aria-hidden="true" />
+                {{ avisoDisponibilidade }}
+              </p>
+            }
+          </app-form-section>
 
-    <!-- Veículo -->
-    <div class="mb-3">
-      <label class="form-label">Veículo</label>
-      <select class="form-select" formControlName="automovelId">
-        <option value="">Selecione um veículo</option>
-        <option *ngFor="let veiculo of veiculosDisponiveis" [value]="veiculo.id">{{ veiculo.placa }} - {{ veiculo.marca }} {{ veiculo.modelo }}</option>
-      </select>
-      <div *ngIf="form.controls['automovelId'].invalid && form.controls['automovelId'].touched"
-           class="text-danger small">
-        Veículo é obrigatório.
-      </div>
-      <div *ngIf="avisoDisponibilidade" class="text-warning-emphasis small mt-1" role="status">
-        <i class="bi bi-exclamation-triangle me-1"></i>{{ avisoDisponibilidade }}
-      </div>
-      <small class="text-muted" *ngIf="!avisoDisponibilidade && !form.controls['dataSaida'].value">
-        Informe as datas para ver só os veículos disponíveis no período.
-      </small>
-    </div>
+          @if (taxasServicos.length) {
+            <app-form-section titulo="Taxas e serviços" descricao="Itens extras somados ao valor do aluguel.">
+              @for (taxa of taxasServicos; track taxa.id) {
+                <div class="col-span-12 flex items-center gap-3 sm:col-span-6">
+                  <hlm-checkbox
+                    [inputId]="'taxa-' + taxa.id"
+                    [checked]="taxasSelecionadas.includes(taxa.id!)"
+                    (checkedChange)="onTaxaChange($event, taxa)"
+                  />
+                  <label hlmLabel [for]="'taxa-' + taxa.id" class="text-body-m font-normal">
+                    {{ taxa.nome }} — {{ formatarMoeda(taxa.preco) }} ({{ taxa.tipoCalculo === 'Fixo' ? 'fixo' : 'diário' }})
+                  </label>
+                </div>
+              }
+            </app-form-section>
+          }
 
-    <!-- Taxas e Serviços -->
-    <div class="mb-3">
-      <label class="form-label">Taxas e Serviços</label>
-      <div *ngFor="let taxa of taxasServicos" class="form-check">
-        <input class="form-check-input"
-               type="checkbox"
-               [value]="taxa.id"
-               [id]="'taxa-' + taxa.id"
-               [checked]="taxasSelecionadas.includes(taxa.id!)"
-               (change)="onTaxaChange($event, taxa)">
-        <label class="form-check-label" [for]="'taxa-' + taxa.id">
-          {{ taxa.nome }} - {{ formatarMoeda(taxa.preco) }} ({{ taxa.tipoCalculo === 'Fixo' ? 'Fixo' : 'Diário' }})
-        </label>
-      </div>
-    </div>
-
-    <!-- Cupom de Desconto -->
-    <div class="mb-3">
-      <label class="form-label">Código do Cupom (opcional)</label>
-      <input class="form-control text-uppercase"
-             [class.is-valid]="cupomStatus === 'valido'"
-             [class.is-invalid]="cupomStatus === 'invalido'"
-             formControlName="cupomCodigo"
-             placeholder="Ex: BEMVINDO10"
-             aria-describedby="cupom-feedback"/>
-      <div id="cupom-feedback" class="small mt-1" aria-live="polite">
-        <span *ngIf="cupomStatus === 'validando'" class="text-muted">
-          <span class="spinner-border spinner-border-sm me-1"></span>Validando cupom…
-        </span>
-        <span *ngIf="cupomStatus === 'valido'" class="text-success"><i class="bi bi-check-circle me-1"></i>{{ cupomMensagem }}</span>
-        <span *ngIf="cupomStatus === 'invalido'" class="text-danger"><i class="bi bi-x-circle me-1"></i>{{ cupomMensagem }}</span>
-        <span *ngIf="cupomStatus === 'aguardando'" class="text-muted">{{ cupomMensagem }}</span>
-      </div>
-
-      <!-- Desafios do cliente: metas ativas, progresso e o cupom liberado ao cumprir -->
-      <div *ngIf="progressoDesafios.length > 0" class="mt-3" aria-label="Desafios do cliente">
-        <div class="form-label mb-1">Desafios do cliente</div>
-        <ul class="list-unstyled mb-0">
-          <li *ngFor="let d of progressoDesafios" class="mb-2">
-            <div class="d-flex justify-content-between align-items-center small">
-              <span>{{ d.nome }}</span>
-              <span *ngIf="d.cumprido && d.cupomLiberadoCodigo" class="d-flex align-items-center gap-2">
-                <span class="badge bg-success"><i class="bi bi-trophy me-1"></i>Meta cumprida</span>
-                <button type="button" class="btn btn-sm btn-outline-success" (click)="usarCupomDoDesafio(d.cupomLiberadoCodigo)">
-                  Usar cupom {{ d.cupomLiberadoCodigo }}
-                </button>
-              </span>
-              <span *ngIf="!d.cumprido" class="text-muted">{{ d.progresso }} de {{ d.meta }} aluguéis</span>
+          <app-form-section titulo="Cupom de desconto" descricao="Opcional. O desconto é validado no servidor sobre o valor calculado.">
+            <app-form-field class="col-span-12 sm:col-span-6" label="Código do cupom">
+              <input hlmInput formControlName="cupomCodigo" class="uppercase" placeholder="Ex.: BEMVINDO10" autocomplete="off" aria-describedby="cupom-feedback" />
+            </app-form-field>
+            <div id="cupom-feedback" class="text-body-s col-span-12 flex min-h-5 items-center gap-1.5 sm:col-span-6 sm:pt-7" aria-live="polite">
+              @switch (cupomStatus) {
+                @case ('validando') {
+                  <span class="text-muted-foreground flex items-center gap-1.5">
+                    <ng-icon name="lucideLoader2" class="animate-spin motion-reduce:animate-none" aria-hidden="true" />
+                    Validando cupom…
+                  </span>
+                }
+                @case ('valido') {
+                  <span class="text-success flex items-center gap-1.5">
+                    <ng-icon name="lucideCircleCheck" aria-hidden="true" />
+                    {{ cupomMensagem }}
+                  </span>
+                }
+                @case ('invalido') {
+                  <span class="text-destructive flex items-center gap-1.5">
+                    <ng-icon name="lucideCircleX" aria-hidden="true" />
+                    {{ cupomMensagem }}
+                  </span>
+                }
+                @case ('aguardando') {
+                  <span class="text-muted-foreground">{{ cupomMensagem }}</span>
+                }
+              }
             </div>
-            <div class="progress" style="height: 6px"
-                 role="progressbar"
-                 [attr.aria-label]="'Progresso do desafio ' + d.nome"
-                 [attr.aria-valuenow]="percentualDoDesafio(d)" aria-valuemin="0" aria-valuemax="100">
-              <div class="progress-bar" [class.bg-success]="d.cumprido" [style.width.%]="percentualDoDesafio(d)"></div>
-            </div>
-          </li>
-        </ul>
+
+            <!-- Desafios do cliente: metas ativas, progresso e o cupom liberado ao cumprir -->
+            @if (progressoDesafios.length > 0) {
+              <div class="col-span-12" aria-label="Desafios do cliente">
+                <h3 class="text-title-s mb-2">Desafios do cliente</h3>
+                <ul class="flex flex-col gap-3">
+                  @for (d of progressoDesafios; track d.desafioId) {
+                    <li class="flex flex-col gap-1.5">
+                      <div class="text-body-m flex flex-wrap items-center justify-between gap-2">
+                        <span>{{ d.nome }}</span>
+                        @if (d.cumprido && d.cupomLiberadoCodigo) {
+                          <span class="flex items-center gap-2">
+                            <span class="bg-success-container text-on-success-container text-label-m inline-flex items-center gap-1 rounded-full px-2.5 py-1">
+                              <ng-icon name="lucideTrophy" class="text-sm" aria-hidden="true" />
+                              Meta cumprida
+                            </span>
+                            <button hlmBtn variant="outline" size="sm" type="button" (click)="usarCupomDoDesafio(d.cupomLiberadoCodigo)">
+                              Usar cupom {{ d.cupomLiberadoCodigo }}
+                            </button>
+                          </span>
+                        } @else if (!d.cumprido) {
+                          <span class="text-muted-foreground">{{ d.progresso }} de {{ d.meta }} aluguéis</span>
+                        }
+                      </div>
+                      <div
+                        class="bg-muted h-1.5 overflow-hidden rounded-full"
+                        role="progressbar"
+                        [attr.aria-label]="'Progresso do desafio ' + d.nome"
+                        [attr.aria-valuenow]="percentualDoDesafio(d)"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                      >
+                        <div class="h-full rounded-full" [class]="d.cumprido ? 'bg-success' : 'bg-primary'" [style.width.%]="percentualDoDesafio(d)"></div>
+                      </div>
+                    </li>
+                  }
+                </ul>
+              </div>
+            }
+          </app-form-section>
+        </div>
+
+        <!-- Resumo do valor: calculado pelo servidor (mesmo cálculo que é gravado ao salvar) -->
+        <aside class="lg:sticky lg:top-0" aria-live="polite" [attr.aria-busy]="simulando">
+          <section class="border-border bg-card flex flex-col gap-3 rounded-xl border p-5">
+            <h2 class="text-title-m">Resumo do valor</h2>
+
+            @if (!simulacao && !simulando && !erroSimulacao) {
+              <p class="text-body-m text-muted-foreground">Escolha o veículo e as datas para ver o valor do aluguel.</p>
+            }
+            @if (simulando) {
+              <p class="text-body-m text-muted-foreground flex items-center gap-2">
+                <ng-icon name="lucideLoader2" class="animate-spin motion-reduce:animate-none" aria-hidden="true" />
+                Calculando…
+              </p>
+            }
+            @if (erroSimulacao) {
+              <p class="text-body-m text-destructive flex items-start gap-2" role="alert">
+                <ng-icon name="lucideCircleAlert" class="mt-0.5 shrink-0" aria-hidden="true" />
+                {{ erroSimulacao }}
+              </p>
+            }
+
+            @if (simulacao && !erroSimulacao) {
+              <dl class="text-body-m flex flex-col gap-2">
+                <div class="flex justify-between gap-4">
+                  <dt class="text-muted-foreground">Diárias ({{ simulacao.dias }} × {{ formatarMoeda(simulacao.precoDiaria) }})</dt>
+                  <dd class="tabular">{{ formatarMoeda(simulacao.valorDiarias) }}</dd>
+                </div>
+                @if (simulacao.valorTaxas > 0) {
+                  <div class="flex justify-between gap-4">
+                    <dt class="text-muted-foreground">Taxas e serviços</dt>
+                    <dd class="tabular">{{ formatarMoeda(simulacao.valorTaxas) }}</dd>
+                  </div>
+                }
+                @if (descontoCupom > 0) {
+                  <div class="text-success flex justify-between gap-4">
+                    <dt>Desconto do cupom</dt>
+                    <dd class="tabular">− {{ formatarMoeda(descontoCupom) }}</dd>
+                  </div>
+                }
+                <div class="flex justify-between gap-4">
+                  <dt class="text-muted-foreground">Caução (devolvida na entrega)</dt>
+                  <dd class="tabular">{{ formatarMoeda(caucaoExibida()) }}</dd>
+                </div>
+                <div class="border-border text-title-m flex justify-between gap-4 border-t pt-3">
+                  <dt>Total na retirada</dt>
+                  <dd class="tabular">{{ formatarMoeda(totalAPagar()) }}</dd>
+                </div>
+              </dl>
+            }
+          </section>
+        </aside>
       </div>
-    </div>
+    }
 
-    <!-- Resumo do valor: calculado pelo servidor (mesmo cálculo que é gravado ao salvar) -->
-    <div class="card mb-3" aria-live="polite" [attr.aria-busy]="simulando">
-      <div class="card-body">
-        <h6 class="card-title">Resumo do valor</h6>
-
-        <p *ngIf="!simulacao && !simulando && !erroSimulacao" class="text-muted small mb-0">
-          Escolha o veículo e as datas para ver o valor do aluguel.
-        </p>
-        <p *ngIf="simulando" class="text-muted small mb-0">
-          <span class="spinner-border spinner-border-sm me-1"></span>Calculando…
-        </p>
-        <p *ngIf="erroSimulacao" class="text-danger small mb-0" role="alert">{{ erroSimulacao }}</p>
-
-        <dl *ngIf="simulacao && !erroSimulacao" class="mb-0 resumo-valor">
-          <div class="d-flex justify-content-between">
-            <dt class="fw-normal">Diárias ({{ simulacao.dias }} × {{ formatarMoeda(simulacao.precoDiaria) }})</dt>
-            <dd class="mb-0">{{ formatarMoeda(simulacao.valorDiarias) }}</dd>
-          </div>
-          <div class="d-flex justify-content-between" *ngIf="simulacao.valorTaxas > 0">
-            <dt class="fw-normal">Taxas e serviços</dt>
-            <dd class="mb-0">{{ formatarMoeda(simulacao.valorTaxas) }}</dd>
-          </div>
-          <div class="d-flex justify-content-between text-success" *ngIf="descontoCupom > 0">
-            <dt class="fw-normal">Desconto do cupom</dt>
-            <dd class="mb-0">− {{ formatarMoeda(descontoCupom) }}</dd>
-          </div>
-          <div class="d-flex justify-content-between">
-            <dt class="fw-normal">Caução (devolvida na entrega)</dt>
-            <dd class="mb-0">{{ formatarMoeda(caucaoExibida()) }}</dd>
-          </div>
-          <hr class="my-2">
-          <div class="d-flex justify-content-between fw-bold">
-            <dt>Total a pagar na retirada</dt>
-            <dd class="mb-0">{{ formatarMoeda(totalAPagar()) }}</dd>
-          </div>
-        </dl>
-      </div>
-    </div>
-
-    <!-- Botões -->
-    <div class="d-flex gap-2">
-      <button class="btn btn-primary"
-              type="submit"
-              [disabled]="loading">
-        <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
-        {{ editMode ? 'Salvar' : 'Criar' }}
-      </button>
-      <button class="btn btn-secondary"
-              type="button"
-              (click)="cancelar()"
-              [disabled]="loading">
-        Cancelar
-      </button>
-    </div>
-
-    <!-- Erros do servidor -->
-    <div *ngIf="serverErrors.length > 0" class="alert alert-danger mt-3">
-      <ul class="mb-0">
-        <li *ngFor="let error of serverErrors">{{ error }}</li>
-      </ul>
-    </div>
-  </form>
-</div>
+    <app-form-actions [salvando]="loading" [alterado]="form.dirty" [rotuloSalvar]="editMode ? 'Salvar alterações' : 'Criar aluguel'" (cancelar)="cancelar()" />
+  </app-page>
+</form>

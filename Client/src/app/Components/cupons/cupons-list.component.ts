@@ -1,88 +1,80 @@
-import { Component, OnInit, inject } from '@angular/core';
-import { Router } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule } from '@angular/forms';
-import { CuponsService } from './cupons.service';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
+import { NgIcon } from '@ng-icons/core';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { crudLista } from '../../shared/data-table/crud-lista';
+import { DataTableComponent } from '../../shared/data-table/data-table.component';
+import { AcaoLinha, ColunaTabela } from '../../shared/data-table/data-table.types';
+import { formatarData, formatarMoeda } from '../../shared/data-table/data-table.util';
+import { PageHeaderComponent } from '../../shared/layout/page-header.component';
+import { PageComponent } from '../../shared/layout/page.component';
 import { CupomDto, tipoDescontoLabel } from './cupom.model';
-import { ConfirmacaoService } from '../../core/confirmacao.service';
-import { filter } from 'rxjs/operators';
+import { CuponsService } from './cupons.service';
 
 @Component({
   selector: 'app-cupons-list',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
-  templateUrl: './cupons-list.component.html',
-  styleUrls: ['../scss/global.scss']
+  imports: [RouterLink, NgIcon, HlmButtonImports, PageComponent, PageHeaderComponent, DataTableComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './cupons-list.component.html'
 })
-export class CuponsListComponent implements OnInit {
-  private readonly confirmacao = inject(ConfirmacaoService);
+export class CuponsListComponent {
+  private readonly svc = inject(CuponsService);
+  private readonly router = inject(Router);
 
-  cupons: CupomDto[] = [];
-  loading = false;
-  tipoDescontoLabel = tipoDescontoLabel;
+  private readonly lista = crudLista<CupomDto>({
+    listar: () => this.svc.listar(),
+    excluir: id => this.svc.excluir(id),
+    singular: 'cupom'
+  });
+  readonly cupons = this.lista.dados;
+  readonly carregando = this.lista.carregando;
+  readonly erro = this.lista.erro;
+  readonly carregar = this.lista.carregar;
+  readonly excluir = this.lista.excluir;
+  readonly tipoDescontoLabel = tipoDescontoLabel;
 
-  constructor(
-    private svc: CuponsService,
-    private router: Router,
-    private snack: MatSnackBar
-  ) {}
+  readonly colunas: ColunaTabela<CupomDto>[] = [
+    { id: 'codigo', cabecalho: 'Código' },
+    { id: 'descricao', cabecalho: 'Descrição', truncar: 34, prioridade: 'baixa' },
+    { id: 'valorDesconto', cabecalho: 'Desconto', tipo: 'numero', formatar: c => this.formatarValor(c) },
+    { id: 'validoAte', cabecalho: 'Válido até', tipo: 'data' },
+    { id: 'usos', cabecalho: 'Usos', tipo: 'numero', valor: c => c.usosAtuais ?? 0, formatar: c => `${c.usosAtuais ?? 0} / ${c.limiteUsos}` },
+    { id: 'parceiroNome', cabecalho: 'Parceiro', filtravel: true },
+    {
+      id: 'ativo',
+      cabecalho: 'Status',
+      tipo: 'enum',
+      valor: c => (c.ativo ? 'Ativo' : 'Inativo'),
+      opcoes: [
+        { valor: 'Ativo', rotulo: 'Ativo', tom: 'success' },
+        { valor: 'Inativo', rotulo: 'Inativo', tom: 'neutral' }
+      ]
+    }
+  ];
 
-  ngOnInit() {
-    this.carregar();
-  }
+  readonly acoes: AcaoLinha<CupomDto>[] = [
+    { rotulo: 'Editar', icone: 'lucidePencil', executar: c => this.editar(c.id) },
+    { rotulo: 'Excluir', icone: 'lucideTrash2', destrutiva: true, executar: c => this.excluir(c.id) }
+  ];
 
-  carregar() {
-    this.loading = true;
-    this.svc.listar().subscribe({
-      next: c => {
-        this.cupons = c;
-        this.loading = false;
-      },
-      error: (err) => {
-        this.loading = false;
-        console.error('Erro ao listar cupons:', err);
-        this.snack.open('Erro ao listar cupons', 'Fechar', { duration: 4000 });
-      }
-    });
-  }
+  readonly tituloLinha = (c: CupomDto) => c.codigo;
 
   formatarValor(cupom: CupomDto): string {
     if (cupom.tipoDesconto === 'Percentual') {
       return `${cupom.valorDesconto}%`;
     }
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cupom.valorDesconto);
+    return formatarMoeda(cupom.valorDesconto);
   }
 
   formatarData(dataString?: string): string {
-    if (!dataString) return '';
-    return new Date(dataString).toLocaleDateString('pt-BR');
+    return dataString ? formatarData(dataString) : '';
   }
 
-  novo() {
-    this.router.navigate(['/cupons/new']);
+  novo(): void {
+    void this.router.navigate(['/cupons/new']);
   }
 
-  editar(id?: string) {
-    if (id) this.router.navigate([`/cupons/${id}/edit`]);
-  }
-
-  excluir(id?: string) {
-    if (!id) return;
-
-    this.confirmacao.confirmar({ titulo: 'Confirmar exclusão', mensagem: 'Deseja realmente excluir este cupom?', confirmar: 'Excluir', destrutivo: true })
-      .pipe(filter(Boolean))
-      .subscribe(() => {
-        this.svc.excluir(id).subscribe({
-          next: () => {
-            this.snack.open('Cupom excluído', 'Fechar', { duration: 3000 });
-            this.carregar();
-          },
-          error: (err) => {
-            console.error('Erro ao excluir cupom:', err);
-            this.snack.open('Falha ao excluir cupom', 'Fechar', { duration: 4000 });
-          }
-        });
-      });
+  editar(id?: string): void {
+    if (id) void this.router.navigate([`/cupons/${id}/edit`]);
   }
 }

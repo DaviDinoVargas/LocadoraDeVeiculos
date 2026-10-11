@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { NotificacaoService } from '../../core/notificacao.service';
+import { criarNotificacaoFalsa } from '../../core/testing/notificacao-fake.spec';
 import { of } from 'rxjs';
 import { ConfiguracaoFormComponent } from './configuracao-form.component';
 import { ConfiguracoesService } from './configuracoes.service';
@@ -19,7 +20,7 @@ describe('ConfiguracaoFormComponent — caução configurável', () => {
 
     await TestBed.configureTestingModule({
       imports: [ConfiguracaoFormComponent],
-      providers: [provideRouter([]), { provide: ConfiguracoesService, useValue: svc }, { provide: MatSnackBar, useValue: { open: () => {} } }]
+      providers: [provideRouter([]), { provide: ConfiguracoesService, useValue: svc }, { provide: NotificacaoService, useValue: criarNotificacaoFalsa() }]
     }).compileComponents();
 
     fixture = TestBed.createComponent(ConfiguracaoFormComponent);
@@ -50,7 +51,7 @@ describe('ConfiguracaoFormComponent — caução configurável', () => {
     fixture.componentInstance.salvar();
 
     expect(chamadas).toEqual([]);
-    expect(fixture.componentInstance.mensagemSucesso).toContain('sucesso');
+    expect(fixture.componentInstance.mensagemSucesso()).toContain('sucesso');
   });
 
   it('rejeita caução negativa ou acima do limite', () => {

@@ -1,132 +1,90 @@
-<div class="container mt-4">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3>{{ titulo }}</h3>
-
-    <!-- Botão de novo cliente dinâmico baseado no modo -->
-    <div *ngIf="modoLista === 'todos'" class="btn-group">
-      <button class="btn btn-primary dropdown-toggle" type="button"
-              aria-haspopup="true" [attr.aria-expanded]="menuNovoAberto"
-              (click)="alternarMenuNovo($event)">
-        <i class="bi bi-plus-circle me-1"></i>
-        Novo Cliente
+<app-page>
+  <app-page-header [titulo]="titulo" descricao="Pessoas físicas e jurídicas que alugam veículos.">
+    @if (modoLista === 'todos') {
+      <button acoes hlmBtn type="button" [hlmDropdownMenuTrigger]="menuNovo" align="end" aria-haspopup="menu">
+        <ng-icon name="lucidePlus" aria-hidden="true" />
+        Novo cliente
+        <ng-icon name="lucideChevronDown" aria-hidden="true" />
       </button>
-      <ul class="dropdown-menu" [class.show]="menuNovoAberto">
-        <li><button type="button" class="dropdown-item" (click)="novoCliente('pf')">Pessoa Física</button></li>
-        <li><button type="button" class="dropdown-item" (click)="novoCliente('pj')">Pessoa Jurídica</button></li>
-      </ul>
-    </div>
+    } @else if (modoLista === 'pf') {
+      <a acoes hlmBtn routerLink="/clientes/new/pf">
+        <ng-icon name="lucidePlus" aria-hidden="true" />
+        Nova pessoa física
+      </a>
+    } @else {
+      <a acoes hlmBtn routerLink="/clientes/new/pj">
+        <ng-icon name="lucidePlus" aria-hidden="true" />
+        Nova pessoa jurídica
+      </a>
+    }
+  </app-page-header>
 
-    <button *ngIf="modoLista === 'pf'" class="btn btn-primary" (click)="novoCliente('pf')">
-      <i class="bi bi-plus-circle me-1"></i>
-      Nova Pessoa Física
+  <!-- Abas por tipo de cliente (cada uma é uma rota) -->
+  <nav aria-label="Tipo de cliente" class="border-border -mb-2 flex gap-1 border-b">
+    <a
+      routerLink="/clientes"
+      routerLinkActive="border-primary text-foreground"
+      [routerLinkActiveOptions]="{ exact: true }"
+      class="text-label-l text-muted-foreground hover:text-foreground -mb-px inline-flex min-h-11 items-center border-b-2 border-transparent px-4"
+      ariaCurrentWhenActive="page"
+    >
+      Todos
+    </a>
+    <a
+      routerLink="/clientes/pf"
+      routerLinkActive="border-primary text-foreground"
+      class="text-label-l text-muted-foreground hover:text-foreground -mb-px inline-flex min-h-11 items-center border-b-2 border-transparent px-4"
+      ariaCurrentWhenActive="page"
+    >
+      Pessoas físicas
+    </a>
+    <a
+      routerLink="/clientes/pj"
+      routerLinkActive="border-primary text-foreground"
+      class="text-label-l text-muted-foreground hover:text-foreground -mb-px inline-flex min-h-11 items-center border-b-2 border-transparent px-4"
+      ariaCurrentWhenActive="page"
+    >
+      Pessoas jurídicas
+    </a>
+  </nav>
+
+  <app-data-table
+    [tableId]="'clientes-' + modoLista"
+    itens="clientes"
+    item="cliente"
+    [colunas]="colunas()"
+    [dados]="clientes()"
+    [carregando]="carregando()"
+    [erro]="erro()"
+    [acoesLinha]="acoes"
+    [tituloLinha]="tituloLinha"
+    tituloVazio="Nenhum cliente cadastrado"
+    descricaoVazio="Cadastre o primeiro cliente para poder registrar aluguéis."
+    (recarregar)="carregar()"
+  >
+    @if (modoLista === 'todos') {
+      <button acaoVazia hlmBtn type="button" [hlmDropdownMenuTrigger]="menuNovo" align="center" aria-haspopup="menu">
+        <ng-icon name="lucidePlus" aria-hidden="true" />
+        Novo cliente
+      </button>
+    } @else {
+      <button acaoVazia hlmBtn type="button" (click)="novo()">
+        <ng-icon name="lucidePlus" aria-hidden="true" />
+        Novo cliente
+      </button>
+    }
+  </app-data-table>
+</app-page>
+
+<ng-template #menuNovo>
+  <hlm-dropdown-menu class="w-48">
+    <button hlmDropdownMenuItem type="button" (triggered)="novoCliente('pf')">
+      <ng-icon name="lucideUser" aria-hidden="true" />
+      Pessoa física
     </button>
-
-    <button *ngIf="modoLista === 'pj'" class="btn btn-primary" (click)="novoCliente('pj')">
-      <i class="bi bi-plus-circle me-1"></i>
-      Nova Pessoa Jurídica
+    <button hlmDropdownMenuItem type="button" (triggered)="novoCliente('pj')">
+      <ng-icon name="lucideBuilding2" aria-hidden="true" />
+      Pessoa jurídica
     </button>
-  </div>
-
-  <!-- Abas para filtrar por tipo (só mostra se for a lista geral) -->
-  <div *ngIf="modoLista === 'todos'">
-    <ul class="nav nav-tabs mb-3">
-      <li class="nav-item">
-        <a class="nav-link" [class.active]="modoLista === 'todos'" (click)="filtrarPorTipo('todos')">Todos</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" [class.active]="false" (click)="filtrarPorTipo('PessoaFisica')">Pessoas Físicas</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" [class.active]="false" (click)="filtrarPorTipo('PessoaJuridica')">Pessoas Jurídicas</a>
-      </li>
-    </ul>
-
-    <!-- Botões de navegação para listas específicas (só mostra se for a lista geral) -->
-    <div class="row mb-3">
-      <div class="col-md-6">
-        <div class="card">
-          <div class="card-body text-center">
-            <h5 class="card-title">Pessoas Físicas</h5>
-            <p class="card-text">Gerencie clientes pessoas físicas</p>
-            <button class="btn btn-outline-primary" (click)="navegarParaPf()">
-              <i class="bi bi-person me-1"></i>
-              Acessar Pessoas Físicas
-            </button>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-6">
-        <div class="card">
-          <div class="card-body text-center">
-            <h5 class="card-title">Pessoas Jurídicas</h5>
-            <p class="card-text">Gerencie clientes pessoas jurídicas</p>
-            <button class="btn btn-outline-warning" (click)="navegarParaPj()">
-              <i class="bi bi-building me-1"></i>
-              Acessar Pessoas Jurídicas
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Loading -->
-  <div *ngIf="loading" class="text-center py-4">
-    <div class="spinner-border text-primary" role="status">
-      <span class="visually-hidden">Carregando...</span>
-    </div>
-    <p class="mt-2">Carregando {{ titulo.toLowerCase() }}...</p>
-  </div>
-
-  <!-- Lista de clientes -->
-  <div *ngIf="!loading && clientes.length > 0" class="table-responsive">
-    <table class="table table-hover">
-      <thead class="table-light">
-        <tr>
-          <th>Nome</th>
-          <th>Documento</th>
-          <th>Telefone</th>
-          <th>Email</th>
-          <th *ngIf="modoLista === 'todos'">Tipo</th>
-          <th class="text-end">Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let c of clientes">
-          <td>{{ c.nome }}</td>
-          <td>{{ obterDocumentoPrincipal(c) }}</td>
-          <td>{{ c.telefone }}</td>
-          <td>{{ c.email || '-' }}</td>
-          <td *ngIf="modoLista === 'todos'">
-            <span class="badge" [ngClass]="obterTipoCliente(c) === 'Pessoa Física' ? 'bg-info' : 'bg-warning'">
-              {{ obterTipoCliente(c) }}
-            </span>
-          </td>
-          <td class="text-end">
-            <div class="btn-group btn-group-sm">
-              <button class="btn btn-outline-primary"
-                      (click)="editar(c)"
-                      title="Editar">
-                <i class="bi bi-pencil"></i>
-              </button>
-              <button class="btn btn-outline-danger"
-                      (click)="excluir(c.id)"
-                      title="Excluir">
-                <i class="bi bi-trash"></i>
-              </button>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Mensagem quando não há clientes -->
-  <div *ngIf="!loading && clientes.length === 0" class="alert alert-info">
-    <i class="bi bi-info-circle me-2"></i>
-    Nenhum cliente encontrado.
-    <span *ngIf="modoLista === 'pf'"> Clique em "Nova Pessoa Física" para adicionar.</span>
-    <span *ngIf="modoLista === 'pj'"> Clique em "Nova Pessoa Jurídica" para adicionar.</span>
-    <span *ngIf="modoLista === 'todos'"> Clique em "Novo Cliente" para adicionar.</span>
-  </div>
-</div>
+  </hlm-dropdown-menu>
+</ng-template>

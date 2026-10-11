@@ -1,7 +1,8 @@
 import { Type } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { NotificacaoService } from '../core/notificacao.service';
+import { criarNotificacaoFalsa } from '../core/testing/notificacao-fake.spec';
 import { of } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { ConfirmacaoService } from '../core/confirmacao.service';
@@ -56,7 +57,7 @@ describe('Exclusão nas listas — confirmação por diálogo', () => {
         { provide: ClientesService, useValue: stub }, // a lista de condutores também carrega os clientes
         { provide: ConfirmacaoService, useValue: { confirmar } },
         { provide: AuthService, useValue: { getUsuario: () => ({ cargo: 'Empresa' }) } },
-        { provide: MatSnackBar, useValue: { open: () => {} } }
+        { provide: NotificacaoService, useValue: criarNotificacaoFalsa() }
       ]
     });
     const fixture = TestBed.createComponent(componente);

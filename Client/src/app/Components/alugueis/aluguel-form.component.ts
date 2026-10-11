@@ -1,7 +1,6 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, ActivatedRoute, ParamMap } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { AlugueisService } from './alugueis.service';
 import { ClientesService } from '../clientes/clientes.service';
 import { CondutoresService } from '../condutor/condutores.service';
@@ -18,16 +17,38 @@ import { mensagensDeErro } from '../../core/api-error';
 import { CuponsService } from '../cupons/cupons.service';
 import { DesafiosCupomService } from '../desafios-cupom/desafios-cupom.service';
 import { ProgressoDesafioDto } from '../desafios-cupom/desafio-cupom.model';
-import { CommonModule } from '@angular/common';
+import { NgIcon } from '@ng-icons/core';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmCheckboxImports } from '@spartan-ng/helm/checkbox';
+import { HlmInputImports } from '@spartan-ng/helm/input';
+import { HlmLabel } from '@spartan-ng/helm/label';
+import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
+import { FormProtegido } from '../../core/form-guard';
+import { NotificacaoService } from '../../core/notificacao.service';
+import { focarPrimeiroInvalido } from '../../shared/form-fields/crud-form';
+import { FormActionsComponent } from '../../shared/form-fields/form-actions.component';
+import { FormErrorsComponent } from '../../shared/form-fields/form-errors.component';
+import { FormFieldComponent } from '../../shared/form-fields/form-field.component';
+import { FormSectionComponent } from '../../shared/form-fields/form-section.component';
+import { FormSkeletonComponent } from '../../shared/form-fields/form-skeleton.component';
+import { PageHeaderComponent } from '../../shared/layout/page-header.component';
+import { PageComponent } from '../../shared/layout/page.component';
+import { formatarMoeda } from '../../shared/data-table/data-table.util';
+import { mascararCpf } from '../../shared/mascaras/mascara.directive';
 
+// Este formulário concentra várias consultas reativas (simulação, disponibilidade, cupom, desafios) que
+// atualizam campos da classe a cada resposta; por isso ele segue com a detecção de mudanças padrão e
+// os campos mutáveis (migrar para signals/OnPush fica como evolução, ver o handoff).
 @Component({
   selector: 'app-aluguel-form',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
-  templateUrl: './aluguel-form.component.html',
-  styleUrls: ['../scss/global.scss']
+  imports: [
+    ReactiveFormsModule, NgIcon, HlmButtonImports, HlmCheckboxImports, HlmInputImports, HlmLabel, HlmNativeSelectImports, PageComponent,
+    PageHeaderComponent, FormSectionComponent, FormFieldComponent, FormActionsComponent, FormErrorsComponent, FormSkeletonComponent
+  ],
+  changeDetection: ChangeDetectionStrategy.Default,
+  templateUrl: './aluguel-form.component.html'
 })
-export class AluguelFormComponent implements OnInit, OnDestroy {
+export class AluguelFormComponent implements OnInit, OnDestroy, FormProtegido {
   form!: FormGroup;
   id?: string | null = null;
   loading = false;
@@ -73,19 +94,19 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
 
   private sub: Subscription | null = null;
 
-  constructor(
-    private fb: FormBuilder,
-    private svc: AlugueisService,
-    private clientesSvc: ClientesService,
-    private condutoresSvc: CondutoresService,
-    private veiculosSvc: VeiculosService,
-    private taxasSvc: TaxasServicosService,
-    private cuponsSvc: CuponsService,
-    private desafiosSvc: DesafiosCupomService,
-    private route: ActivatedRoute,
-    private router: Router,
-    private snack: MatSnackBar
-  ) {
+  private readonly fb = inject(FormBuilder);
+  private readonly svc = inject(AlugueisService);
+  private readonly clientesSvc = inject(ClientesService);
+  private readonly condutoresSvc = inject(CondutoresService);
+  private readonly veiculosSvc = inject(VeiculosService);
+  private readonly taxasSvc = inject(TaxasServicosService);
+  private readonly cuponsSvc = inject(CuponsService);
+  private readonly desafiosSvc = inject(DesafiosCupomService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly notificacao = inject(NotificacaoService);
+
+  constructor() {
     this.form = this.fb.group({
       clienteId: ['', Validators.required],
       condutorId: ['', Validators.required],
@@ -133,7 +154,7 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
   carregarClientes() {
     this.clientesSvc.listar().subscribe({
       next: clientes => this.clientes = clientes,
-      error: () => this.snack.open('Erro ao carregar clientes', 'Fechar', { duration: 4000 })
+      error: () => this.notificacao.erro('Erro ao carregar clientes')
     });
   }
 
@@ -144,14 +165,14 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
         // Sem período escolhido não dá para saber quem está livre: mostra todos até as datas serem informadas.
         this.veiculosDisponiveis = veiculos;
       },
-      error: () => this.snack.open('Erro ao carregar veículos', 'Fechar', { duration: 4000 })
+      error: () => this.notificacao.erro('Erro ao carregar veículos')
     });
   }
 
   carregarTaxasServicos() {
     this.taxasSvc.listar().subscribe({
       next: taxas => this.taxasServicos = taxas,
-      error: () => this.snack.open('Erro ao carregar taxas e serviços', 'Fechar', { duration: 4000 })
+      error: () => this.notificacao.erro('Erro ao carregar taxas e serviços')
     });
   }
 
@@ -162,7 +183,7 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
       distinctUntilChanged(),
       switchMap(clienteId => clienteId
         ? this.condutoresSvc.listarPorCliente(clienteId).pipe(catchError(() => {
-            this.snack.open('Erro ao carregar os condutores do cliente', 'Fechar', { duration: 4000 });
+            this.notificacao.erro('Erro ao carregar os condutores do cliente');
             return of([] as CondutorDto[]);
           }))
         : of([] as CondutorDto[]))
@@ -177,8 +198,8 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
     });
   }
 
-  onTaxaChange(event: Event, taxa: TaxaServicoDto) {
-    if ((event.target as HTMLInputElement).checked) {
+  onTaxaChange(marcada: boolean, taxa: TaxaServicoDto) {
+    if (marcada) {
       this.taxasSelecionadas.push(taxa.id!);
     } else {
       const index = this.taxasSelecionadas.indexOf(taxa.id!);
@@ -342,10 +363,11 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
   }
 
   formatarMoeda(valor: number): string {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(valor);
+    return formatarMoeda(valor);
+  }
+
+  formatarCpf(cpf: string): string {
+    return mascararCpf(cpf);
   }
 
   carregar(id: string) {
@@ -369,7 +391,7 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.loading = false;
-        this.snack.open('Erro ao carregar aluguel', 'Fechar', { duration: 4000 });
+        this.notificacao.erro('Erro ao carregar aluguel');
         this.router.navigate(['/alugueis']);
       }
     });
@@ -378,14 +400,13 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
   salvar() {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.snack.open('Verifique os campos obrigatórios', 'Fechar', { duration: 3500 });
+      this.notificacao.aviso('Verifique os campos destacados.');
+      queueMicrotask(focarPrimeiroInvalido);
       return;
     }
 
     if (this.cupomStatus === 'invalido' || this.cupomStatus === 'validando') {
-      this.snack.open(
-        this.cupomStatus === 'validando' ? 'Aguarde a validação do cupom.' : 'Corrija ou remova o cupom antes de salvar.',
-        'Fechar', { duration: 3500 });
+      this.notificacao.aviso(this.cupomStatus === 'validando' ? 'Aguarde a validação do cupom.' : 'Corrija ou remova o cupom antes de salvar.');
       return;
     }
 
@@ -403,14 +424,14 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
 
     const successHandler = () => {
       this.loading = false;
-      this.snack.open(this.editMode ? 'Aluguel atualizado' : 'Aluguel criado', 'Fechar', { duration: 3000 });
-      this.router.navigate(['/alugueis']);
+      this.form.markAsPristine();
+      this.notificacao.sucesso(this.editMode ? 'Aluguel atualizado' : 'Aluguel criado');
+      void this.router.navigate(['/alugueis']);
     };
 
     const errorHandler = (err: unknown) => {
       this.loading = false;
       this.serverErrors = mensagensDeErro(err);
-      this.snack.open(this.serverErrors[0], 'Fechar', { duration: 4000 });
     };
 
     if (this.editMode && this.id) {
@@ -427,6 +448,6 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
   }
 
   cancelar() {
-    this.router.navigate(['/alugueis']);
+    void this.router.navigate(['/alugueis']);
   }
 }

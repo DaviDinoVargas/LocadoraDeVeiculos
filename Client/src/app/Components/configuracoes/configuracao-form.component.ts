@@ -1,71 +1,82 @@
-import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { ConfiguracoesService } from './configuracoes.service';
-import { ConfiguracaoDto } from './configuracao.model';
-import { CommonModule } from '@angular/common';
+import { NgIcon } from '@ng-icons/core';
+import { HlmAlertImports } from '@spartan-ng/helm/alert';
+import { HlmInputImports } from '@spartan-ng/helm/input';
 import { Observable, concat, last, of } from 'rxjs';
 import { mensagensDeErro } from '../../core/api-error';
+import { FormProtegido } from '../../core/form-guard';
+import { NotificacaoService } from '../../core/notificacao.service';
+import { focarPrimeiroInvalido } from '../../shared/form-fields/crud-form';
+import { FormActionsComponent } from '../../shared/form-fields/form-actions.component';
+import { FormErrorsComponent } from '../../shared/form-fields/form-errors.component';
+import { FormFieldComponent } from '../../shared/form-fields/form-field.component';
+import { FormSectionComponent } from '../../shared/form-fields/form-section.component';
+import { FormSkeletonComponent } from '../../shared/form-fields/form-skeleton.component';
+import { PageHeaderComponent } from '../../shared/layout/page-header.component';
+import { PageComponent } from '../../shared/layout/page.component';
+import { ConfiguracaoDto } from './configuracao.model';
+import { ConfiguracoesService } from './configuracoes.service';
 
 @Component({
   selector: 'app-configuracao-form',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
-  templateUrl: './configuracao-form.component.html',
-  styleUrls: ['../scss/global.scss']
+  imports: [
+    ReactiveFormsModule, NgIcon, HlmInputImports, HlmAlertImports, PageComponent, PageHeaderComponent, FormSectionComponent,
+    FormFieldComponent, FormActionsComponent, FormErrorsComponent, FormSkeletonComponent
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './configuracao-form.component.html'
 })
-export class ConfiguracaoFormComponent implements OnInit {
-  form!: FormGroup;
-  loading = false;
-  serverErrors: string[] = [];
-  mensagemSucesso: string = '';
+export class ConfiguracaoFormComponent implements OnInit, FormProtegido {
+  private readonly svc = inject(ConfiguracoesService);
+  private readonly router = inject(Router);
+  private readonly notificacao = inject(NotificacaoService);
+
+  readonly form = inject(NonNullableFormBuilder).group({
+    precoCombustivel: [0, [Validators.required, Validators.min(0.01)]],
+    valorGarantia: [0, [Validators.required, Validators.min(0), Validators.max(100000)]]
+  });
+
+  readonly mensagensCombustivel = { min: 'O preço do combustível deve ser maior que 0.' };
+  readonly mensagensGarantia = { min: 'Informe um valor entre R$ 0,00 e R$ 100.000,00.', max: 'Informe um valor entre R$ 0,00 e R$ 100.000,00.' };
+
+  readonly carregando = signal(false);
+  readonly salvando = signal(false);
+  readonly erros = signal<string[]>([]);
+  readonly mensagemSucesso = signal('');
   // Valores carregados do servidor: só chamamos o PUT do que realmente mudou.
   private original: ConfiguracaoDto | null = null;
 
-  constructor(
-    private fb: FormBuilder,
-    private svc: ConfiguracoesService,
-    private router: Router,
-    private snack: MatSnackBar
-  ) {
-    this.form = this.fb.group({
-      precoCombustivel: [0, [Validators.required, Validators.min(0.01)]],
-      valorGarantia: [0, [Validators.required, Validators.min(0), Validators.max(100000)]]
-    });
-  }
-
-  ngOnInit() {
+  ngOnInit(): void {
     this.carregar();
   }
 
-  carregar() {
-    this.loading = true;
+  carregar(): void {
+    this.carregando.set(true);
     this.svc.obter().subscribe({
       next: config => {
         this.original = config;
         this.form.patchValue(config);
-        this.loading = false;
+        this.form.markAsPristine();
+        this.carregando.set(false);
       },
-      error: (err) => {
-        this.loading = false;
-        console.error('Erro ao carregar configurações:', err);
-        this.snack.open('Erro ao carregar configurações', 'Fechar', { duration: 4000 });
-      }
+      error: () => this.carregando.set(false)
     });
   }
 
-  salvar() {
+  salvar(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.snack.open('Verifique os campos obrigatórios', 'Fechar', { duration: 3500 });
+      this.notificacao.aviso('Verifique os campos destacados.');
+      queueMicrotask(focarPrimeiroInvalido);
       return;
     }
 
     const { precoCombustivel, valorGarantia } = this.form.getRawValue();
-    this.loading = true;
-    this.serverErrors = [];
-    this.mensagemSucesso = '';
+    this.salvando.set(true);
+    this.erros.set([]);
+    this.mensagemSucesso.set('');
 
     // Em sequência (e não em paralelo): os dois PUTs leem e gravam a mesma linha de
     // configuração, e se ela ainda não existir os dois tentariam criá-la.
@@ -81,19 +92,19 @@ export class ConfiguracaoFormComponent implements OnInit {
     salvar$.subscribe({
       next: () => {
         this.original = { ...this.original, precoCombustivel, valorGarantia };
-        this.loading = false;
-        this.mensagemSucesso = 'Configurações atualizadas com sucesso!';
-        this.snack.open('Configurações atualizadas', 'Fechar', { duration: 3000 });
+        this.salvando.set(false);
+        this.form.markAsPristine();
+        this.mensagemSucesso.set('Configurações atualizadas com sucesso!');
+        this.notificacao.sucesso('Configurações atualizadas');
       },
       error: (err: unknown) => {
-        this.loading = false;
-        this.serverErrors = mensagensDeErro(err);
-        this.snack.open(this.serverErrors[0], 'Fechar', { duration: 4000 });
+        this.salvando.set(false);
+        this.erros.set(mensagensDeErro(err));
       }
     });
   }
 
-  cancelar() {
-    this.router.navigate(['/home']);
+  cancelar(): void {
+    void this.router.navigate(['/home']);
   }
 }

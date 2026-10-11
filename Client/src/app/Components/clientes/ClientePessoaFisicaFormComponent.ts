@@ -1,263 +1,107 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, ActivatedRoute, ParamMap } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { HlmInputImports } from '@spartan-ng/helm/input';
+import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
+import { HlmTextareaImports } from '@spartan-ng/helm/textarea';
+import { FormProtegido } from '../../core/form-guard';
+import { NotificacaoService } from '../../core/notificacao.service';
+import { crudForm } from '../../shared/form-fields/crud-form';
+import { FormActionsComponent } from '../../shared/form-fields/form-actions.component';
+import { FormErrorsComponent } from '../../shared/form-fields/form-errors.component';
+import { FormFieldComponent } from '../../shared/form-fields/form-field.component';
+import { FormSectionComponent } from '../../shared/form-fields/form-section.component';
+import { FormSkeletonComponent } from '../../shared/form-fields/form-skeleton.component';
+import { PageHeaderComponent } from '../../shared/layout/page-header.component';
+import { PageComponent } from '../../shared/layout/page.component';
+import { MascaraDirective, mascararCnpj, mascararCpf } from '../../shared/mascaras/mascara.directive';
+import { MENSAGENS_CPF, VALIDADORES_CPF } from '../../shared/validators/documentos';
+import { ClienteDto, ClientePessoaFisicaDto, ClientePessoaJuridicaDto } from './cliente.model';
 import { ClientesService } from './clientes.service';
-import { ClientePessoaFisicaDto, ClientePessoaJuridicaDto, ClienteDto } from './cliente.model';
-import { Subscription } from 'rxjs';
-import { CommonModule } from '@angular/common';
-import { VALIDADORES_CPF } from '../../shared/validators/documentos';
-import { MascaraDirective } from '../../shared/mascaras/mascara.directive';
-import { HttpErrorResponse } from '@angular/common/http';
 
 @Component({
   selector: 'app-cliente-pessoa-fisica-form',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MascaraDirective],
-  templateUrl: './cliente-pessoa-fisica-form.component.html',
-  styleUrls: ['../scss/global.scss']
+  imports: [
+    ReactiveFormsModule, HlmInputImports, HlmNativeSelectImports, HlmTextareaImports, MascaraDirective, PageComponent, PageHeaderComponent,
+    FormSectionComponent, FormFieldComponent, FormActionsComponent, FormErrorsComponent, FormSkeletonComponent
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './cliente-pessoa-fisica-form.component.html'
 })
-export class ClientePessoaFisicaFormComponent implements OnInit, OnDestroy {
-  form!: FormGroup;
-  id?: string | null = null;
-  loading = false;
-  editMode = false;
-  serverErrors: string[] = [];
-  pessoasJuridicas: ClientePessoaJuridicaDto[] = [];
+export class ClientePessoaFisicaFormComponent implements OnInit, FormProtegido {
+  private readonly svc = inject(ClientesService);
+  private readonly router = inject(Router);
+  private readonly notificacao = inject(NotificacaoService);
 
-  private sub: Subscription | null = null;
+  readonly pessoasJuridicas = signal<ClientePessoaJuridicaDto[]>([]);
+  readonly mensagensCpf = MENSAGENS_CPF;
 
-  constructor(
-    private fb: FormBuilder,
-    private svc: ClientesService,
-    private route: ActivatedRoute,
-    private router: Router,
-    private snack: MatSnackBar
-  ) {
-    this.form = this.fb.group({
-      nome: ['', Validators.required],
-      cpf: ['', VALIDADORES_CPF],
-      rg: [''],
-      cnh: [''],
-      validadeCnh: [''],
-      telefone: ['', Validators.required],
-      email: ['', [Validators.email]],
-      endereco: [''],
-      clientePessoaJuridicaId: [null]
-    });
-  }
+  readonly form = inject(NonNullableFormBuilder).group({
+    nome: ['', Validators.required],
+    cpf: ['', VALIDADORES_CPF],
+    rg: [''],
+    cnh: [''],
+    validadeCnh: [''],
+    telefone: ['', Validators.required],
+    email: ['', [Validators.email]],
+    endereco: [''],
+    clientePessoaJuridicaId: ['']
+  });
 
-  ngOnInit() {
-    this.carregarPessoasJuridicas();
+  private readonly crud = crudForm<ClientePessoaFisicaDto, typeof this.form.controls, ClienteDto>({
+    form: this.form,
+    obter: id => this.svc.obter(id),
+    criar: payload => this.svc.criarPessoaFisica(payload),
+    atualizar: (id, payload) => this.svc.atualizarPessoaFisica(id, payload),
+    rotaLista: '/clientes',
+    singular: 'cliente',
+    aoCarregar: dado => this.preencher(dado),
+    montarPayload: () => this.montarPayload()
+  });
+  readonly editMode = this.crud.editMode;
+  readonly carregando = this.crud.carregando;
+  readonly salvando = this.crud.salvando;
+  readonly erros = this.crud.erros;
+  readonly salvar = this.crud.salvar;
+  readonly cancelar = this.crud.cancelar;
 
-    this.sub = this.route.paramMap.subscribe((params: ParamMap) => {
-      this.id = params.get('id');
-      this.editMode = !!this.id;
-
-      if (this.editMode && this.id) {
-        this.carregar(this.id);
-      }
-    });
-  }
-
-  ngOnDestroy() {
-    this.sub?.unsubscribe();
-  }
-
-  carregarPessoasJuridicas() {
-    this.svc.listarPessoasJuridicas().subscribe({
-      next: pj => this.pessoasJuridicas = pj,
-      error: () => this.snack.open('Erro ao carregar pessoas jurídicas', 'Fechar', { duration: 4000 })
-    });
-  }
-
-  carregar(id: string) {
-    this.loading = true;
-    this.svc.obter(id).subscribe({
-      next: (cliente: ClienteDto) => {
-        if (cliente.tipoCliente !== 'PessoaFisica') {
-          this.snack.open('Cliente não é uma pessoa física', 'Fechar', { duration: 4000 });
-          this.router.navigate(['/clientes']);
-          return;
-        }
-
-        // Formatar CPF se necessário
-        let cpfFormatado = cliente.cpf;
-        if (cpfFormatado && !cpfFormatado.includes('.')) {
-          cpfFormatado = this.formatarCPFString(cpfFormatado);
-        }
-
-        this.form.patchValue({
-          ...cliente,
-          cpf: cpfFormatado,
-          clientePessoaJuridicaId: cliente.clientePessoaJuridicaId || null
-        });
-        this.loading = false;
-      },
-      error: () => {
-        this.loading = false;
-        this.snack.open('Erro ao carregar cliente', 'Fechar', { duration: 4000 });
-        this.router.navigate(['/clientes']);
-      }
-    });
-  }
-
-  // Método para formatar string de CPF
-  formatarCPFString(cpf: string): string {
-    if (!cpf) return '';
-    cpf = cpf.replace(/\D/g, '');
-    return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-  }
-
-  // Método para formatar durante a digitação
-
-  // Método para formatar RG durante a digitação
-  formatarRGInput(event: Event) {
-    const campo = event.target as HTMLInputElement;
-    let value = campo.value.replace(/\D/g, '');
-
-    if (value.length > 9) {
-      value = value.substring(0, 9);
-    }
-
-    // Formatar RG: 00.000.000-0
-    if (value.length <= 9) {
-      value = value.replace(/(\d{2})(\d)/, '$1.$2');
-      value = value.replace(/(\d{3})(\d)/, '$1.$2');
-      value = value.replace(/(\d{3})(\d{1})$/, '$1-$2');
-    }
-
-    campo.value = value;
-    this.form.get('rg')?.setValue(value, { emitEvent: false });
-  }
-
-  // Método para formatar telefone
-  formatarTelefoneInput(event: Event) {
-    const campo = event.target as HTMLInputElement;
-    let value = campo.value.replace(/\D/g, '');
-
-    if (value.length > 11) {
-      value = value.substring(0, 11);
-    }
-
-    // Formatar telefone: (00) 00000-0000
-    if (value.length === 11) {
-      value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-    } else if (value.length === 10) {
-      value = value.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
-    }
-
-    campo.value = value;
-    this.form.get('telefone')?.setValue(value, { emitEvent: false });
+  ngOnInit(): void {
+    this.svc.listarPessoasJuridicas().subscribe({ next: pj => this.pessoasJuridicas.set(pj) });
   }
 
   formatarCNPJ(cnpj: string): string {
-    if (!cnpj) return '';
-    cnpj = cnpj.replace(/\D/g, '');
-    return cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+    return mascararCnpj(cnpj);
   }
 
-  salvar() {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-
-      // Verificar erros específicos
-      if (this.form.get('cpf')?.invalid) {
-        this.snack.open('CPF inválido. Use o formato 000.000.000-00', 'Fechar', { duration: 4000 });
-      } else if (this.form.get('email')?.invalid) {
-        this.snack.open('Email inválido', 'Fechar', { duration: 4000 });
-      } else {
-        this.snack.open('Verifique os campos obrigatórios', 'Fechar', { duration: 3500 });
-      }
-
+  private preencher(cliente: ClienteDto): void {
+    if (cliente.tipoCliente !== 'PessoaFisica') {
+      this.notificacao.erro('Este cliente não é uma pessoa física.');
+      void this.router.navigate(['/clientes']);
       return;
     }
-
-    const formValue = this.form.getRawValue();
-
-    // Criar payload com dados formatados
-    const payload: ClientePessoaFisicaDto = {
-      nome: formValue.nome,
-      cpf: formValue.cpf, // Já está formatado com pontos e traço
-      telefone: formValue.telefone
-    };
-
-    // Adicionar campos opcionais apenas se preenchidos
-    if (formValue.rg && formValue.rg.trim() !== '') {
-      payload.rg = formValue.rg;
-    }
-
-    if (formValue.cnh && formValue.cnh.trim() !== '') {
-      payload.cnh = formValue.cnh;
-    }
-
-    if (formValue.validadeCnh && formValue.validadeCnh.trim() !== '') {
-      payload.validadeCnh = formValue.validadeCnh;
-    }
-
-    if (formValue.email && formValue.email.trim() !== '') {
-      payload.email = formValue.email;
-    }
-
-    if (formValue.endereco && formValue.endereco.trim() !== '') {
-      payload.endereco = formValue.endereco;
-    }
-
-    // Enviar null se não houver vínculo
-    if (formValue.clientePessoaJuridicaId) {
-      payload.clientePessoaJuridicaId = formValue.clientePessoaJuridicaId;
-    } else {
-      payload.clientePessoaJuridicaId = null;
-    }
-
-    // Log para debug
-
-    this.loading = true;
-    this.serverErrors = [];
-
-    const successHandler = () => {
-      this.loading = false;
-      this.snack.open(this.editMode ? 'Cliente atualizado' : 'Cliente criado', 'Fechar', { duration: 3000 });
-      this.router.navigate(['/clientes']);
-    };
-
-    const errorHandler = (err: HttpErrorResponse) => {
-      this.loading = false;
-
-      console.error('Erro completo:', err);
-
-      if (err.error && Array.isArray(err.error)) {
-        // A API está retornando array de strings
-        this.serverErrors = err.error;
-      } else if (err.error && err.error.errors) {
-        // Formato de erros de validação
-        this.serverErrors = [];
-        Object.keys(err.error.errors).forEach(key => {
-          err.error.errors[key].forEach((message: string) => {
-            this.serverErrors.push(`${key}: ${message}`);
-          });
-        });
-      } else {
-        this.serverErrors = [err?.message || 'Erro desconhecido'];
-      }
-
-      this.snack.open(this.serverErrors[0] || 'Erro ao salvar cliente', 'Fechar', { duration: 4000 });
-    };
-
-    if (this.editMode && this.id) {
-      this.svc.atualizarPessoaFisica(this.id, payload).subscribe({
-        next: successHandler,
-        error: errorHandler
-      });
-    } else {
-      this.svc.criarPessoaFisica(payload).subscribe({
-        next: successHandler,
-        error: errorHandler
-      });
-    }
+    this.form.patchValue({
+      nome: cliente.nome,
+      cpf: mascararCpf(cliente.cpf),
+      rg: cliente.rg ?? '',
+      cnh: cliente.cnh ?? '',
+      validadeCnh: (cliente.validadeCnh ?? '').slice(0, 10),
+      telefone: cliente.telefone,
+      email: cliente.email ?? '',
+      endereco: cliente.endereco ?? '',
+      clientePessoaJuridicaId: cliente.clientePessoaJuridicaId ?? ''
+    });
   }
 
-  cancelar() {
-    this.router.navigate(['/clientes']);
+  // Só envia os opcionais preenchidos; sem vínculo com PJ vai null (a API distingue "sem vínculo").
+  private montarPayload(): ClientePessoaFisicaDto {
+    const v = this.form.getRawValue();
+    const payload: ClientePessoaFisicaDto = { nome: v.nome, cpf: v.cpf, telefone: v.telefone };
+    if (v.rg.trim()) payload.rg = v.rg;
+    if (v.cnh.trim()) payload.cnh = v.cnh;
+    if (v.validadeCnh.trim()) payload.validadeCnh = v.validadeCnh;
+    if (v.email.trim()) payload.email = v.email;
+    if (v.endereco.trim()) payload.endereco = v.endereco;
+    payload.clientePessoaJuridicaId = v.clientePessoaJuridicaId || null;
+    return payload;
   }
 }

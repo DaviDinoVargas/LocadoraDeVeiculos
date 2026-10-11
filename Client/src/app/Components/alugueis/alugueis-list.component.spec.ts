@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { NotificacaoService } from '../../core/notificacao.service';
+import { criarNotificacaoFalsa } from '../../core/testing/notificacao-fake.spec';
 import { of, throwError } from 'rxjs';
 import { AlugueisListComponent } from './alugueis-list.component';
 import { AlugueisService } from './alugueis.service';
@@ -14,7 +15,7 @@ describe('AlugueisListComponent — filtro de status no servidor e devolução',
   let component: AlugueisListComponent;
   let alugueis: jasmine.SpyObj<AlugueisService>;
   let devolucoes: jasmine.SpyObj<DevolucoesService>;
-  let snack: { open: jasmine.Spy };
+  let notificacao: jasmine.SpyObj<NotificacaoService>;
   let router: Router;
 
   const aluguel = (id: string, status: string) => ({ id, status, automovelPlaca: 'AAA1A11', clienteNome: 'Fulano', condutorNome: 'Beltrano' }) as SelecionarAlugueisDto;
@@ -25,7 +26,7 @@ describe('AlugueisListComponent — filtro de status no servidor e devolução',
     alugueis.listarPorStatus.and.returnValue(of([aluguel('2', 'Concluido')]));
     alugueis.selecionarEmAberto.and.returnValue(of([aluguel('1', 'Reservado')]));
     devolucoes = jasmine.createSpyObj('DevolucoesService', ['obterPorAluguelId']);
-    snack = { open: jasmine.createSpy('open') };
+    notificacao = criarNotificacaoFalsa();
 
     TestBed.configureTestingModule({
       imports: [AlugueisListComponent],
@@ -33,7 +34,7 @@ describe('AlugueisListComponent — filtro de status no servidor e devolução',
         provideRouter([]),
         { provide: AlugueisService, useValue: alugueis },
         { provide: DevolucoesService, useValue: devolucoes },
-        { provide: MatSnackBar, useValue: snack }
+        { provide: NotificacaoService, useValue: notificacao }
       ]
     });
     router = TestBed.inject(Router);
@@ -45,40 +46,44 @@ describe('AlugueisListComponent — filtro de status no servidor e devolução',
 
   it('abre listando todos', () => {
     expect(alugueis.listar).toHaveBeenCalledTimes(1);
-    expect(component.alugueisFiltrados.length).toBe(2);
+    expect(component.alugueisFiltrados().length).toBe(2);
   });
 
   it('um status específico consulta GET /alugueis/status/{status} em vez de filtrar na memória', () => {
     component.filtrarPorStatus('Concluido');
 
     expect(alugueis.listarPorStatus).toHaveBeenCalledOnceWith('Concluido');
-    expect(component.alugueisFiltrados.map(a => a.id)).toEqual(['2']);
+    expect(component.alugueisFiltrados().map(a => a.id)).toEqual(['2']);
   });
 
   it('"em aberto" usa o endpoint próprio e "todos" volta a listar tudo', () => {
     component.filtrarPorStatus('em-aberto');
     expect(alugueis.selecionarEmAberto).toHaveBeenCalledTimes(1);
-    expect(component.alugueisFiltrados.map(a => a.id)).toEqual(['1']);
+    expect(component.alugueisFiltrados().map(a => a.id)).toEqual(['1']);
 
     component.filtrarPorStatus('todos');
     expect(alugueis.listar).toHaveBeenCalledTimes(2);
   });
 
-  it('erro ao filtrar avisa o usuário e desliga o carregando', () => {
+  it('erro ao filtrar mostra o estado de erro (com "Tentar novamente") e desliga o carregando', () => {
     alugueis.listarPorStatus.and.returnValue(throwError(() => new Error('falhou')));
-    spyOn(console, 'error');
 
     component.filtrarPorStatus('Cancelado');
-
-    expect(snack.open).toHaveBeenCalled();
-    expect(component.loading).toBeFalse();
-  });
-
-  it('só aluguel concluído tem o botão "Ver devolução"', () => {
     fixture.detectChanges();
 
-    const botoes = fixture.nativeElement.querySelectorAll('button[title="Ver devolução"]');
-    expect(botoes.length).toBe(1);
+    expect(component.erro()).toBeTrue();
+    expect(component.carregando()).toBeFalse();
+    expect(fixture.nativeElement.textContent).toContain('Tentar novamente');
+  });
+
+  it('só aluguel concluído tem a ação "Ver devolução"; só reservado/em andamento pode cancelar', () => {
+    const acao = (rotulo: string) => component.acoes().find(a => a.rotulo === rotulo)!;
+
+    expect(acao('Ver devolução').visivel!(aluguel('2', 'Concluido'))).toBeTrue();
+    expect(acao('Ver devolução').visivel!(aluguel('1', 'Reservado'))).toBeFalse();
+    expect(acao('Cancelar aluguel').visivel!(aluguel('1', 'Reservado'))).toBeTrue();
+    expect(acao('Cancelar aluguel').visivel!(aluguel('2', 'Concluido'))).toBeFalse();
+    expect(acao('Registrar devolução').visivel!(aluguel('3', 'EmAndamento'))).toBeTrue();
   });
 
   it('"Ver devolução" abre a devolução registrada do aluguel', () => {
@@ -95,11 +100,12 @@ describe('AlugueisListComponent — filtro de status no servidor e devolução',
 
     component.verDevolucao('2');
 
-    expect(snack.open).toHaveBeenCalledWith('Este aluguel ainda não tem devolução registrada.', 'Fechar', jasmine.anything());
+    expect(notificacao.aviso).toHaveBeenCalledWith('Este aluguel ainda não tem devolução registrada.');
     expect(router.navigate).not.toHaveBeenCalled();
   });
   describe('exportar PDF', () => {
-    const botao = () => fixture.nativeElement.querySelector('button.btn-outline-secondary') as HTMLButtonElement;
+    const botao = () =>
+      Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('button')).find(b => b.textContent?.includes('Exportar PDF'))!;
 
     it('exporta exatamente a lista que está na tela, com o nome do filtro', () => {
       const gerar = spyOn(TestBed.inject(PdfService), 'gerarRelatorioAlugueis');
@@ -108,7 +114,7 @@ describe('AlugueisListComponent — filtro de status no servidor e devolução',
 
       botao().click();
 
-      expect(gerar).toHaveBeenCalledOnceWith(component.alugueisFiltrados, 'Concluídos');
+      expect(gerar).toHaveBeenCalledOnceWith(component.alugueisFiltrados(), 'Concluídos');
     });
 
     it('com a lista vazia o botão fica desabilitado e nada é exportado', () => {

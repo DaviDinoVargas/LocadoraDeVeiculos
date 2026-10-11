@@ -1,58 +1,41 @@
-<div class="container mt-3">
-  <h4 *ngIf="!editMode">Novo Parceiro</h4>
-  <h4 *ngIf="editMode">Editar Parceiro</h4>
+<form [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+  <app-page largura="estreita">
+    <app-page-header
+      [titulo]="editMode() ? 'Editar parceiro' : 'Novo parceiro'"
+      descricao="Empresa parceira que oferece benefícios aos clientes da locadora."
+      voltarPara="/parceiros"
+      rotuloVoltar="Parceiros"
+    />
 
-  <form [formGroup]="form" (ngSubmit)="salvar()">
-    <div class="mb-3">
-      <label class="form-label">Nome</label>
-      <input class="form-control" formControlName="nome"/>
-      <div *ngIf="form.controls['nome'].invalid && form.controls['nome'].touched" class="text-danger small">
-        Nome é obrigatório.
-      </div>
-    </div>
+    <app-form-errors [erros]="erros()" />
 
-    <div class="mb-3">
-      <label class="form-label">CNPJ</label>
-      <input class="form-control" formControlName="cnpj" appMascara="cnpj" placeholder="00.000.000/0000-00"
-             [attr.aria-invalid]="form.controls['cnpj'].invalid && form.controls['cnpj'].touched"
-             aria-describedby="cnpj-erro"/>
-      <div *ngIf="form.controls['cnpj'].invalid && form.controls['cnpj'].touched" class="text-danger small" id="cnpj-erro">
-        <span *ngIf="form.controls['cnpj'].hasError('required')">CNPJ é obrigatório.</span>
-        <span *ngIf="!form.controls['cnpj'].hasError('required') && form.controls['cnpj'].hasError('pattern')">Use o formato 00.000.000/0000-00.</span>
-        <span *ngIf="!form.controls['cnpj'].hasError('required') && !form.controls['cnpj'].hasError('pattern') && form.controls['cnpj'].hasError('cnpjInvalido')">CNPJ inválido: confira os números.</span>
-      </div>
-    </div>
+    @if (carregando()) {
+      <app-form-skeleton />
+    } @else {
+      <app-form-section titulo="Dados do parceiro">
+        <app-form-field class="col-span-12" label="Nome" required>
+          <input hlmInput formControlName="nome" autocomplete="organization" />
+        </app-form-field>
+        <app-form-field class="col-span-12 sm:col-span-6" label="CNPJ" required [mensagens]="mensagensCnpj">
+          <input hlmInput formControlName="cnpj" appMascara="cnpj" placeholder="00.000.000/0000-00" autocomplete="off" />
+        </app-form-field>
+        <app-form-field class="col-span-12 sm:col-span-6" label="Categoria" required>
+          <hlm-native-select class="w-full" formControlName="categoria">
+            <option hlmNativeSelectOption value="">Selecione a categoria</option>
+            @for (c of categorias; track c.value) {
+              <option hlmNativeSelectOption [value]="c.value">{{ c.label }}</option>
+            }
+          </hlm-native-select>
+        </app-form-field>
+        @if (editMode()) {
+          <div class="col-span-12 flex items-center gap-3">
+            <hlm-checkbox inputId="parceiro-ativo" formControlName="ativo" />
+            <label hlmLabel for="parceiro-ativo">Parceiro ativo</label>
+          </div>
+        }
+      </app-form-section>
+    }
 
-    <div class="mb-3">
-      <label class="form-label">Categoria</label>
-      <select class="form-select" formControlName="categoria">
-        <option value="">Selecione a categoria</option>
-        <option *ngFor="let c of categorias" [value]="c.value">{{ c.label }}</option>
-      </select>
-      <div *ngIf="form.controls['categoria'].invalid && form.controls['categoria'].touched" class="text-danger small">
-        Categoria é obrigatória.
-      </div>
-    </div>
-
-    <div class="mb-3 form-check" *ngIf="editMode">
-      <input type="checkbox" class="form-check-input" id="ativoCheck" formControlName="ativo"/>
-      <label class="form-check-label" for="ativoCheck">Parceiro ativo</label>
-    </div>
-
-    <div class="d-flex gap-2">
-      <button class="btn btn-primary" type="submit" [disabled]="loading">
-        <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
-        {{ editMode ? 'Salvar' : 'Criar' }}
-      </button>
-      <button class="btn btn-secondary" type="button" (click)="cancelar()" [disabled]="loading">
-        Cancelar
-      </button>
-    </div>
-
-    <div *ngIf="serverErrors.length > 0" class="alert alert-danger mt-3">
-      <ul class="mb-0">
-        <li *ngFor="let error of serverErrors">{{ error }}</li>
-      </ul>
-    </div>
-  </form>
-</div>
+    <app-form-actions [salvando]="salvando()" [alterado]="form.dirty" [rotuloSalvar]="editMode() ? 'Salvar alterações' : 'Criar parceiro'" (cancelar)="cancelar()" />
+  </app-page>
+</form>

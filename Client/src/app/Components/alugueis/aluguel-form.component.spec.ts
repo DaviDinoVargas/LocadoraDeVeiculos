@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { NotificacaoService } from '../../core/notificacao.service';
+import { criarNotificacaoFalsa } from '../../core/testing/notificacao-fake.spec';
 import { HttpErrorResponse } from '@angular/common/http';
 import { of, throwError } from 'rxjs';
 import { AluguelFormComponent } from './aluguel-form.component';
@@ -58,7 +59,7 @@ describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
         { provide: CuponsService, useValue: cupons },
         { provide: DesafiosCupomService, useValue: desafios },
         { provide: TaxasServicosService, useValue: { listar: () => of([{ id: 't1', nome: 'Seguro', preco: 30, tipoCalculo: 'Diario' }]) } },
-        { provide: MatSnackBar, useValue: { open: () => {} } }
+        { provide: NotificacaoService, useValue: criarNotificacaoFalsa() }
       ]
     }).compileComponents();
 
@@ -97,7 +98,7 @@ describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
   it('inclui as taxas marcadas no pedido de simulação', fakeAsync(() => {
     component.form.patchValue({ automovelId: 'v2', dataSaida: '2030-01-10', dataRetornoPrevisto: '2030-01-13' });
     tick(400);
-    component.onTaxaChange({ target: { checked: true } } as unknown as Event, { id: 't1', nome: 'Seguro', preco: 30, tipoCalculo: 'Diario' } as never);
+    component.onTaxaChange(true, { id: 't1', nome: 'Seguro', preco: 30, tipoCalculo: 'Diario' } as never);
     tick(400);
 
     expect(alugueis.simular.calls.mostRecent().args[0].taxasServicosIds).toEqual(['t1']);
@@ -121,7 +122,8 @@ describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
 
     expect(component.erroSimulacao).toContain('plano de cobrança');
     expect(component.simulacao).toBeNull();
-    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain('plano de cobrança');
+    const alertas = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('[role="alert"]')).map(a => a.textContent);
+    expect(alertas.some(t => t?.includes('plano de cobrança'))).toBeTrue();
   }));
 
   it('mostra a mensagem de negócio do servidor ao falhar ao salvar (409 de disponibilidade)', () => {
@@ -383,7 +385,7 @@ describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
       fixture.detectChanges();
 
       expect(component.condutoresFiltrados).toEqual([]);
-      expect(fixture.nativeElement.querySelector('select[formControlName="condutorId"] option').textContent)
+      expect(fixture.nativeElement.querySelector('hlm-native-select[formControlName="condutorId"] option').textContent)
         .toContain('Selecione um cliente primeiro');
     });
   });

@@ -1,132 +1,62 @@
-<div class="container mt-3">
-  <h4 *ngIf="!editMode">Nova Pessoa Física</h4>
-  <h4 *ngIf="editMode">Editar Pessoa Física</h4>
+<form [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+  <app-page largura="form">
+    <app-page-header
+      [titulo]="editMode() ? 'Editar pessoa física' : 'Nova pessoa física'"
+      descricao="Cliente pessoa física, com documento e habilitação."
+      voltarPara="/clientes/pf"
+      rotuloVoltar="Pessoas físicas"
+    />
 
-  <form [formGroup]="form" (ngSubmit)="salvar()">
-    <!-- Nome -->
-    <div class="mb-3">
-      <label class="form-label">Nome Completo <span class="text-danger">*</span></label>
-      <input class="form-control"
-             formControlName="nome"
-             placeholder="Digite o nome completo"/>
-      <div *ngIf="form.controls['nome'].invalid && form.controls['nome'].touched"
-           class="text-danger small">
-        Nome é obrigatório.
-      </div>
-    </div>
+    <app-form-errors [erros]="erros()" />
 
-    <!-- CPF -->
-    <div class="mb-3">
-      <label class="form-label">CPF <span class="text-danger">*</span></label>
-      <input class="form-control"
-             formControlName="cpf"
-             appMascara="cpf"
-             placeholder="000.000.000-00"
-             [attr.aria-invalid]="form.controls['cpf'].invalid && form.controls['cpf'].touched"
-             aria-describedby="cpf-erro"/>
-      <div *ngIf="form.controls['cpf'].invalid && form.controls['cpf'].touched" class="text-danger small" id="cpf-erro">
-        <span *ngIf="form.controls['cpf'].hasError('required')">CPF é obrigatório.</span>
-        <span *ngIf="!form.controls['cpf'].hasError('required') && form.controls['cpf'].hasError('pattern')">Use o formato 000.000.000-00.</span>
-        <span *ngIf="!form.controls['cpf'].hasError('required') && !form.controls['cpf'].hasError('pattern') && form.controls['cpf'].hasError('cpfInvalido')">CPF inválido: confira os números.</span>
-      </div>
-      <small class="text-muted">Formato: 000.000.000-00</small>
-    </div>
+    @if (carregando()) {
+      <app-form-skeleton />
+    } @else {
+      <app-form-section titulo="Dados pessoais">
+        <app-form-field class="col-span-12 sm:col-span-8" label="Nome completo" required>
+          <input hlmInput formControlName="nome" placeholder="Digite o nome completo" autocomplete="name" />
+        </app-form-field>
+        <app-form-field class="col-span-12 sm:col-span-4" label="CPF" required [mensagens]="mensagensCpf">
+          <input hlmInput formControlName="cpf" appMascara="cpf" placeholder="000.000.000-00" autocomplete="off" />
+        </app-form-field>
+        <app-form-field class="col-span-12 sm:col-span-4" label="RG" hint="Formato 00.000.000-0">
+          <input hlmInput formControlName="rg" placeholder="00.000.000-0" maxlength="12" autocomplete="off" />
+        </app-form-field>
+      </app-form-section>
 
-    <!-- RG -->
-    <div class="mb-3">
-      <label class="form-label">RG</label>
-      <input class="form-control"
-             formControlName="rg"
-             placeholder="00.000.000-0"
-             (input)="formatarRGInput($event)"
-             maxlength="12"/>
-      <small class="text-muted">Formato: 00.000.000-0</small>
-    </div>
+      <app-form-section titulo="Habilitação" descricao="Necessária para alugar em nome próprio.">
+        <app-form-field class="col-span-12 sm:col-span-6" label="CNH">
+          <input hlmInput formControlName="cnh" placeholder="Número da CNH" inputmode="numeric" autocomplete="off" />
+        </app-form-field>
+        <app-form-field class="col-span-12 sm:col-span-6" label="Validade da CNH">
+          <input hlmInput type="date" formControlName="validadeCnh" />
+        </app-form-field>
+      </app-form-section>
 
-    <!-- CNH -->
-    <div class="row mb-3">
-      <div class="col-md-6">
-        <label class="form-label">CNH</label>
-        <input class="form-control"
-               formControlName="cnh"
-               placeholder="Número da CNH"/>
-      </div>
-      <div class="col-md-6">
-        <label class="form-label">Validade da CNH</label>
-        <input type="date"
-               class="form-control"
-               formControlName="validadeCnh"/>
-      </div>
-    </div>
+      <app-form-section titulo="Contato">
+        <app-form-field class="col-span-12 sm:col-span-6" label="Telefone" required>
+          <input hlmInput type="tel" formControlName="telefone" appMascara="telefone" placeholder="(00) 00000-0000" autocomplete="tel" />
+        </app-form-field>
+        <app-form-field class="col-span-12 sm:col-span-6" label="E-mail">
+          <input hlmInput type="email" formControlName="email" placeholder="email@exemplo.com" autocomplete="email" />
+        </app-form-field>
+        <app-form-field class="col-span-12" label="Endereço">
+          <textarea hlmTextarea formControlName="endereco" rows="3" placeholder="Rua, número, bairro, cidade, estado"></textarea>
+        </app-form-field>
+      </app-form-section>
 
-    <!-- Telefone -->
-    <div class="mb-3">
-      <label class="form-label">Telefone <span class="text-danger">*</span></label>
-      <input class="form-control"
-             formControlName="telefone"
-             placeholder="(00) 00000-0000"
-             (input)="formatarTelefoneInput($event)"
-             maxlength="15"/>
-      <div *ngIf="form.controls['telefone'].invalid && form.controls['telefone'].touched"
-           class="text-danger small">
-        Telefone é obrigatório.
-      </div>
-      <small class="text-muted">Formato: (00) 00000-0000</small>
-    </div>
+      <app-form-section titulo="Vínculo" descricao="Opcional: vincule esta pessoa a uma empresa cliente.">
+        <app-form-field class="col-span-12 sm:col-span-8" label="Pessoa jurídica">
+          <hlm-native-select class="w-full" formControlName="clientePessoaJuridicaId">
+            <option hlmNativeSelectOption value="">Nenhuma</option>
+            @for (pj of pessoasJuridicas(); track pj.id) {
+              <option hlmNativeSelectOption [value]="pj.id">{{ pj.nome }} ({{ formatarCNPJ(pj.cnpj) }})</option>
+            }
+          </hlm-native-select>
+        </app-form-field>
+      </app-form-section>
+    }
 
-    <!-- Email -->
-    <div class="mb-3">
-      <label class="form-label">Email</label>
-      <input type="email"
-             class="form-control"
-             formControlName="email"
-             placeholder="email@exemplo.com"/>
-      <div *ngIf="form.controls['email'].invalid && form.controls['email'].touched"
-           class="text-danger small">
-        Email inválido.
-      </div>
-    </div>
-
-    <!-- Endereço -->
-    <div class="mb-3">
-      <label class="form-label">Endereço</label>
-      <textarea class="form-control"
-                formControlName="endereco"
-                rows="3"
-                placeholder="Rua, número, bairro, cidade, estado"></textarea>
-    </div>
-
-    <!-- Cliente Pessoa Jurídica (opcional) -->
-    <div class="mb-3">
-      <label class="form-label">Vincular a Pessoa Jurídica (opcional)</label>
-      <select class="form-select" formControlName="clientePessoaJuridicaId">
-        <option [ngValue]="null">Nenhuma</option>
-        <option *ngFor="let pj of pessoasJuridicas" [ngValue]="pj.id">{{ pj.nome }} ({{ formatarCNPJ(pj.cnpj) }})</option>
-      </select>
-    </div>
-
-    <!-- Botões -->
-    <div class="d-flex gap-2">
-      <button class="btn btn-primary"
-              type="submit"
-              [disabled]="loading || form.invalid">
-        <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
-        {{ editMode ? 'Salvar' : 'Criar' }}
-      </button>
-      <button class="btn btn-secondary"
-              type="button"
-              (click)="cancelar()"
-              [disabled]="loading">
-        Cancelar
-      </button>
-    </div>
-
-    <!-- Erros de validação -->
-    <div *ngIf="serverErrors.length > 0" class="alert alert-danger mt-3">
-      <h6 class="alert-heading">Erros:</h6>
-      <ul class="mb-0">
-        <li *ngFor="let error of serverErrors">{{ error }}</li>
-      </ul>
-    </div>
-  </form>
-</div>
+    <app-form-actions [salvando]="salvando()" [alterado]="form.dirty" [rotuloSalvar]="editMode() ? 'Salvar alterações' : 'Criar cliente'" (cancelar)="cancelar()" />
+  </app-page>
+</form>

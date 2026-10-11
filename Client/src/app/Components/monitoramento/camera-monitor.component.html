@@ -1,264 +1,245 @@
-<div class="container-fluid py-3">
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="d-flex justify-content-between align-items-center">
-        <h2 class="mb-0">
-          <i class="bi bi-camera-video me-2"></i>
-          Monitoramento de Câmeras
-        </h2>
-        <div class="btn-group">
-          <button class="btn btn-outline-primary"
-                  [class.active]="modoExibicao === 'multiplas'"
-                  (click)="trocarModo('multiplas')">
-            <i class="bi bi-grid-3x3-gap me-1"></i>
-            Múltiplas Câmeras
-          </button>
-          <button class="btn btn-outline-primary"
-                  [class.active]="modoExibicao === 'unica'"
-                  (click)="trocarModo('unica')">
-            <i class="bi bi-camera me-1"></i>
-            Câmera Única
-          </button>
-        </div>
-      </div>
-      <p class="text-muted mb-0">
-        Monitoramento em tempo real de veículos e detecção automática de placas
+<app-page>
+  <app-page-header titulo="Monitoramento de câmeras" descricao="Veículos em tempo real e leitura automática de placas, ligada ao registro de devolução.">
+    <div acoes class="border-border flex rounded-full border p-0.5" role="group" aria-label="Layout das câmeras">
+      <button
+        type="button"
+        class="text-label-l inline-flex min-h-9 items-center gap-1.5 rounded-full px-4"
+        [class]="modoExibicao() === 'multiplas' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground hover:text-foreground'"
+        [attr.aria-pressed]="modoExibicao() === 'multiplas'"
+        (click)="trocarModo('multiplas')"
+      >
+        <ng-icon name="lucideLayoutGrid" aria-hidden="true" />
+        Todas
+      </button>
+      <button
+        type="button"
+        class="text-label-l inline-flex min-h-9 items-center gap-1.5 rounded-full px-4"
+        [class]="modoExibicao() === 'unica' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground hover:text-foreground'"
+        [attr.aria-pressed]="modoExibicao() === 'unica'"
+        (click)="trocarModo('unica')"
+      >
+        <ng-icon name="lucideVideo" aria-hidden="true" />
+        Uma câmera
+      </button>
+    </div>
+    @if (camerasAtivas().length) {
+      <button acoes hlmBtn variant="outline" type="button" (click)="pararTodasCameras()">
+        <ng-icon name="lucideVideoOff" aria-hidden="true" />
+        Parar todas
+      </button>
+    }
+  </app-page-header>
+
+  <!-- Faixa de resumo -->
+  <dl class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div class="border-border bg-card rounded-xl border p-4">
+      <dt class="text-label-l text-muted-foreground">Câmeras ativas</dt>
+      <dd class="text-headline-s tabular">{{ camerasAtivas().length }} <span class="text-body-m text-muted-foreground font-normal">de {{ cameras().length }}</span></dd>
+    </div>
+    <div class="border-border bg-card rounded-xl border p-4">
+      <dt class="text-label-l text-muted-foreground">Placas detectadas</dt>
+      <dd class="text-headline-s tabular">{{ placasDetectadas().length }}</dd>
+    </div>
+    <div class="border-border bg-card rounded-xl border p-4">
+      <dt class="text-label-l text-muted-foreground">Com aluguel em aberto</dt>
+      <dd class="text-headline-s tabular">{{ placasComAluguelTotal() }}</dd>
+    </div>
+    <div class="border-border bg-card rounded-xl border p-4">
+      <dt class="text-label-l text-muted-foreground">Placas novas</dt>
+      <dd class="text-headline-s tabular">{{ placasNovas() }}</dd>
+    </div>
+  </dl>
+
+  @if (camerasAtivas().length) {
+    <div hlmAlert role="note">
+      <ng-icon name="lucideInfo" aria-hidden="true" />
+      <p hlmAlertDescription>
+        A webcam é exclusiva neste computador: enquanto o monitoramento estiver ligado, o login e a verificação facial pelo navegador
+        podem não conseguir usar a câmera. Pare as câmeras para liberá-la.
       </p>
     </div>
-  </div>
-
-  <!-- Filtros -->
-  <div class="row mb-3">
-    <div class="col-12">
-      <div class="card">
-        <div class="card-body py-2">
-          <div class="row g-2 align-items-center">
-            <div class="col-md-3">
-              <input type="text"
-                     class="form-control form-control-sm"
-                     placeholder="Filtrar por placa..."
-                     [(ngModel)]="filtroPlaca"
-                     (ngModelChange)="onFiltroChange()">
-            </div>
-            <div class="col-md-3">
-              <select class="form-select form-select-sm"
-                      [(ngModel)]="filtroCamera"
-                      (ngModelChange)="onFiltroChange()">
-                <option [ngValue]="null">Todas as câmeras</option>
-                <option *ngFor="let cam of cameras" [value]="cam">
-                  Câmera {{ cam }}
-                </option>
-              </select>
-            </div>
-            <div class="col-md-4">
-              <div class="form-check form-switch">
-                <input class="form-check-input"
-                       type="checkbox"
-                       id="apenasNaoProcessadas"
-                       [(ngModel)]="apenasNaoProcessadas"
-                       (ngModelChange)="onFiltroChange()">
-                <label class="form-check-label" for="apenasNaoProcessadas">
-                  Apenas placas sem devolução pendente
-                </label>
-              </div>
-            </div>
-            <div class="col-md-2 text-end">
-              <button class="btn btn-sm btn-outline-danger"
-                      (click)="limparPlacas()">
-                <i class="bi bi-trash me-1"></i>
-                Limpar
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  }
 
   <!-- Câmeras -->
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h5 class="mb-0">
-            <i class="bi bi-camera me-1"></i>
-            Câmeras {{ modoExibicao === 'unica' ? 'Selecionada' : 'Disponíveis' }}
-          </h5>
-          <!-- Atualize o contador de câmeras ativas -->
-          <div class="small text-muted">
-            {{ getActiveCamerasCount() }} de {{ cameras.length }} ativas
-          </div>
+  <section aria-labelledby="titulo-cameras" class="flex flex-col gap-3">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <h2 id="titulo-cameras" class="text-title-l">{{ modoExibicao() === 'unica' ? 'Câmera selecionada' : 'Câmeras do servidor' }}</h2>
+      @if (modoExibicao() === 'unica' && cameras().length > 1) {
+        <div class="flex flex-wrap gap-2" role="group" aria-label="Escolher câmera">
+          @for (cam of cameras(); track cam) {
+            <button
+              type="button"
+              class="text-label-l min-h-9 rounded-full border px-4"
+              [class]="cameraSelecionada() === cam ? 'border-transparent bg-secondary text-secondary-foreground' : 'border-border text-muted-foreground hover:bg-accent/40'"
+              [attr.aria-pressed]="cameraSelecionada() === cam"
+              (click)="selecionarCamera(cam)"
+            >
+              Câmera {{ cam }}
+            </button>
+          }
         </div>
-        <div class="card-body p-0">
-          <div *ngIf="loading" class="text-center py-4 text-muted">Procurando câmeras...</div>
-
-          <div *ngIf="!loading && erroCameras" class="alert alert-danger m-3 d-flex justify-content-between align-items-center" role="alert">
-            <span>{{ erroCameras }}</span>
-            <button class="btn btn-sm btn-outline-danger" (click)="carregarCameras()">Tentar novamente</button>
-          </div>
-
-          <div *ngIf="!loading && !erroCameras && cameras.length === 0" class="text-center py-4 text-muted">
-            <i class="bi bi-camera-video-off display-6"></i>
-            <p class="mt-2 mb-2">Nenhuma câmera encontrada no servidor.</p>
-            <button class="btn btn-sm btn-outline-primary" (click)="carregarCameras()">Procurar novamente</button>
-          </div>
-
-          <div *ngIf="modoExibicao === 'multiplas'" class="row g-0">
-            <div *ngFor="let cam of cameras"
-                 class="col-12 col-md-6 col-lg-4 col-xl-3 border">
-              <div class="p-2">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                  <h6 class="mb-0">Câmera {{ cam }}</h6>
-                  <!-- No botão de toggle, adicione indicação de loading -->
-                  <button class="btn btn-sm"
-                          [class.btn-success]="!camerasAtivas.get(cam) && !isCameraLoading(cam)"
-                          [class.btn-danger]="camerasAtivas.get(cam) && !isCameraLoading(cam)"
-                          [class.btn-secondary]="isCameraLoading(cam)"
-                          [disabled]="isCameraLoading(cam)"
-                          (click)="toggleCamera(cam)">
-                    <i class="bi"
-                       [class.bi-play-fill]="!camerasAtivas.get(cam) && !isCameraLoading(cam)"
-                       [class.bi-stop-fill]="camerasAtivas.get(cam) && !isCameraLoading(cam)"
-                       [class.bi-hourglass-split]="isCameraLoading(cam)"></i>
-                    {{ isCameraLoading(cam) ? 'Processando...' : (camerasAtivas.get(cam) ? 'Parar' : 'Iniciar') }}
-                  </button>
-                </div>
-                <div class="camera-preview position-relative">
-                  <div *ngIf="camerasAtivas.get(cam); else cameraInativa"
-                       class="ratio ratio-16x9">
-                    <img *ngIf="getStreamUrl(cam)"
-                         [src]="getStreamUrl(cam)"
-                         alt="Câmera {{ cam }}"
-                         class="img-fluid bg-dark"
-                         (load)="aoCarregarStream(cam)"
-                         (error)="aoFalharStream(cam)"
-                         (click)="selecionarCamera(cam)">
-                  </div>
-                  <ng-template #cameraInativa>
-                    <div class="ratio ratio-16x9 bg-dark d-flex align-items-center justify-content-center">
-                      <div class="text-center text-light">
-                        <i class="bi bi-camera-off display-6"></i>
-                        <p class="mt-2 mb-0">Câmera inativa</p>
-                      </div>
-                    </div>
-                  </ng-template>
-                  <div class="position-absolute top-0 end-0 m-2">
-                    <span class="badge"
-                          [class.bg-success]="camerasAtivas.get(cam)"
-                          [class.bg-secondary]="!camerasAtivas.get(cam)">
-                      {{ camerasAtivas.get(cam) ? 'LIVE' : 'OFF' }}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div *ngIf="modoExibicao === 'unica' && cameraSelecionada !== null"
-               class="p-3">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <h5 class="mb-0">Câmera {{ cameraSelecionada }} - Visão Detalhada</h5>
-              <button class="btn btn-sm btn-outline-secondary"
-                      (click)="cameraSelecionada = null">
-                <i class="bi bi-x-lg"></i>
-              </button>
-            </div>
-            <div class="ratio ratio-16x9">
-              <img *ngIf="getStreamUrl(cameraSelecionada)"
-                   [src]="getStreamUrl(cameraSelecionada)"
-                   alt="Câmera {{ cameraSelecionada }}"
-                   class="img-fluid bg-dark"
-                   (load)="aoCarregarStream(cameraSelecionada)"
-                   (error)="aoFalharStream(cameraSelecionada)">
-            </div>
-          </div>
-
-          <div *ngIf="modoExibicao === 'unica' && cameraSelecionada === null"
-               class="text-center py-5">
-            <i class="bi bi-camera display-1 text-muted"></i>
-            <p class="mt-3">Selecione uma câmera para visualização detalhada</p>
-            <div class="d-flex flex-wrap gap-2 justify-content-center">
-              <button *ngFor="let cam of cameras"
-                      class="btn btn-outline-primary"
-                      (click)="selecionarCamera(cam)">
-                <i class="bi bi-camera me-1"></i>
-                Câmera {{ cam }}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      }
     </div>
-  </div>
 
-  <!-- Placas Detectadas -->
-  <div class="row">
-    <div class="col-12">
-      <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h5 class="mb-0">
-            <i class="bi bi-car-front me-1"></i>
-            Placas Detectadas
-            <span class="badge bg-primary ms-2">{{ placasFiltradas.length }}</span>
-          </h5>
-          <div class="text-muted small">
-            Clique em uma placa para registrar devolução
-          </div>
-        </div>
-        <div class="card-body p-0">
-          <div *ngIf="placasFiltradas.length === 0" class="text-center py-4">
-            <i class="bi bi-car-front display-4 text-muted"></i>
-            <p class="mt-3 mb-0">Nenhuma placa detectada ainda</p>
-            <p class="text-muted small">As placas aparecerão aqui automaticamente</p>
-          </div>
-
-          <div *ngIf="placasFiltradas.length > 0" class="row g-0">
-            <div *ngFor="let placa of placasFiltradas"
-                 class="col-12 col-md-6 col-lg-4 col-xl-3 border">
-              <div class="p-3">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                  <div>
-                    <h5 class="mb-0">
-                      <span class="badge bg-dark me-2">CAM {{ placa.camera }}</span>
-                      {{ placa.plate }}
-                    </h5>
-                    <small class="text-muted">
-                      {{ formatarData(placa.timestamp) }}
-                    </small>
-                  </div>
-                  <div>
-                    <span class="badge"
-                          [class.bg-success]="!temAluguelEmAberto(placa.plate)"
-                          [class.bg-warning]="temAluguelEmAberto(placa.plate)">
-                      {{ temAluguelEmAberto(placa.plate) ? 'COM ALUGUEL' : 'NOVA' }}
-                    </span>
-                  </div>
-                </div>
-
-                <div *ngIf="temAluguelEmAberto(placa.plate)" class="mb-3">
-                  <div class="alert alert-sm alert-info mb-2">
-                    <i class="bi bi-info-circle me-1"></i>
-                    Aluguel em aberto encontrado
-                  </div>
-                  <div class="small">
-                    <div><strong>Cliente:</strong> {{ getAluguelInfo(placa.plate)?.clienteNome || 'N/A' }}</div>
-                    <div><strong>Condutor:</strong> {{ getAluguelInfo(placa.plate)?.condutorNome || 'N/A' }}</div>
-                    <div><strong>Previsto:</strong> {{ formatarDataString(getAluguelInfo(placa.plate)?.dataRetornoPrevisto || '') }}</div>
-                  </div>
-                </div>
-
-                <div class="d-grid gap-2">
-                  <button class="btn btn-sm btn-primary"
-                          (click)="navegarParaDevolucao(placa.plate)">
-                    <i class="bi bi-check-circle me-1"></i>
-                    Registrar Devolução
-                  </button>
-                </div>
+    @if (carregandoCameras()) {
+      <p class="text-body-m text-muted-foreground" role="status">Procurando câmeras…</p>
+    } @else if (erroCameras()) {
+      <app-error-state titulo="Não foi possível consultar as câmeras" [descricao]="erroCameras()" (repetir)="carregarCameras()" />
+    } @else if (cameras().length === 0) {
+      <app-empty-state titulo="Nenhuma câmera encontrada no servidor" descricao="Conecte uma webcam ao computador do servidor e procure novamente." icone="lucideVideoOff">
+        <button hlmBtn variant="outline" type="button" (click)="carregarCameras()">Procurar novamente</button>
+      </app-empty-state>
+    } @else {
+      <div class="grid gap-3" [class]="modoExibicao() === 'multiplas' ? 'sm:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1'">
+        @for (cam of tilesVisiveis(); track cam) {
+          @let e = estadoDe(cam);
+          <article
+            #tile
+            class="bg-surface-lowest border-border relative flex aspect-video flex-col overflow-hidden rounded-xl border"
+            [attr.aria-label]="'Câmera ' + cam + ', ' + rotuloEstado(e.estado).toLowerCase()"
+          >
+            <!-- vídeo ou estado -->
+            @if ((e.estado === 'ao-vivo' || e.estado === 'reconectando') && e.url && abaVisivel()) {
+              <img [src]="e.url" [alt]="'Câmera ' + cam + ', ao vivo'" class="size-full object-contain" (load)="aoCarregarStream(cam)" (error)="aoFalharStream(cam)" />
+            } @else {
+              <div class="text-on-surface-variant flex size-full flex-col items-center justify-center gap-2 p-4 text-center">
+                @switch (e.estado) {
+                  @case ('iniciando') {
+                    <ng-icon name="lucideLoader2" class="animate-spin text-3xl motion-reduce:animate-none" aria-hidden="true" />
+                    <p class="text-body-m" role="status">Ligando a câmera…</p>
+                  }
+                  @case ('reconectando') {
+                    <ng-icon name="lucideRefreshCw" class="animate-spin text-3xl motion-reduce:animate-none" aria-hidden="true" />
+                    <p class="text-body-m" role="status">Reconectando… (tentativa {{ e.tentativas }})</p>
+                    <button hlmBtn variant="outline" size="sm" type="button" (click)="tentarAgora(cam)">Tentar agora</button>
+                  }
+                  @case ('erro') {
+                    <ng-icon name="lucideTriangleAlert" class="text-destructive text-3xl" aria-hidden="true" />
+                    <p class="text-body-m max-w-sm" role="alert">{{ e.mensagem || 'Não foi possível exibir a câmera.' }}</p>
+                    <button hlmBtn variant="outline" size="sm" type="button" (click)="iniciarCamera(cam)">Tentar novamente</button>
+                  }
+                  @case ('sem-permissao') {
+                    <ng-icon name="lucideLock" class="text-3xl" aria-hidden="true" />
+                    <p class="text-body-m max-w-sm" role="alert">Você não tem permissão para ver esta câmera. {{ e.mensagem }}</p>
+                  }
+                  @case ('ao-vivo') {
+                    @if (!abaVisivel()) {
+                      <ng-icon name="lucideVideoOff" class="text-3xl" aria-hidden="true" />
+                      <p class="text-body-m">Vídeo pausado enquanto a aba está oculta.</p>
+                    } @else {
+                      <ng-icon name="lucideLoader2" class="animate-spin text-3xl motion-reduce:animate-none" aria-hidden="true" />
+                      <p class="text-body-m" role="status">Carregando o vídeo…</p>
+                    }
+                  }
+                  @default {
+                    <ng-icon name="lucideVideoOff" class="text-3xl" aria-hidden="true" />
+                    <p class="text-body-m">Câmera parada</p>
+                    @if (e.aoVivoDesde) {
+                      <p class="text-body-s">Última vez ao vivo às {{ formatarHora(e.aoVivoDesde) }}</p>
+                    }
+                    <button hlmBtn size="sm" type="button" (click)="iniciarCamera(cam)">
+                      <ng-icon name="lucideVideo" aria-hidden="true" />
+                      Iniciar câmera
+                    </button>
+                  }
+                }
               </div>
+            }
+
+            <!-- sobreposição: nome, estado e controles (texto sobre fundo semitransparente) -->
+            <div class="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 bg-black/50 p-2.5">
+              <span class="text-label-l text-white">Câmera {{ cam }}</span>
+              <span class="text-label-m flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-white">
+                @if (e.estado === 'ao-vivo') {
+                  <span class="bg-destructive size-2 rounded-full motion-safe:animate-pulse" aria-hidden="true"></span>
+                }
+                {{ e.estado === 'ao-vivo' ? 'AO VIVO' : rotuloEstado(e.estado) }}
+              </span>
             </div>
-          </div>
-        </div>
+            <div class="absolute inset-x-0 bottom-0 flex items-center justify-end gap-1 bg-black/50 p-2">
+              @if (e.estado === 'ao-vivo' || e.estado === 'reconectando') {
+                <button hlmBtn variant="secondary" size="sm" type="button" (click)="telaCheia(tile)">
+                  <ng-icon name="lucideMaximize" aria-hidden="true" />
+                  Tela cheia
+                </button>
+                <button hlmBtn variant="secondary" size="sm" type="button" (click)="alternarCamera(cam)">
+                  <ng-icon name="lucideVideoOff" aria-hidden="true" />
+                  Parar
+                </button>
+              }
+            </div>
+          </article>
+        }
       </div>
+    }
+  </section>
+
+  <!-- Placas detectadas -->
+  <section aria-labelledby="titulo-placas" class="flex flex-col gap-3">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <h2 id="titulo-placas" class="text-title-l">Placas detectadas</h2>
+      <button hlmBtn variant="ghost" size="sm" type="button" [disabled]="!placasDetectadas().length" (click)="limparPlacas()">
+        <ng-icon name="lucideTrash2" aria-hidden="true" />
+        Limpar lista
+      </button>
     </div>
-  </div>
-</div>
+
+    <div class="flex flex-wrap items-center gap-3" role="search">
+      <div class="relative w-full sm:w-64">
+        <ng-icon name="lucideSearch" class="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2" aria-hidden="true" />
+        <input hlmInput type="search" class="rounded-full pl-10" aria-label="Filtrar por placa" placeholder="Filtrar por placa…" [ngModel]="filtroPlaca()" (ngModelChange)="filtroPlaca.set($event)" />
+      </div>
+      <hlm-native-select aria-label="Filtrar por câmera" [value]="filtroCamera()" (valueChange)="filtroCamera.set($event ?? '')">
+        <option hlmNativeSelectOption value="">Todas as câmeras</option>
+        @for (cam of cameras(); track cam) {
+          <option hlmNativeSelectOption [value]="'' + cam">Câmera {{ cam }}</option>
+        }
+      </hlm-native-select>
+      <label class="text-body-m flex items-center gap-2">
+        <hlm-switch [ngModel]="apenasSemDevolucao()" (ngModelChange)="apenasSemDevolucao.set($event)" aria-label="Apenas placas sem devolução pendente" />
+        Só placas sem aluguel em aberto
+      </label>
+    </div>
+
+    <div aria-live="polite" class="sr-only">{{ placasFiltradas().length }} placas na lista</div>
+
+    @if (placasFiltradas().length === 0) {
+      <app-empty-state
+        [titulo]="placasDetectadas().length ? 'Nenhuma placa para os filtros aplicados' : 'Nenhuma placa detectada ainda'"
+        [descricao]="placasDetectadas().length ? 'Remova algum filtro para ver as demais placas.' : 'As placas aparecem aqui automaticamente quando uma câmera ao vivo lê uma placa.'"
+        icone="lucideScanLine"
+      />
+    } @else {
+      <ul class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        @for (placa of placasFiltradas(); track placa.plate + placa.camera + placa.timestamp) {
+          <li class="border-border bg-card flex flex-col gap-3 rounded-xl border p-4">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <p class="text-title-l tracking-wider tabular">{{ placa.plate }}</p>
+                <p class="text-body-s text-muted-foreground">Câmera {{ placa.camera }} · {{ formatarHora(placa.timestamp) }}</p>
+              </div>
+              @if (temAluguelEmAberto(placa.plate)) {
+                <app-status-badge texto="Com aluguel" tom="warning" icone="lucideReceipt" />
+              } @else {
+                <app-status-badge texto="Nova" tom="success" icone="lucideSparkles" />
+              }
+            </div>
+
+            @if (temAluguelEmAberto(placa.plate)) {
+              <dl class="text-body-m flex flex-col gap-1">
+                <div class="flex justify-between gap-3"><dt class="text-muted-foreground">Cliente</dt><dd class="truncate">{{ getAluguelInfo(placa.plate)?.clienteNome || '—' }}</dd></div>
+                <div class="flex justify-between gap-3"><dt class="text-muted-foreground">Condutor</dt><dd class="truncate">{{ getAluguelInfo(placa.plate)?.condutorNome || '—' }}</dd></div>
+                <div class="flex justify-between gap-3"><dt class="text-muted-foreground">Retorno previsto</dt><dd>{{ formatarDataString(getAluguelInfo(placa.plate)?.dataRetornoPrevisto) }}</dd></div>
+              </dl>
+            }
+
+            <button hlmBtn type="button" class="w-full" (click)="navegarParaDevolucao(placa.plate)">
+              <ng-icon name="lucideUndo2" aria-hidden="true" />
+              Registrar devolução
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+</app-page>

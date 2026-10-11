@@ -1,191 +1,207 @@
-import { Component, OnInit, inject } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { AlugueisService } from './alugueis.service';
+import { ChangeDetectionStrategy, Component, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { NgIcon } from '@ng-icons/core';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { filter, map } from 'rxjs';
+import { ConfirmacaoService } from '../../core/confirmacao.service';
+import { NotificacaoService } from '../../core/notificacao.service';
+import { crudLista } from '../../shared/data-table/crud-lista';
+import { DataTableComponent } from '../../shared/data-table/data-table.component';
+import { AcaoLinha, ColunaTabela } from '../../shared/data-table/data-table.types';
+import { formatarData, formatarMoeda } from '../../shared/data-table/data-table.util';
+import { PageHeaderComponent } from '../../shared/layout/page-header.component';
+import { PageComponent } from '../../shared/layout/page.component';
 import { DevolucoesService } from '../devolucoes/devolucoes.service';
 import { PdfService } from '../pdf/pdf.service';
 import { SelecionarAlugueisDto } from './aluguel.model';
-import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule } from '@angular/forms';
-import { ConfirmacaoService } from '../../core/confirmacao.service';
-import { filter } from 'rxjs/operators';
+import { AlugueisService } from './alugueis.service';
+
+const ABAS: { status: string; rotulo: string }[] = [
+  { status: 'todos', rotulo: 'Todos' },
+  { status: 'Reservado', rotulo: 'Reservados' },
+  { status: 'EmAndamento', rotulo: 'Em andamento' },
+  { status: 'Concluido', rotulo: 'Concluídos' },
+  { status: 'Cancelado', rotulo: 'Cancelados' },
+  { status: 'em-aberto', rotulo: 'Em aberto' }
+];
 
 @Component({
   selector: 'app-alugueis-list',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
-  templateUrl: './alugueis-list.component.html',
-  styleUrls: ['../scss/global.scss']
+  imports: [RouterLink, NgIcon, HlmButtonImports, PageComponent, PageHeaderComponent, DataTableComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './alugueis-list.component.html'
 })
 export class AlugueisListComponent implements OnInit {
+  private readonly svc = inject(AlugueisService);
+  private readonly devolucoesSvc = inject(DevolucoesService);
+  private readonly pdf = inject(PdfService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly confirmacao = inject(ConfirmacaoService);
+  private readonly notificacao = inject(NotificacaoService);
 
-  alugueisFiltrados: SelecionarAlugueisDto[] = [];
-  loading = false;
-  filtroStatus: string = 'todos';
-
-  constructor(
-    private svc: AlugueisService,
-    private devolucoesSvc: DevolucoesService,
-    private pdf: PdfService,
-    private router: Router,
-    private route: ActivatedRoute,
-    private snack: MatSnackBar
-  ) {}
-
-  ngOnInit() {
-    const statusInicial = this.route.snapshot.queryParamMap.get('status');
-    if (statusInicial) {
-      this.filtroStatus = statusInicial;
-    }
-    this.carregar();
-  }
-
-  carregar() {
-    this.filtrarPorStatus(this.filtroStatus);
-  }
+  readonly abas = ABAS;
+  readonly filtroStatus = signal('todos');
 
   // O filtro é feito no servidor: todos -> GET /alugueis, em-aberto -> /alugueis/em-aberto e
   // cada status -> /alugueis/status/{status} (antes carregava tudo e filtrava na memória).
-  filtrarPorStatus(status: string) {
-    this.filtroStatus = status;
-    this.loading = true;
+  private readonly lista = crudLista<SelecionarAlugueisDto>({
+    listar: () => {
+      const status = this.filtroStatus();
+      return status === 'todos' ? this.svc.listar() : status === 'em-aberto' ? this.svc.selecionarEmAberto() : this.svc.listarPorStatus(status);
+    },
+    excluir: id => this.svc.excluir(id),
+    singular: 'aluguel',
+    carregarAoCriar: false
+  });
+  readonly alugueisFiltrados = this.lista.dados;
+  readonly carregando = this.lista.carregando;
+  readonly erro = this.lista.erro;
+  readonly excluir = this.lista.excluir;
 
-    const origem$ = status === 'todos' ? this.svc.listar()
-      : status === 'em-aberto' ? this.svc.selecionarEmAberto()
-      : this.svc.listarPorStatus(status);
+  // Link de fora (sidebar "Em aberto", KPI da Home) muda o ?status= com a tela já aberta.
+  private readonly statusNaUrl = toSignal(this.route.queryParamMap.pipe(map(p => p.get('status') ?? 'todos')), { initialValue: 'todos' });
 
-    origem$.subscribe({
-      next: a => {
-        this.alugueisFiltrados = a;
-        this.loading = false;
-      },
-      error: (err) => {
-        this.loading = false;
-        console.error('Erro ao listar aluguéis:', err);
-        this.snack.open('Erro ao listar aluguéis', 'Fechar', { duration: 4000 });
-      }
-    });
-  }
-
-  private readonly nomesDosFiltros: { [status: string]: string } = {
+  private readonly nomesDosFiltros: Record<string, string> = {
     todos: 'Todos os aluguéis', 'em-aberto': 'Em aberto', Reservado: 'Reservados',
     EmAndamento: 'Em andamento', Concluido: 'Concluídos', Cancelado: 'Cancelados'
   };
 
-  /** Exporta em PDF exatamente a lista que está na tela (já filtrada por status). */
-  exportarPdf() {
-    if (this.alugueisFiltrados.length === 0) return;
-    this.pdf.gerarRelatorioAlugueis(this.alugueisFiltrados, this.nomesDosFiltros[this.filtroStatus] ?? this.filtroStatus);
-  }
+  readonly colunas: ColunaTabela<SelecionarAlugueisDto>[] = [
+    { id: 'condutorNome', cabecalho: 'Condutor' },
+    { id: 'automovelPlaca', cabecalho: 'Veículo' },
+    { id: 'clienteNome', cabecalho: 'Cliente' },
+    { id: 'dataSaida', cabecalho: 'Saída', tipo: 'data' },
+    { id: 'dataRetornoPrevisto', cabecalho: 'Retorno previsto', tipo: 'data' },
+    { id: 'valorPrevisto', cabecalho: 'Valor previsto', tipo: 'moeda' },
+    {
+      id: 'situacao',
+      cabecalho: 'Status',
+      tipo: 'enum',
+      filtravel: false, // o filtro de status são as abas acima (consultam o servidor)
+      valor: a => a.status,
+      opcoes: [
+        { valor: 'Reservado', rotulo: 'Reservado', tom: 'info' },
+        { valor: 'EmAndamento', rotulo: 'Em andamento', tom: 'warning' },
+        { valor: 'Concluido', rotulo: 'Concluído', tom: 'success' },
+        { valor: 'Cancelado', rotulo: 'Cancelado', tom: 'error' }
+      ]
+    }
+  ];
 
-  // Aluguel concluído: leva à devolução registrada (GET /devolucoes/aluguel/{id}).
-  verDevolucao(aluguelId?: string) {
-    if (!aluguelId) return;
+  readonly acoes = computed<AcaoLinha<SelecionarAlugueisDto>[]>(() => [
+    { rotulo: 'Editar', icone: 'lucidePencil', visivel: a => a.status !== 'Concluido', executar: a => this.editar(a.id) },
+    { rotulo: 'Iniciar aluguel', icone: 'lucideCircleCheck', visivel: a => a.status === 'Reservado', executar: a => this.iniciar(a.id) },
+    { rotulo: 'Registrar devolução', icone: 'lucideUndo2', visivel: a => a.status === 'EmAndamento', executar: a => this.devolver(a.id) },
+    { rotulo: 'Ver devolução', icone: 'lucideReceipt', visivel: a => a.status === 'Concluido', executar: a => this.verDevolucao(a.id) },
+    { rotulo: 'Cancelar aluguel', icone: 'lucideCircleX', visivel: a => a.status === 'Reservado' || a.status === 'EmAndamento', executar: a => this.cancelar(a.id) },
+    { rotulo: 'Excluir', icone: 'lucideTrash2', destrutiva: true, visivel: a => a.status === 'Reservado' || a.status === 'Cancelado', executar: a => this.excluir(a.id) }
+  ]);
 
-    this.devolucoesSvc.obterPorAluguelId(aluguelId).subscribe({
-      next: d => this.router.navigate([`/devolucoes/${d.id}`]),
-      error: () => this.snack.open('Este aluguel ainda não tem devolução registrada.', 'Fechar', { duration: 4000 })
+  readonly tituloLinha = (a: SelecionarAlugueisDto) => `${a.clienteNome} — ${a.automovelPlaca}`;
+
+  constructor() {
+    effect(() => {
+      const naUrl = this.statusNaUrl();
+      untracked(() => {
+        if (naUrl !== this.filtroStatus()) this.filtrarPorStatus(naUrl, false);
+      });
     });
   }
 
-  getStatusBadgeClass(status: string): string {
-    switch (status) {
-      case 'Reservado': return 'bg-info';
-      case 'EmAndamento': return 'bg-primary';
-      case 'Concluido': return 'bg-success';
-      case 'Cancelado': return 'bg-danger';
-      default: return 'bg-secondary';
+  ngOnInit(): void {
+    const statusInicial = this.route.snapshot.queryParamMap.get('status');
+    if (statusInicial) {
+      this.filtroStatus.set(statusInicial);
     }
+    this.carregar();
+  }
+
+  carregar(): void {
+    this.lista.carregar();
+  }
+
+  filtrarPorStatus(status: string, atualizarUrl = true): void {
+    this.filtroStatus.set(status);
+    this.carregar();
+    if (atualizarUrl) {
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { status: status === 'todos' ? null : status, page: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true
+      });
+    }
+  }
+
+  /** Exporta em PDF exatamente a lista que está na tela (já filtrada por status). */
+  exportarPdf(): void {
+    if (this.alugueisFiltrados().length === 0) return;
+    this.pdf.gerarRelatorioAlugueis(this.alugueisFiltrados(), this.nomesDosFiltros[this.filtroStatus()] ?? this.filtroStatus());
+  }
+
+  // Aluguel concluído: leva à devolução registrada (GET /devolucoes/aluguel/{id}).
+  verDevolucao(aluguelId?: string): void {
+    if (!aluguelId) return;
+
+    this.devolucoesSvc.obterPorAluguelId(aluguelId).subscribe({
+      next: d => void this.router.navigate([`/devolucoes/${d.id}`]),
+      error: () => this.notificacao.aviso('Este aluguel ainda não tem devolução registrada.')
+    });
   }
 
   getStatusText(status: string): string {
-    switch (status) {
-      case 'Reservado': return 'Reservado';
-      case 'EmAndamento': return 'Em Andamento';
-      case 'Concluido': return 'Concluído';
-      case 'Cancelado': return 'Cancelado';
-      default: return status;
-    }
+    return this.colunas[6].opcoes?.find(o => o.valor === status)?.rotulo ?? status;
   }
 
   formatarData(dataString: string): string {
-    if (!dataString) return '';
-    const data = new Date(dataString);
-    return data.toLocaleDateString('pt-BR');
+    return formatarData(dataString);
   }
 
   formatarMoeda(valor: number): string {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(valor);
+    return formatarMoeda(valor);
   }
 
-  novo() {
-    this.router.navigate(['/alugueis/new']);
+  novo(): void {
+    void this.router.navigate(['/alugueis/new']);
   }
 
-  editar(id?: string) {
-    if (id) this.router.navigate([`/alugueis/${id}/edit`]);
+  editar(id?: string): void {
+    if (id) void this.router.navigate([`/alugueis/${id}/edit`]);
   }
 
-  devolver(id?: string) {
-  if (id) this.router.navigate([`/alugueis/${id}/devolver`]);
-}
+  devolver(id?: string): void {
+    if (id) void this.router.navigate([`/alugueis/${id}/devolver`]);
+  }
 
-  iniciar(id?: string) {
+  iniciar(id?: string): void {
     if (!id) return;
 
-    this.confirmacao.confirmar({ titulo: 'Iniciar aluguel', mensagem: 'Deseja realmente iniciar este aluguel?', confirmar: 'Iniciar aluguel' })
+    this.confirmacao
+      .confirmar({ titulo: 'Iniciar aluguel', mensagem: 'Deseja realmente iniciar este aluguel?', confirmar: 'Iniciar aluguel' })
       .pipe(filter(Boolean))
       .subscribe(() => {
         this.svc.iniciar(id).subscribe({
           next: () => {
-            this.snack.open('Aluguel iniciado com sucesso', 'Fechar', { duration: 3000 });
+            this.notificacao.sucesso('Aluguel iniciado com sucesso');
             this.carregar();
-          },
-          error: (err) => {
-            console.error('Erro ao iniciar aluguel:', err);
-            this.snack.open('Falha ao iniciar aluguel', 'Fechar', { duration: 4000 });
           }
         });
       });
   }
 
-  cancelar(id?: string) {
+  cancelar(id?: string): void {
     if (!id) return;
 
-    this.confirmacao.confirmar({ titulo: 'Cancelar aluguel', mensagem: 'Deseja realmente cancelar este aluguel?', confirmar: 'Cancelar aluguel', cancelar: 'Voltar', destrutivo: true })
+    this.confirmacao
+      .confirmar({ titulo: 'Cancelar aluguel', mensagem: 'Deseja realmente cancelar este aluguel?', confirmar: 'Cancelar aluguel', cancelar: 'Voltar', destrutivo: true })
       .pipe(filter(Boolean))
       .subscribe(() => {
         this.svc.cancelar(id).subscribe({
           next: () => {
-            this.snack.open('Aluguel cancelado com sucesso', 'Fechar', { duration: 3000 });
+            this.notificacao.sucesso('Aluguel cancelado com sucesso');
             this.carregar();
-          },
-          error: (err) => {
-            console.error('Erro ao cancelar aluguel:', err);
-            this.snack.open('Falha ao cancelar aluguel', 'Fechar', { duration: 4000 });
-          }
-        });
-      });
-  }
-
-  excluir(id?: string) {
-    if (!id) return;
-
-    this.confirmacao.confirmar({ titulo: 'Confirmar exclusão', mensagem: 'Deseja realmente excluir este aluguel?', confirmar: 'Excluir', destrutivo: true })
-      .pipe(filter(Boolean))
-      .subscribe(() => {
-        this.svc.excluir(id).subscribe({
-          next: () => {
-            this.snack.open('Aluguel excluído com sucesso', 'Fechar', { duration: 3000 });
-            this.carregar();
-          },
-          error: (err) => {
-            console.error('Erro ao excluir aluguel:', err);
-            this.snack.open('Falha ao excluir aluguel', 'Fechar', { duration: 4000 });
           }
         });
       });

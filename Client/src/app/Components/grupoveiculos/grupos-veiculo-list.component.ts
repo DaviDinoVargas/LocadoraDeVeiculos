@@ -1,73 +1,53 @@
-import { Component, inject } from '@angular/core';
-import { Router } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { GruposVeiculoService } from './grupos-veiculo.service';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
+import { NgIcon } from '@ng-icons/core';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { AcaoLinha, ColunaTabela } from '../../shared/data-table/data-table.types';
+import { DataTableComponent } from '../../shared/data-table/data-table.component';
+import { crudLista } from '../../shared/data-table/crud-lista';
+import { PageHeaderComponent } from '../../shared/layout/page-header.component';
+import { PageComponent } from '../../shared/layout/page.component';
 import { GrupoVeiculoDto } from './grupo-veiculo.model';
-import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule } from '@angular/forms';
-import { ConfirmacaoService } from '../../core/confirmacao.service';
-import { filter } from 'rxjs/operators';
+import { GruposVeiculoService } from './grupos-veiculo.service';
 
 @Component({
   selector: 'app-grupos-veiculo-list',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
-  templateUrl: './grupos-veiculo-list.component.html',
-  styleUrls: ['../scss/global.scss']
+  imports: [RouterLink, NgIcon, HlmButtonImports, PageComponent, PageHeaderComponent, DataTableComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './grupos-veiculo-list.component.html'
 })
 export class GruposVeiculoListComponent {
-  private readonly confirmacao = inject(ConfirmacaoService);
+  private readonly svc = inject(GruposVeiculoService);
+  private readonly router = inject(Router);
 
-  grupos: GrupoVeiculoDto[] = [];
-  loading = false;
+  private readonly lista = crudLista<GrupoVeiculoDto>({
+    listar: () => this.svc.listar(),
+    excluir: id => this.svc.excluir(id),
+    singular: 'grupo de veículo'
+  });
+  readonly grupos = this.lista.dados;
+  readonly carregando = this.lista.carregando;
+  readonly erro = this.lista.erro;
+  readonly carregar = this.lista.carregar;
+  readonly excluir = this.lista.excluir;
 
-  constructor(
-    private svc: GruposVeiculoService,
-    private router: Router,
-    private snack: MatSnackBar
-  ) {
-    this.carregar();
+  readonly colunas: ColunaTabela<GrupoVeiculoDto>[] = [
+    { id: 'nome', cabecalho: 'Nome' },
+    { id: 'descricao', cabecalho: 'Descrição', truncar: 60 }
+  ];
+
+  readonly acoes: AcaoLinha<GrupoVeiculoDto>[] = [
+    { rotulo: 'Editar', icone: 'lucidePencil', executar: g => this.editar(g.id) },
+    { rotulo: 'Excluir', icone: 'lucideTrash2', destrutiva: true, executar: g => this.excluir(g.id) }
+  ];
+
+  readonly tituloLinha = (g: GrupoVeiculoDto) => g.nome;
+
+  novo(): void {
+    void this.router.navigate(['/grupoveiculos/new']);
   }
 
-  carregar() {
-    this.loading = true;
-    this.svc.listar().subscribe({
-      next: g => {
-        this.grupos = g;
-        this.loading = false;
-      },
-      error: (err) => {
-        this.loading = false;
-        console.error('Erro ao listar grupos de veículo:', err);
-        this.snack.open('Erro ao listar grupos de veículo', 'Fechar', { duration: 4000 });
-      }
-    });
-  }
-
-  novo() {
-    this.router.navigate(['/grupoveiculos/new']);
-  }
-
-  editar(id?: string) {
-    if (id) this.router.navigate([`/grupoveiculos/${id}/edit`]);
-  }
-
-  excluir(id?: string) {
-    if (!id) return;
-
-    this.confirmacao.confirmar({ titulo: 'Confirmar exclusão', mensagem: 'Deseja realmente excluir este grupo de veículo?', confirmar: 'Excluir', destrutivo: true })
-      .pipe(filter(Boolean))
-      .subscribe(() => {
-        this.svc.excluir(id).subscribe({
-          next: () => {
-            this.snack.open('Grupo de veículo excluído', 'Fechar', { duration: 3000 });
-            this.carregar();
-          },
-          error: (err) => {
-            console.error('Erro ao excluir grupo de veículo:', err);
-            this.snack.open('Falha ao excluir grupo de veículo', 'Fechar', { duration: 4000 });
-          }
-        });
-      });
+  editar(id?: string): void {
+    if (id) void this.router.navigate([`/grupoveiculos/${id}/edit`]);
   }
 }

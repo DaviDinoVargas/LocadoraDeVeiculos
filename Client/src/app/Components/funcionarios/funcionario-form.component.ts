@@ -1,184 +1,121 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
-import { Router, ActivatedRoute, ParamMap } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { FuncionariosService } from './funcionarios.service';
-import { FuncionarioDto } from './funcionario.model';
-import { Subscription } from 'rxjs';
-import { CommonModule } from '@angular/common';
-import { VALIDADORES_CPF } from '../../shared/validators/documentos';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { AbstractControl, NonNullableFormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
+import { NgIcon } from '@ng-icons/core';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmInputImports } from '@spartan-ng/helm/input';
+import { FormProtegido } from '../../core/form-guard';
+import { crudForm } from '../../shared/form-fields/crud-form';
+import { FormActionsComponent } from '../../shared/form-fields/form-actions.component';
+import { FormErrorsComponent } from '../../shared/form-fields/form-errors.component';
+import { FormFieldComponent } from '../../shared/form-fields/form-field.component';
+import { FormSectionComponent } from '../../shared/form-fields/form-section.component';
+import { FormSkeletonComponent } from '../../shared/form-fields/form-skeleton.component';
+import { PageHeaderComponent } from '../../shared/layout/page-header.component';
+import { PageComponent } from '../../shared/layout/page.component';
 import { MascaraDirective } from '../../shared/mascaras/mascara.directive';
-import { mensagensDeErro } from '../../core/api-error';
+import { MENSAGENS_CPF, VALIDADORES_CPF } from '../../shared/validators/documentos';
+import { FuncionarioDto } from './funcionario.model';
+import { FuncionariosService } from './funcionarios.service';
+
+/** Erro `mismatch` na confirmação (não no grupo) para a mensagem aparecer embaixo do campo certo. */
+function senhasIguais(grupo: AbstractControl): ValidationErrors | null {
+  const confirmar = grupo.get('confirmarSenha');
+  if (!confirmar) return null;
+  const senha = grupo.get('senha')?.value;
+  const diferente = !!senha && !!confirmar.value && senha !== confirmar.value;
+  const erros = { ...(confirmar.errors ?? {}) };
+  if (diferente) {
+    erros['mismatch'] = true;
+  } else {
+    delete erros['mismatch'];
+  }
+  confirmar.setErrors(Object.keys(erros).length ? erros : null, { emitEvent: false });
+  return null;
+}
 
 @Component({
   selector: 'app-funcionario-form',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MascaraDirective],
-  templateUrl: './funcionario-form.component.html',
-  styleUrls: ['../scss/global.scss']
+  imports: [
+    ReactiveFormsModule, NgIcon, HlmButtonImports, HlmInputImports, MascaraDirective, PageComponent, PageHeaderComponent,
+    FormSectionComponent, FormFieldComponent, FormActionsComponent, FormErrorsComponent, FormSkeletonComponent
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './funcionario-form.component.html'
 })
-export class FuncionarioFormComponent implements OnInit, OnDestroy {
-  form!: FormGroup;
-  id?: string | null = null;
-  loading = false;
-  editMode = false;
-  showPassword = false;
-  showConfirmPassword = false;
-  serverErrors: string[] = [];
+export class FuncionarioFormComponent implements FormProtegido {
+  private readonly svc = inject(FuncionariosService);
 
-  private sub: Subscription | null = null;
+  readonly mensagensCpf = MENSAGENS_CPF;
+  readonly mensagensSalario = { min: 'O salário deve ser maior ou igual a 0.' };
+  readonly mensagensSenha = { minlength: 'A senha precisa de ao menos 6 caracteres.' };
+  readonly mensagensConfirmacao = { mismatch: 'As senhas não coincidem.' };
+  readonly mostrarSenha = signal(false);
+  readonly mostrarConfirmacao = signal(false);
 
-  constructor(
-    private fb: FormBuilder,
-    private svc: FuncionariosService,
-    private route: ActivatedRoute,
-    private router: Router,
-    private snack: MatSnackBar
-  ) {
-    // Cria o formulário sem validador inicial
-    this.form = this.fb.group({
-      nomeCompleto: ['', Validators.required],
-      cpf: ['', VALIDADORES_CPF],
-      email: ['', [Validators.email]],
-      senha: ['', []],
-      confirmarSenha: ['', []],
-      salario: [0, [Validators.required, Validators.min(0)]],
-      admissaoEmUtc: ['', Validators.required]
-    });
-  }
+  readonly form = inject(NonNullableFormBuilder).group({
+    nomeCompleto: ['', Validators.required],
+    cpf: ['', VALIDADORES_CPF],
+    email: ['', [Validators.email]],
+    senha: [''],
+    confirmarSenha: [''],
+    salario: [0, [Validators.required, Validators.min(0)]],
+    admissaoEmUtc: ['', Validators.required]
+  });
 
-  ngOnInit() {
-    this.sub = this.route.paramMap.subscribe((params: ParamMap) => {
-      this.id = params.get('id');
-      this.editMode = !!this.id;
+  private readonly crud = crudForm<FuncionarioDto, typeof this.form.controls>({
+    form: this.form,
+    obter: id => this.svc.obter(id),
+    criar: payload => this.svc.criar(payload),
+    atualizar: (id, payload) => this.svc.atualizar(id, payload),
+    rotaLista: '/funcionarios',
+    singular: 'funcionário',
+    // Nunca preenche as senhas ao editar (campos sensíveis: só se digitar uma nova)
+    aoCarregar: f =>
+      this.form.patchValue({
+        nomeCompleto: f.nomeCompleto,
+        cpf: f.cpf,
+        email: f.email ?? '',
+        salario: f.salario,
+        admissaoEmUtc: (f.admissaoEmUtc ?? '').slice(0, 10)
+      }),
+    montarPayload: () => this.montarPayload()
+  });
+  readonly editMode = this.crud.editMode;
+  readonly carregando = this.crud.carregando;
+  readonly salvando = this.crud.salvando;
+  readonly erros = this.crud.erros;
+  readonly salvar = this.crud.salvar;
+  readonly cancelar = this.crud.cancelar;
 
-      // Ajusta validações baseado no modo
-      this.adjustValidations();
-
-      if (this.editMode && this.id) {
-        this.carregar(this.id);
-      }
-    });
-  }
-
-  ngOnDestroy() {
-    this.sub?.unsubscribe();
-  }
-
-  private adjustValidations() {
-    const senhaControl = this.form.get('senha');
-    const confirmarSenhaControl = this.form.get('confirmarSenha');
-
-    if (this.editMode) {
-      // Em modo edição, senha não é obrigatória
-      senhaControl?.clearValidators();
-      confirmarSenhaControl?.clearValidators();
-
-      // Remove o validador de comparação
-      this.form.setValidators(null);
+  constructor() {
+    // O modo vem da rota já na criação: na edição a senha é opcional; no cadastro é obrigatória.
+    const editando = !!inject(ActivatedRoute).snapshot.paramMap.get('id');
+    if (!editando) {
+      this.form.controls.senha.setValidators([Validators.required, Validators.minLength(6)]);
+      this.form.controls.confirmarSenha.setValidators([Validators.required]);
     } else {
-      // Em modo criação, senha é obrigatória
-      senhaControl?.setValidators([Validators.required, Validators.minLength(6)]);
-      confirmarSenhaControl?.setValidators([Validators.required]);
-
-      // Adiciona validador de comparação
-      this.form.setValidators(this.createPasswordMatchValidator());
+      this.form.controls.senha.setValidators([Validators.minLength(6)]);
     }
-
-    senhaControl?.updateValueAndValidity();
-    confirmarSenhaControl?.updateValueAndValidity();
+    this.form.addValidators(senhasIguais);
     this.form.updateValueAndValidity();
   }
 
-  // Cria um validador que não depende do contexto 'this'
-  private createPasswordMatchValidator() {
-    return (form: AbstractControl): ValidationErrors | null => {
-      const senha = form.get('senha')?.value;
-      const confirmarSenha = form.get('confirmarSenha')?.value;
-
-      // Só valida se ambos os campos estiverem preenchidos
-      if (senha && confirmarSenha && senha !== confirmarSenha) {
-        return { mismatch: true };
-      }
-      return null;
-    };
+  alternarSenha(): void {
+    this.mostrarSenha.update(v => !v);
   }
 
-  toggleShowPassword() {
-    this.showPassword = !this.showPassword;
+  alternarConfirmacao(): void {
+    this.mostrarConfirmacao.update(v => !v);
   }
 
-  toggleShowConfirmPassword() {
-    this.showConfirmPassword = !this.showConfirmPassword;
-  }
-
-  carregar(id: string) {
-    this.loading = true;
-    this.svc.obter(id).subscribe({
-      next: f => {
-        // Remove senhas ao carregar para edição
-        const { senha, confirmarSenha, ...dados } = f;
-        this.form.patchValue(dados);
-        this.loading = false;
-      },
-      error: () => {
-        this.loading = false;
-        this.snack.open('Erro ao carregar funcionário', 'Fechar', { duration: 4000 });
-        this.router.navigate(['/funcionarios']);
-      }
-    });
-  }
-
-  salvar() {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-
-      if (this.form.hasError('mismatch')) {
-        this.snack.open('As senhas não coincidem', 'Fechar', { duration: 3500 });
-      } else {
-        this.snack.open('Verifique os campos obrigatórios', 'Fechar', { duration: 3500 });
-      }
-      return;
+  // Em edição, senha em branco não é enviada (mantém a atual)
+  private montarPayload(): FuncionarioDto {
+    const payload: FuncionarioDto = this.form.getRawValue();
+    if (this.editMode() && !payload.senha?.trim()) {
+      delete payload.senha;
+      delete payload.confirmarSenha;
     }
-
-    let payload: FuncionarioDto = this.form.getRawValue();
-
-    // Em modo edição, se senha estiver vazia, remove do payload
-    if (this.editMode) {
-      if (!payload.senha || payload.senha.trim() === '') {
-        delete payload.senha;
-        delete payload.confirmarSenha;
-      }
-    }
-
-    this.loading = true;
-
-    const successHandler = () => {
-      this.loading = false;
-      this.snack.open(this.editMode ? 'Funcionário atualizado' : 'Funcionário criado', 'Fechar', { duration: 3000 });
-      this.router.navigate(['/funcionarios']);
-    };
-
-    const errorHandler = (err: unknown) => {
-      this.loading = false;
-      this.serverErrors = mensagensDeErro(err);
-      this.snack.open(this.serverErrors[0], 'Fechar', { duration: 4000 });
-    };
-
-    if (this.editMode && this.id) {
-      this.svc.atualizar(this.id, payload).subscribe({
-        next: successHandler,
-        error: errorHandler
-      });
-    } else {
-      this.svc.criar(payload).subscribe({
-        next: successHandler,
-        error: errorHandler
-      });
-    }
-  }
-
-  cancelar() {
-    this.router.navigate(['/funcionarios']);
+    return payload;
   }
 }

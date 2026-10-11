@@ -1,119 +1,77 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, ActivatedRoute, ParamMap } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { HlmInputImports } from '@spartan-ng/helm/input';
+import { HlmTextareaImports } from '@spartan-ng/helm/textarea';
+import { FormProtegido } from '../../core/form-guard';
+import { NotificacaoService } from '../../core/notificacao.service';
+import { crudForm } from '../../shared/form-fields/crud-form';
+import { FormActionsComponent } from '../../shared/form-fields/form-actions.component';
+import { FormErrorsComponent } from '../../shared/form-fields/form-errors.component';
+import { FormFieldComponent } from '../../shared/form-fields/form-field.component';
+import { FormSectionComponent } from '../../shared/form-fields/form-section.component';
+import { FormSkeletonComponent } from '../../shared/form-fields/form-skeleton.component';
+import { PageHeaderComponent } from '../../shared/layout/page-header.component';
+import { PageComponent } from '../../shared/layout/page.component';
+import { MascaraDirective, mascararCnpj } from '../../shared/mascaras/mascara.directive';
+import { MENSAGENS_CNPJ, VALIDADORES_CNPJ } from '../../shared/validators/documentos';
+import { ClienteDto, ClientePessoaJuridicaDto } from './cliente.model';
 import { ClientesService } from './clientes.service';
-import { ClientePessoaJuridicaDto, ClienteDto } from './cliente.model';
-import { Subscription } from 'rxjs';
-import { CommonModule } from '@angular/common';
-import { VALIDADORES_CNPJ } from '../../shared/validators/documentos';
-import { MascaraDirective } from '../../shared/mascaras/mascara.directive';
-import { HttpErrorResponse } from '@angular/common/http';
 
 @Component({
   selector: 'app-cliente-pessoa-juridica-form',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MascaraDirective],
-  templateUrl: './cliente-pessoa-juridica-form.component.html',
-  styleUrls: ['../scss/global.scss']
+  imports: [
+    ReactiveFormsModule, HlmInputImports, HlmTextareaImports, MascaraDirective, PageComponent, PageHeaderComponent, FormSectionComponent,
+    FormFieldComponent, FormActionsComponent, FormErrorsComponent, FormSkeletonComponent
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './cliente-pessoa-juridica-form.component.html'
 })
-export class ClientePessoaJuridicaFormComponent implements OnInit, OnDestroy {
-  form!: FormGroup;
-  id?: string | null = null;
-  loading = false;
-  editMode = false;
-  serverErrors: string[] = [];
+export class ClientePessoaJuridicaFormComponent implements FormProtegido {
+  private readonly svc = inject(ClientesService);
+  private readonly router = inject(Router);
+  private readonly notificacao = inject(NotificacaoService);
 
-  private sub: Subscription | null = null;
+  readonly mensagensCnpj = MENSAGENS_CNPJ;
 
-  constructor(
-    private fb: FormBuilder,
-    private svc: ClientesService,
-    private route: ActivatedRoute,
-    private router: Router,
-    private snack: MatSnackBar
-  ) {
-    this.form = this.fb.group({
-      nome: ['', Validators.required],
-      cnpj: ['', VALIDADORES_CNPJ],
-      nomeFantasia: [''],
-      telefone: ['', Validators.required],
-      email: ['', Validators.email],
-      endereco: ['']
-    });
-  }
+  readonly form = inject(NonNullableFormBuilder).group({
+    nome: ['', Validators.required],
+    cnpj: ['', VALIDADORES_CNPJ],
+    nomeFantasia: [''],
+    telefone: ['', Validators.required],
+    email: ['', Validators.email],
+    endereco: ['']
+  });
 
-  ngOnInit() {
-    this.sub = this.route.paramMap.subscribe((params: ParamMap) => {
-      this.id = params.get('id');
-      this.editMode = !!this.id;
+  private readonly crud = crudForm<ClientePessoaJuridicaDto, typeof this.form.controls, ClienteDto>({
+    form: this.form,
+    obter: id => this.svc.obter(id),
+    criar: payload => this.svc.criarPessoaJuridica(payload),
+    atualizar: (id, payload) => this.svc.atualizarPessoaJuridica(id, payload),
+    rotaLista: '/clientes',
+    singular: 'cliente',
+    aoCarregar: dado => this.preencher(dado)
+  });
+  readonly editMode = this.crud.editMode;
+  readonly carregando = this.crud.carregando;
+  readonly salvando = this.crud.salvando;
+  readonly erros = this.crud.erros;
+  readonly salvar = this.crud.salvar;
+  readonly cancelar = this.crud.cancelar;
 
-      if (this.editMode && this.id) {
-        this.carregar(this.id);
-      }
-    });
-  }
-
-  ngOnDestroy() {
-    this.sub?.unsubscribe();
-  }
-
-  carregar(id: string) {
-    this.loading = true;
-    this.svc.obter(id).subscribe({
-      next: (cliente: ClienteDto) => {
-        if (cliente.tipoCliente !== 'PessoaJuridica') {
-          this.snack.open('Cliente não é uma pessoa jurídica', 'Fechar', { duration: 4000 });
-          this.router.navigate(['/clientes']);
-          return;
-        }
-        this.form.patchValue(cliente);
-        this.loading = false;
-      },
-      error: () => {
-        this.loading = false;
-        this.snack.open('Erro ao carregar cliente', 'Fechar', { duration: 4000 });
-        this.router.navigate(['/clientes']);
-      }
-    });
-  }
-
-  salvar() {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      this.snack.open('Verifique os campos obrigatórios', 'Fechar', { duration: 3500 });
+  private preencher(cliente: ClienteDto): void {
+    if (cliente.tipoCliente !== 'PessoaJuridica') {
+      this.notificacao.erro('Este cliente não é uma pessoa jurídica.');
+      void this.router.navigate(['/clientes']);
       return;
     }
-
-    const payload: ClientePessoaJuridicaDto = this.form.getRawValue();
-    this.loading = true;
-
-    const successHandler = () => {
-      this.loading = false;
-      this.snack.open(this.editMode ? 'Cliente atualizado' : 'Cliente criado', 'Fechar', { duration: 3000 });
-      this.router.navigate(['/clientes']);
-    };
-
-    const errorHandler = (err: HttpErrorResponse) => {
-      this.loading = false;
-      this.serverErrors = [err?.message ?? 'Erro desconhecido'];
-      this.snack.open(this.serverErrors[0], 'Fechar', { duration: 4000 });
-    };
-
-    if (this.editMode && this.id) {
-      this.svc.atualizarPessoaJuridica(this.id, payload).subscribe({
-        next: successHandler,
-        error: errorHandler
-      });
-    } else {
-      this.svc.criarPessoaJuridica(payload).subscribe({
-        next: successHandler,
-        error: errorHandler
-      });
-    }
-  }
-
-  cancelar() {
-    this.router.navigate(['/clientes']);
+    this.form.patchValue({
+      nome: cliente.nome,
+      cnpj: mascararCnpj(cliente.cnpj),
+      nomeFantasia: cliente.nomeFantasia ?? '',
+      telefone: cliente.telefone,
+      email: cliente.email ?? '',
+      endereco: cliente.endereco ?? ''
+    });
   }
 }

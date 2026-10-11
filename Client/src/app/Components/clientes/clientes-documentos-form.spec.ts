@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { NotificacaoService } from '../../core/notificacao.service';
+import { criarNotificacaoFalsa } from '../../core/testing/notificacao-fake.spec';
 import { of } from 'rxjs';
 import { ClientePessoaFisicaFormComponent } from './ClientePessoaFisicaFormComponent';
 import { ClientePessoaJuridicaFormComponent } from './ClientePessoaJuridicaFormComponent';
@@ -25,7 +26,7 @@ describe('Formulários com CPF/CNPJ — validação de dígitos e máscara', () 
         provideRouter([]),
         { provide: ClientesService, useValue: stub }, // o formulário de condutor também lista clientes
         { provide: servico as never, useValue: stubServico },
-        { provide: MatSnackBar, useValue: { open: () => {} } }
+        { provide: NotificacaoService, useValue: criarNotificacaoFalsa() }
       ]
     });
     const fixture = TestBed.createComponent(componente as never) as unknown as import('@angular/core/testing').ComponentFixture<T & { form: import('@angular/forms').FormGroup }>;

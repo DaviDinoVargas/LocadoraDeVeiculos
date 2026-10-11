@@ -1,112 +1,67 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, ActivatedRoute, ParamMap } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { CommonModule } from '@angular/common';
-import { Subscription } from 'rxjs';
-import { DesafiosCupomService } from './desafios-cupom.service';
-import { DesafioCupomDto } from './desafio-cupom.model';
-import { CuponsService } from '../cupons/cupons.service';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { HlmCheckboxImports } from '@spartan-ng/helm/checkbox';
+import { HlmInputImports } from '@spartan-ng/helm/input';
+import { HlmLabel } from '@spartan-ng/helm/label';
+import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
+import { FormProtegido } from '../../core/form-guard';
+import { crudForm } from '../../shared/form-fields/crud-form';
+import { FormActionsComponent } from '../../shared/form-fields/form-actions.component';
+import { FormErrorsComponent } from '../../shared/form-fields/form-errors.component';
+import { FormFieldComponent } from '../../shared/form-fields/form-field.component';
+import { FormSectionComponent } from '../../shared/form-fields/form-section.component';
+import { FormSkeletonComponent } from '../../shared/form-fields/form-skeleton.component';
+import { PageHeaderComponent } from '../../shared/layout/page-header.component';
+import { PageComponent } from '../../shared/layout/page.component';
 import { CupomDto } from '../cupons/cupom.model';
-import { mensagensDeErro } from '../../core/api-error';
+import { CuponsService } from '../cupons/cupons.service';
+import { DesafioCupomDto } from './desafio-cupom.model';
+import { DesafiosCupomService } from './desafios-cupom.service';
 
 @Component({
   selector: 'app-desafio-cupom-form',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
-  templateUrl: './desafio-cupom-form.component.html',
-  styleUrls: ['../scss/global.scss']
+  imports: [
+    ReactiveFormsModule, HlmInputImports, HlmNativeSelectImports, HlmCheckboxImports, HlmLabel, PageComponent, PageHeaderComponent,
+    FormSectionComponent, FormFieldComponent, FormActionsComponent, FormErrorsComponent, FormSkeletonComponent
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './desafio-cupom-form.component.html'
 })
-export class DesafioCupomFormComponent implements OnInit, OnDestroy {
-  form!: FormGroup;
-  id?: string | null = null;
-  loading = false;
-  editMode = false;
-  serverErrors: string[] = [];
-  cupons: CupomDto[] = [];
+export class DesafioCupomFormComponent implements OnInit, FormProtegido {
+  private readonly svc = inject(DesafiosCupomService);
+  private readonly cuponsSvc = inject(CuponsService);
 
-  private sub: Subscription | null = null;
+  readonly cupons = signal<CupomDto[]>([]);
+  readonly mensagensMeta = { min: 'A meta deve ser de pelo menos 1 aluguel.' };
+  readonly mensagensPeriodo = { min: 'O período deve ser de pelo menos 1 dia.' };
+  readonly mensagensCupom = { required: 'Escolha o cupom de recompensa.' };
 
-  constructor(
-    private fb: FormBuilder,
-    private svc: DesafiosCupomService,
-    private cuponsSvc: CuponsService,
-    private route: ActivatedRoute,
-    private router: Router,
-    private snack: MatSnackBar
-  ) {
-    this.form = this.fb.group({
-      nome: ['', Validators.required],
-      descricao: ['', Validators.required],
-      metaQuantidadeAlugueis: [1, [Validators.required, Validators.min(1)]],
-      periodoDias: [30, [Validators.required, Validators.min(1)]],
-      cupomRecompensaId: ['', Validators.required],
-      ativo: [true]
-    });
-  }
+  readonly form = inject(NonNullableFormBuilder).group({
+    nome: ['', Validators.required],
+    descricao: ['', Validators.required],
+    metaQuantidadeAlugueis: [1, [Validators.required, Validators.min(1)]],
+    periodoDias: [30, [Validators.required, Validators.min(1)]],
+    cupomRecompensaId: ['', Validators.required],
+    ativo: [true]
+  });
 
-  ngOnInit() {
-    this.cuponsSvc.listar().subscribe({ next: c => (this.cupons = c) });
+  private readonly crud = crudForm<DesafioCupomDto, typeof this.form.controls>({
+    form: this.form,
+    obter: id => this.svc.obter(id),
+    criar: payload => this.svc.criar(payload),
+    atualizar: (id, payload) => this.svc.atualizar(id, payload),
+    rotaLista: '/desafios-cupom',
+    singular: 'desafio',
+    aoCarregar: d => this.form.patchValue({ ...d, cupomRecompensaId: d.cupomRecompensaId ?? '', ativo: d.ativo ?? true })
+  });
+  readonly editMode = this.crud.editMode;
+  readonly carregando = this.crud.carregando;
+  readonly salvando = this.crud.salvando;
+  readonly erros = this.crud.erros;
+  readonly salvar = this.crud.salvar;
+  readonly cancelar = this.crud.cancelar;
 
-    this.sub = this.route.paramMap.subscribe((params: ParamMap) => {
-      this.id = params.get('id');
-      this.editMode = !!this.id;
-
-      if (this.editMode && this.id) {
-        this.carregar(this.id);
-      }
-    });
-  }
-
-  ngOnDestroy() {
-    this.sub?.unsubscribe();
-  }
-
-  carregar(id: string) {
-    this.loading = true;
-    this.svc.obter(id).subscribe({
-      next: d => {
-        this.form.patchValue({ ...d, cupomRecompensaId: d.cupomRecompensaId ?? '' });
-        this.loading = false;
-      },
-      error: () => {
-        this.loading = false;
-        this.snack.open('Erro ao carregar desafio', 'Fechar', { duration: 4000 });
-        this.router.navigate(['/desafios-cupom']);
-      }
-    });
-  }
-
-  salvar() {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      this.snack.open('Verifique os campos obrigatórios', 'Fechar', { duration: 3500 });
-      return;
-    }
-
-    const payload: DesafioCupomDto = this.form.getRawValue();
-    this.loading = true;
-
-    const successHandler = () => {
-      this.loading = false;
-      this.snack.open(this.editMode ? 'Desafio atualizado' : 'Desafio criado', 'Fechar', { duration: 3000 });
-      this.router.navigate(['/desafios-cupom']);
-    };
-
-    const errorHandler = (err: unknown) => {
-      this.loading = false;
-      this.serverErrors = mensagensDeErro(err);
-      this.snack.open(this.serverErrors[0], 'Fechar', { duration: 4000 });
-    };
-
-    if (this.editMode && this.id) {
-      this.svc.atualizar(this.id, payload).subscribe({ next: successHandler, error: errorHandler });
-    } else {
-      this.svc.criar(payload).subscribe({ next: successHandler, error: errorHandler });
-    }
-  }
-
-  cancelar() {
-    this.router.navigate(['/desafios-cupom']);
+  ngOnInit(): void {
+    this.cuponsSvc.listar().subscribe({ next: c => this.cupons.set(c) });
   }
 }

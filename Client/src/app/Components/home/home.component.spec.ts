@@ -50,7 +50,7 @@ describe('HomeComponent — resumo da operação', () => {
   it('mostra os KPIs vindos do servidor', () => {
     montar();
 
-    expect(component.estado).toBe('pronto');
+    expect(component.estado()).toBe('pronto');
     expect(texto()).toContain('Frota disponível');
     expect(texto()).toContain('5 de 10');
     expect(texto()).toContain('4 em uso');
@@ -64,7 +64,7 @@ describe('HomeComponent — resumo da operação', () => {
   it('atrasados aparecem com ícone E texto (não só cor); sem atrasados diz "nenhum atrasado"', () => {
     montar();
     expect(texto()).toContain('1 atrasado(s)');
-    expect(fixture.nativeElement.querySelector('.kpi-alerta .bi-exclamation-triangle')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.kpi-alerta ng-icon')).not.toBeNull();
 
     TestBed.resetTestingModule();
     dashboard.resumo.and.returnValue(of({ ...resumo, alugueis: { ...resumo.alugueis, atrasados: 0 } }));
@@ -87,61 +87,77 @@ describe('HomeComponent — resumo da operação', () => {
     montar();
     expect(component.variacaoReceita()).toEqual({ texto: '+8% vs. mês anterior', tendencia: 'alta' });
 
-    component.resumo = { ...resumo, financeiro: { ...resumo.financeiro, receitaDoMes: 500 } };
+    component.resumo.set({ ...resumo, financeiro: { ...resumo.financeiro, receitaDoMes: 500 } });
     expect(component.variacaoReceita()).toEqual({ texto: '-50% vs. mês anterior', tendencia: 'queda' });
 
-    component.resumo = { ...resumo, financeiro: { ...resumo.financeiro, receitaMesAnterior: 0 } };
+    component.resumo.set({ ...resumo, financeiro: { ...resumo.financeiro, receitaMesAnterior: 0 } });
     expect(component.variacaoReceita().tendencia).toBe('sem-base');
 
-    component.resumo = { ...resumo, financeiro: { ...resumo.financeiro, receitaDoMes: 1000 } };
+    component.resumo.set({ ...resumo, financeiro: { ...resumo.financeiro, receitaDoMes: 1000 } });
     expect(component.variacaoReceita().tendencia).toBe('estavel');
   });
 
-  it('gráfico: o maior mês ocupa 100%, mês com valor nunca some e mês zerado fica vazio', () => {
+  it('a variação do faturamento mostra ícone ↑/↓ e texto', () => {
     montar();
 
-    expect(component.alturaBarra(8)).toBe(100);
-    expect(component.alturaBarra(4)).toBe(50);
-    expect(component.alturaBarra(0)).toBe(0);
-    component.resumo = { ...resumo, ultimosMeses: [{ ano: 2026, mes: 1, alugueis: 1, receita: 0 }, { ano: 2026, mes: 2, alugueis: 100, receita: 0 }] };
-    expect(component.alturaBarra(1)).toBe(4);
+    const kpi = Array.from(fixture.nativeElement.querySelectorAll('a.kpi') as NodeListOf<HTMLElement>).find(a => a.textContent?.includes('Faturamento'))!;
+    expect(kpi.textContent).toContain('+8% vs. mês anterior');
+    expect(kpi.querySelector('ng-icon')).not.toBeNull();
+  });
+
+  it('o gráfico lê as cores dos tokens, tem eixo de aluguéis a partir de zero e série em barra + linha (não só cor)', () => {
+    montar();
+
+    const opcoes = component.opcoesGrafico() as { series: { type: string }[]; yAxis: { min: number }[]; color: string[] };
+    expect(opcoes.series.map(s => s.type)).toEqual(['bar', 'line']);
+    expect(opcoes.yAxis[0].min).toBe(0);
+    expect(opcoes.color.length).toBe(2);
+    expect(opcoes.color.every(c => !!c)).toBeTrue();
   });
 
   it('rótulo do mês em pt-BR e alternativa em tabela para o gráfico', () => {
     montar();
 
     expect(component.rotuloMes(2026, 10)).toMatch(/^out\/26$/);
-    expect(fixture.nativeElement.querySelector('details.grafico-tabela table')).not.toBeNull();
     expect(texto()).toContain('Ver como tabela');
+
+    (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]).find(b => b.textContent?.includes('Ver como tabela'))!.click();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('table.grafico-tabela')).not.toBeNull();
+    expect(texto()).toContain('R$ 1.500,00');
   });
 
   it('falha só do resumo: mostra erro com "Tentar novamente" e os atalhos continuam funcionando', () => {
     dashboard.resumo.and.returnValue(throwError(() => new Error('falhou')));
     montar();
 
-    expect(component.estado).toBe('erro');
+    expect(component.estado()).toBe('erro');
     expect(texto()).toContain('Não foi possível carregar o resumo');
     expect(fixture.nativeElement.querySelectorAll('a.atalho-card').length).toBeGreaterThan(0);
 
     dashboard.resumo.and.returnValue(of(resumo));
-    (fixture.nativeElement.querySelector('[role="alert"] button') as HTMLButtonElement).click();
+    (Array.from(fixture.nativeElement.querySelectorAll('[role="alert"] button')) as HTMLButtonElement[])[0].click();
     fixture.detectChanges();
 
-    expect(component.estado).toBe('pronto');
+    expect(component.estado()).toBe('pronto');
   });
 
   it('enquanto carrega mostra esqueletos (aria-busy), sem layout vazio', () => {
     dashboard.resumo.and.returnValue(new Observable<ResumoDashboardDto>(() => {}));
     montar();
 
-    expect(component.estado).toBe('carregando');
+    expect(component.estado()).toBe('carregando');
     expect(fixture.nativeElement.querySelector('[aria-busy="true"]')).not.toBeNull();
     expect(fixture.nativeElement.querySelectorAll('.kpi-esqueleto').length).toBe(5);
   });
 
-  it('o Funcionario também vê o resumo', () => {
+  it('o Funcionario também vê o resumo, mas só os atalhos que a API deixa', () => {
     montar('Funcionario');
 
-    expect(component.estado).toBe('pronto');
+    expect(component.estado()).toBe('pronto');
+    const rotas = component.atalhos().map(a => a.rota);
+    expect(rotas).toContain('/clientes');
+    expect(rotas).not.toContain('/funcionarios');
   });
 });

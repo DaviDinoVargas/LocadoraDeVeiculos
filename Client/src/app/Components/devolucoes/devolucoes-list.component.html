@@ -1,64 +1,26 @@
-<div class="container mt-4">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3>Devoluções</h3>
-    <button class="btn btn-outline-secondary" type="button" (click)="exportarPdf()" [disabled]="loading || devolucoes.length === 0">
-      <i class="bi bi-file-earmark-pdf me-1"></i>
+<app-page>
+  <app-page-header titulo="Devoluções" descricao="Veículos devolvidos, com multas, combustível e valor final de cada aluguel.">
+    <button acoes hlmBtn variant="outline" type="button" [disabled]="carregando() || devolucoes().length === 0" (click)="exportarPdf()">
+      <ng-icon name="lucideFileText" aria-hidden="true" />
       Exportar PDF
     </button>
-  </div>
+  </app-page-header>
 
-  <!-- Loading -->
-  <div *ngIf="loading" class="text-center py-4">
-    <div class="spinner-border text-primary" role="status">
-      <span class="visually-hidden">Carregando...</span>
-    </div>
-    <p class="mt-2">Carregando devoluções...</p>
-  </div>
-
-  <!-- Lista de devoluções -->
-  <div *ngIf="!loading && devolucoes.length > 0" class="table-responsive">
-    <table class="table table-hover">
-      <thead class="table-light">
-        <tr>
-          <th>Condutor</th>
-          <th>Veículo</th>
-          <th>Cliente</th>
-          <th>Data Devolução</th>
-          <th>Quilometragem Final</th>
-          <th>Valor Total</th>
-          <th class="text-end">Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let d of devolucoes">
-          <td>{{ d.condutorNome }}</td>
-          <td>{{ d.automovelPlaca }}</td>
-          <td>{{ d.clienteNome }}</td>
-          <td>{{ formatarData(d.dataDevolucao) }}</td>
-          <td>{{ d.quilometragemFinal }} km</td>
-          <td>{{ formatarMoeda(d.valorTotal) }}</td>
-          <td class="text-end">
-            <div class="btn-group btn-group-sm">
-              <button class="btn btn-outline-primary"
-                      (click)="visualizar(d.id)"
-                      title="Visualizar">
-                <i class="bi bi-eye"></i>
-              </button>
-              <button class="btn btn-outline-danger"
-                      (click)="excluir(d.id)"
-                      title="Excluir">
-                <i class="bi bi-trash"></i>
-              </button>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Mensagem quando não há devoluções -->
-  <div *ngIf="!loading && devolucoes.length === 0" class="alert alert-info">
-    <i class="bi bi-info-circle me-2"></i>
-    Nenhuma devolução encontrada.
-  </div>
-</div>
+  <app-data-table
+    tableId="devolucoes"
+    itens="devoluções"
+    item="devolução"
+    [colunas]="colunas"
+    [dados]="devolucoes()"
+    [carregando]="carregando()"
+    [erro]="erro()"
+    [acoesLinha]="acoes"
+    [tituloLinha]="tituloLinha"
+    linhasClicaveis
+    [ordenacaoPadrao]="{ id: 'dataDevolucao', desc: true }"
+    tituloVazio="Nenhuma devolução registrada"
+    descricaoVazio="As devoluções aparecem aqui depois que um aluguel em andamento é devolvido."
+    (linhaClique)="visualizar($event.id)"
+    (recarregar)="carregar()"
+  />
+</app-page>

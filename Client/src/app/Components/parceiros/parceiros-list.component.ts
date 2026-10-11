@@ -1,76 +1,71 @@
-import { Component, OnInit, inject } from '@angular/core';
-import { Router } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
+import { NgIcon } from '@ng-icons/core';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { crudLista } from '../../shared/data-table/crud-lista';
+import { DataTableComponent } from '../../shared/data-table/data-table.component';
+import { AcaoLinha, ColunaTabela } from '../../shared/data-table/data-table.types';
+import { PageHeaderComponent } from '../../shared/layout/page-header.component';
+import { PageComponent } from '../../shared/layout/page.component';
+import { mascararCnpj } from '../../shared/mascaras/mascara.directive';
+import { CATEGORIAS_PARCEIRO, ParceiroDto, categoriaLabel } from './parceiro.model';
 import { ParceirosService } from './parceiros.service';
-import { ParceiroDto, categoriaLabel } from './parceiro.model';
-import { ConfirmacaoService } from '../../core/confirmacao.service';
-import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-parceiros-list',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
-  templateUrl: './parceiros-list.component.html',
-  styleUrls: ['../scss/global.scss']
+  imports: [RouterLink, NgIcon, HlmButtonImports, PageComponent, PageHeaderComponent, DataTableComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './parceiros-list.component.html'
 })
-export class ParceirosListComponent implements OnInit {
-  private readonly confirmacao = inject(ConfirmacaoService);
+export class ParceirosListComponent {
+  private readonly svc = inject(ParceirosService);
+  private readonly router = inject(Router);
 
-  parceiros: ParceiroDto[] = [];
-  loading = false;
-  categoriaLabel = categoriaLabel;
+  private readonly lista = crudLista<ParceiroDto>({
+    listar: () => this.svc.listar(),
+    excluir: id => this.svc.excluir(id),
+    singular: 'parceiro'
+  });
+  readonly parceiros = this.lista.dados;
+  readonly carregando = this.lista.carregando;
+  readonly erro = this.lista.erro;
+  readonly carregar = this.lista.carregar;
+  readonly excluir = this.lista.excluir;
+  readonly categoriaLabel = categoriaLabel;
 
-  constructor(
-    private svc: ParceirosService,
-    private router: Router,
-    private snack: MatSnackBar
-  ) {}
+  readonly colunas: ColunaTabela<ParceiroDto>[] = [
+    { id: 'nome', cabecalho: 'Nome' },
+    { id: 'cnpj', cabecalho: 'CNPJ', formatar: p => mascararCnpj(p.cnpj) },
+    {
+      id: 'categoria',
+      cabecalho: 'Categoria',
+      tipo: 'enum',
+      opcoes: CATEGORIAS_PARCEIRO.map(c => ({ valor: c.value, rotulo: c.label, tom: 'info' as const }))
+    },
+    {
+      id: 'ativo',
+      cabecalho: 'Status',
+      tipo: 'enum',
+      valor: p => (p.ativo ? 'Ativo' : 'Inativo'),
+      opcoes: [
+        { valor: 'Ativo', rotulo: 'Ativo', tom: 'success' },
+        { valor: 'Inativo', rotulo: 'Inativo', tom: 'neutral' }
+      ]
+    }
+  ];
 
-  ngOnInit() {
-    this.carregar();
+  readonly acoes: AcaoLinha<ParceiroDto>[] = [
+    { rotulo: 'Editar', icone: 'lucidePencil', executar: p => this.editar(p.id) },
+    { rotulo: 'Excluir', icone: 'lucideTrash2', destrutiva: true, executar: p => this.excluir(p.id) }
+  ];
+
+  readonly tituloLinha = (p: ParceiroDto) => p.nome;
+
+  novo(): void {
+    void this.router.navigate(['/parceiros/new']);
   }
 
-  carregar() {
-    this.loading = true;
-    this.svc.listar().subscribe({
-      next: p => {
-        this.parceiros = p;
-        this.loading = false;
-      },
-      error: (err) => {
-        this.loading = false;
-        console.error('Erro ao listar parceiros:', err);
-        this.snack.open('Erro ao listar parceiros', 'Fechar', { duration: 4000 });
-      }
-    });
-  }
-
-  novo() {
-    this.router.navigate(['/parceiros/new']);
-  }
-
-  editar(id?: string) {
-    if (id) this.router.navigate([`/parceiros/${id}/edit`]);
-  }
-
-  excluir(id?: string) {
-    if (!id) return;
-
-    this.confirmacao.confirmar({ titulo: 'Confirmar exclusão', mensagem: 'Deseja realmente excluir este parceiro?', confirmar: 'Excluir', destrutivo: true })
-      .pipe(filter(Boolean))
-      .subscribe(() => {
-        this.svc.excluir(id).subscribe({
-          next: () => {
-            this.snack.open('Parceiro excluído', 'Fechar', { duration: 3000 });
-            this.carregar();
-          },
-          error: (err) => {
-            console.error('Erro ao excluir parceiro:', err);
-            this.snack.open('Falha ao excluir parceiro', 'Fechar', { duration: 4000 });
-          }
-        });
-      });
+  editar(id?: string): void {
+    if (id) void this.router.navigate([`/parceiros/${id}/edit`]);
   }
 }

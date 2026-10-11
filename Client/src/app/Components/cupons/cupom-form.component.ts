@@ -1,120 +1,79 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, ActivatedRoute, ParamMap } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { CommonModule } from '@angular/common';
-import { Subscription } from 'rxjs';
-import { CuponsService } from './cupons.service';
-import { CupomDto, TIPOS_DESCONTO } from './cupom.model';
-import { ParceirosService } from '../parceiros/parceiros.service';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { HlmCheckboxImports } from '@spartan-ng/helm/checkbox';
+import { HlmInputImports } from '@spartan-ng/helm/input';
+import { HlmLabel } from '@spartan-ng/helm/label';
+import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
+import { FormProtegido } from '../../core/form-guard';
+import { crudForm } from '../../shared/form-fields/crud-form';
+import { FormActionsComponent } from '../../shared/form-fields/form-actions.component';
+import { FormErrorsComponent } from '../../shared/form-fields/form-errors.component';
+import { FormFieldComponent } from '../../shared/form-fields/form-field.component';
+import { FormSectionComponent } from '../../shared/form-fields/form-section.component';
+import { FormSkeletonComponent } from '../../shared/form-fields/form-skeleton.component';
+import { PageHeaderComponent } from '../../shared/layout/page-header.component';
+import { PageComponent } from '../../shared/layout/page.component';
 import { ParceiroDto } from '../parceiros/parceiro.model';
-import { mensagensDeErro } from '../../core/api-error';
+import { ParceirosService } from '../parceiros/parceiros.service';
+import { CupomDto, TIPOS_DESCONTO } from './cupom.model';
+import { CuponsService } from './cupons.service';
 
 @Component({
   selector: 'app-cupom-form',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
-  templateUrl: './cupom-form.component.html',
-  styleUrls: ['../scss/global.scss']
+  imports: [
+    ReactiveFormsModule, HlmInputImports, HlmNativeSelectImports, HlmCheckboxImports, HlmLabel, PageComponent, PageHeaderComponent,
+    FormSectionComponent, FormFieldComponent, FormActionsComponent, FormErrorsComponent, FormSkeletonComponent
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './cupom-form.component.html'
 })
-export class CupomFormComponent implements OnInit, OnDestroy {
-  form!: FormGroup;
-  id?: string | null = null;
-  loading = false;
-  editMode = false;
-  serverErrors: string[] = [];
-  tiposDesconto = TIPOS_DESCONTO;
-  parceiros: ParceiroDto[] = [];
+export class CupomFormComponent implements OnInit, FormProtegido {
+  private readonly svc = inject(CuponsService);
+  private readonly parceirosSvc = inject(ParceirosService);
 
-  private sub: Subscription | null = null;
+  readonly tiposDesconto = TIPOS_DESCONTO;
+  readonly parceiros = signal<ParceiroDto[]>([]);
+  readonly mensagensValor = { min: 'O valor deve ser maior ou igual a 0.' };
+  readonly mensagensLimite = { min: 'O limite deve ser de pelo menos 1 uso.' };
 
-  constructor(
-    private fb: FormBuilder,
-    private svc: CuponsService,
-    private parceirosSvc: ParceirosService,
-    private route: ActivatedRoute,
-    private router: Router,
-    private snack: MatSnackBar
-  ) {
-    this.form = this.fb.group({
-      codigo: ['', Validators.required],
-      descricao: ['', Validators.required],
-      tipoDesconto: ['', Validators.required],
-      valorDesconto: [0, [Validators.required, Validators.min(0)]],
-      validoAte: ['', Validators.required],
-      limiteUsos: [1, [Validators.required, Validators.min(1)]],
-      parceiroId: [''],
-      ativo: [true]
-    });
-  }
+  readonly form = inject(NonNullableFormBuilder).group({
+    codigo: ['', Validators.required],
+    descricao: ['', Validators.required],
+    tipoDesconto: ['', Validators.required],
+    valorDesconto: [0, [Validators.required, Validators.min(0)]],
+    validoAte: ['', Validators.required],
+    limiteUsos: [1, [Validators.required, Validators.min(1)]],
+    parceiroId: [''],
+    ativo: [true]
+  });
 
-  ngOnInit() {
-    this.parceirosSvc.listar().subscribe({ next: p => (this.parceiros = p) });
-
-    this.sub = this.route.paramMap.subscribe((params: ParamMap) => {
-      this.id = params.get('id');
-      this.editMode = !!this.id;
-
-      if (this.editMode && this.id) {
-        this.carregar(this.id);
-      }
-    });
-  }
-
-  ngOnDestroy() {
-    this.sub?.unsubscribe();
-  }
-
-  carregar(id: string) {
-    this.loading = true;
-    this.svc.obter(id).subscribe({
-      next: c => {
-        this.form.patchValue({
-          ...c,
-          validoAte: c.validoAte ? c.validoAte.substring(0, 10) : '',
-          parceiroId: c.parceiroId ?? ''
-        });
-        this.loading = false;
-      },
-      error: () => {
-        this.loading = false;
-        this.snack.open('Erro ao carregar cupom', 'Fechar', { duration: 4000 });
-        this.router.navigate(['/cupons']);
-      }
-    });
-  }
-
-  salvar() {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      this.snack.open('Verifique os campos obrigatórios', 'Fechar', { duration: 3500 });
-      return;
+  private readonly crud = crudForm<CupomDto, typeof this.form.controls>({
+    form: this.form,
+    obter: id => this.svc.obter(id),
+    criar: payload => this.svc.criar(payload),
+    atualizar: (id, payload) => this.svc.atualizar(id, payload),
+    rotaLista: '/cupons',
+    singular: 'cupom',
+    aoCarregar: c =>
+      this.form.patchValue({
+        ...c,
+        validoAte: c.validoAte ? c.validoAte.substring(0, 10) : '',
+        parceiroId: c.parceiroId ?? '',
+        ativo: c.ativo ?? true
+      }),
+    montarPayload: () => {
+      const raw = this.form.getRawValue();
+      return { ...raw, parceiroId: raw.parceiroId || null };
     }
+  });
+  readonly editMode = this.crud.editMode;
+  readonly carregando = this.crud.carregando;
+  readonly salvando = this.crud.salvando;
+  readonly erros = this.crud.erros;
+  readonly salvar = this.crud.salvar;
+  readonly cancelar = this.crud.cancelar;
 
-    const raw = this.form.getRawValue();
-    const payload: CupomDto = { ...raw, parceiroId: raw.parceiroId || null };
-    this.loading = true;
-
-    const successHandler = () => {
-      this.loading = false;
-      this.snack.open(this.editMode ? 'Cupom atualizado' : 'Cupom criado', 'Fechar', { duration: 3000 });
-      this.router.navigate(['/cupons']);
-    };
-
-    const errorHandler = (err: unknown) => {
-      this.loading = false;
-      this.serverErrors = mensagensDeErro(err);
-      this.snack.open(this.serverErrors[0], 'Fechar', { duration: 4000 });
-    };
-
-    if (this.editMode && this.id) {
-      this.svc.atualizar(this.id, payload).subscribe({ next: successHandler, error: errorHandler });
-    } else {
-      this.svc.criar(payload).subscribe({ next: successHandler, error: errorHandler });
-    }
-  }
-
-  cancelar() {
-    this.router.navigate(['/cupons']);
+  ngOnInit(): void {
+    this.parceirosSvc.listar().subscribe({ next: p => this.parceiros.set(p) });
   }
 }

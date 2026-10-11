@@ -1,73 +1,53 @@
-<div class="container mt-3">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h4>Detalhes da Devolução</h4>
-    <button class="btn btn-secondary" (click)="voltar()">
-      <i class="bi bi-arrow-left me-1"></i>
-      Voltar
+<app-page largura="form">
+  <app-page-header titulo="Detalhes da devolução" descricao="Resumo do que foi registrado na devolução do veículo." voltarPara="/devolucoes" rotuloVoltar="Devoluções">
+    <button acoes hlmBtn variant="outline" type="button" [disabled]="!aluguel() || gerandoPdf()" (click)="baixarRecibo()">
+      <ng-icon name="lucideFileText" aria-hidden="true" />
+      Baixar recibo em PDF
     </button>
-  </div>
+    <button acoes hlmBtn variant="outline" type="button" class="text-destructive border-destructive" [disabled]="!devolucao()" (click)="excluir()">
+      <ng-icon name="lucideTrash2" aria-hidden="true" />
+      Excluir devolução
+    </button>
+  </app-page-header>
 
-  <div *ngIf="loading" class="text-center py-4">
-    <div class="spinner-border text-primary" role="status">
-      <span class="visually-hidden">Carregando...</span>
+  @if (carregando()) {
+    <div class="grid gap-4 sm:grid-cols-2" aria-busy="true" aria-label="Carregando a devolução">
+      <hlm-skeleton class="block h-44 w-full rounded-xl" />
+      <hlm-skeleton class="block h-44 w-full rounded-xl" />
+      <hlm-skeleton class="block h-44 w-full rounded-xl sm:col-span-2" />
     </div>
-    <p class="mt-2">Carregando detalhes da devolução...</p>
-  </div>
+  } @else if (devolucao(); as d) {
+    <div class="grid gap-4 sm:grid-cols-2">
+      <section class="border-border bg-card flex flex-col gap-3 rounded-xl border p-5 sm:p-6">
+        <h2 class="text-title-m">Devolução</h2>
+        <dl class="text-body-m flex flex-col gap-2">
+          <div class="flex justify-between gap-4"><dt class="text-muted-foreground">Data da devolução</dt><dd>{{ formatarData(d.dataDevolucao) }}</dd></div>
+          <div class="flex justify-between gap-4"><dt class="text-muted-foreground">Quilometragem final</dt><dd class="tabular">{{ d.quilometragemFinal }} km</dd></div>
+          <div class="flex justify-between gap-4"><dt class="text-muted-foreground">Combustível no tanque</dt><dd class="tabular">{{ d.combustivelNoTanque }} L</dd></div>
+          <div class="flex justify-between gap-4"><dt class="text-muted-foreground">Nível de combustível</dt><dd>{{ getNivelCombustivelText(d.nivelCombustivel) }}</dd></div>
+        </dl>
+      </section>
 
-  <div *ngIf="!loading && devolucao" class="row">
-    <div class="col-md-6">
-      <div class="card mb-4">
-        <div class="card-body">
-          <h5 class="card-title">Informações da Devolução</h5>
-          <p><strong>ID:</strong> {{ devolucao.id }}</p>
-          <p><strong>Data de Devolução:</strong> {{ formatarData(devolucao.dataDevolucao) }}</p>
-          <p><strong>Quilometragem Final:</strong> {{ devolucao.quilometragemFinal }} km</p>
-          <p><strong>Combustível no Tanque:</strong> {{ devolucao.combustivelNoTanque }} L</p>
-          <p><strong>Nível de Combustível:</strong> {{ getNivelCombustivelText(devolucao.nivelCombustivel) }}</p>
-        </div>
-      </div>
-    </div>
+      <section class="border-border bg-card flex flex-col gap-3 rounded-xl border p-5 sm:p-6">
+        <h2 class="text-title-m">Cálculos financeiros</h2>
+        <dl class="text-body-m flex flex-col gap-2">
+          <div class="flex justify-between gap-4"><dt class="text-muted-foreground">Multas</dt><dd class="tabular">{{ formatarMoeda(d.valorMultas) }}</dd></div>
+          <div class="flex justify-between gap-4"><dt class="text-muted-foreground">Adicional de combustível</dt><dd class="tabular">{{ formatarMoeda(d.valorAdicionalCombustivel) }}</dd></div>
+          <div class="border-border text-title-m flex justify-between gap-4 border-t pt-3"><dt>Valor total</dt><dd class="tabular">{{ formatarMoeda(d.valorTotal) }}</dd></div>
+        </dl>
+      </section>
 
-    <div class="col-md-6">
-      <div class="card mb-4">
-        <div class="card-body">
-          <h5 class="card-title">Cálculos Financeiros</h5>
-          <p><strong>Multas:</strong> {{ formatarMoeda(devolucao.valorMultas) }}</p>
-          <p><strong>Adicional Combustível:</strong> {{ formatarMoeda(devolucao.valorAdicionalCombustivel) }}</p>
-          <p><strong>Valor Total:</strong> {{ formatarMoeda(devolucao.valorTotal) }}</p>
-        </div>
-      </div>
+      <section class="border-border bg-card flex flex-col gap-3 rounded-xl border p-5 sm:col-span-2 sm:p-6">
+        <h2 class="text-title-m">Aluguel</h2>
+        <dl class="text-body-m grid gap-x-8 gap-y-2 sm:grid-cols-2">
+          <div class="flex justify-between gap-4"><dt class="text-muted-foreground">Condutor</dt><dd>{{ d.condutorNome }}</dd></div>
+          <div class="flex justify-between gap-4"><dt class="text-muted-foreground">Data de saída</dt><dd>{{ formatarData(aluguel()?.dataSaida) }}</dd></div>
+          <div class="flex justify-between gap-4"><dt class="text-muted-foreground">Veículo</dt><dd>{{ d.automovelPlaca }}</dd></div>
+          <div class="flex justify-between gap-4"><dt class="text-muted-foreground">Retorno previsto</dt><dd>{{ formatarData(aluguel()?.dataRetornoPrevisto) }}</dd></div>
+          <div class="flex justify-between gap-4"><dt class="text-muted-foreground">Cliente</dt><dd>{{ d.clienteNome }}</dd></div>
+          <div class="flex justify-between gap-4"><dt class="text-muted-foreground">Valor previsto do aluguel</dt><dd class="tabular">{{ formatarMoeda(aluguel()?.valorPrevisto) }}</dd></div>
+        </dl>
+      </section>
     </div>
-
-    <div class="col-12">
-      <div class="card">
-        <div class="card-body">
-          <h5 class="card-title">Informações do Aluguel</h5>
-          <div class="row">
-            <div class="col-md-6">
-              <p><strong>Condutor:</strong> {{ devolucao.condutorNome }}</p>
-              <p><strong>Veículo:</strong> {{ devolucao.automovelPlaca }}</p>
-              <p><strong>Cliente:</strong> {{ devolucao.clienteNome }}</p>
-            </div>
-            <div class="col-md-6">
-              <p><strong>Data Saída:</strong> {{ formatarData(aluguel?.dataSaida) }}</p>
-              <p><strong>Data Retorno Previsto:</strong> {{ formatarData(aluguel?.dataRetornoPrevisto) }}</p>
-              <p><strong>Valor Previsto do Aluguel:</strong> {{ formatarMoeda(aluguel?.valorPrevisto) }}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-12 mt-3 d-flex gap-2">
-      <button class="btn btn-primary" [disabled]="!aluguel || gerandoPdf" (click)="baixarRecibo()">
-        <i class="bi bi-file-earmark-pdf me-1"></i>
-        Baixar Recibo em PDF
-      </button>
-      <button class="btn btn-danger" (click)="excluir()">
-        <i class="bi bi-trash me-1"></i>
-        Excluir Devolução
-      </button>
-    </div>
-  </div>
-</div>
+  }
+</app-page>

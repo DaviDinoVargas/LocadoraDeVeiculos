@@ -1,101 +1,106 @@
-<div class="home-container">
-  <div class="home-header">
-    <h1>Locadora de Veículos</h1>
-    <p class="subtitulo" *ngIf="nomeUsuario">Bem-vindo(a) de volta, {{ nomeUsuario }}.</p>
-  </div>
+<app-page>
+  <app-page-header
+    titulo="Locadora de Veículos"
+    [descricao]="nomeUsuario() ? 'Bem-vindo(a) de volta, ' + nomeUsuario() + '.' : 'Resumo da operação e acessos rápidos.'"
+  />
 
   <!-- Resumo da operação: números calculados no servidor; cada KPI leva à lista correspondente (drill-down) -->
-  <section class="resumo" aria-labelledby="titulo-resumo">
-    <h2 id="titulo-resumo" class="secao-titulo">Resumo da operação</h2>
+  <section aria-labelledby="titulo-resumo" class="flex flex-col gap-4">
+    <h2 id="titulo-resumo" class="text-title-l">Resumo da operação</h2>
 
-    <div *ngIf="estado === 'carregando'" class="kpi-grid" aria-busy="true" aria-label="Carregando o resumo">
-      <div class="kpi kpi-esqueleto" *ngFor="let _ of [1, 2, 3, 4, 5]"><span></span><span></span><span></span></div>
-    </div>
+    @switch (estado()) {
+      @case ('carregando') {
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5" aria-busy="true" aria-label="Carregando o resumo">
+          @for (n of esqueletos; track n) {
+            <div class="kpi-esqueleto border-border bg-card flex flex-col gap-3 rounded-xl border p-5">
+              <hlm-skeleton class="block h-4 w-1/2" />
+              <hlm-skeleton class="block h-9 w-2/3" />
+              <hlm-skeleton class="block h-3 w-3/4" />
+            </div>
+          }
+        </div>
+      }
+      @case ('erro') {
+        <app-error-state titulo="Não foi possível carregar o resumo" descricao="O resumo da operação está indisponível agora. Os atalhos abaixo continuam funcionando." (repetir)="carregarResumo()" />
+      }
+      @case ('pronto') {
+        @if (resumo(); as r) {
+          <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+            <app-kpi-card rotulo="Frota disponível" [valor]="r.frota.disponiveis" [complemento]="'de ' + r.frota.total" [apoio]="r.frota.emUso + ' em uso'" link="/veiculos" />
 
-    <div *ngIf="estado === 'erro'" class="alert alert-warning d-flex justify-content-between align-items-center" role="alert">
-      <span><i class="bi bi-exclamation-triangle me-2"></i>Não foi possível carregar o resumo agora.</span>
-      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="carregarResumo()">Tentar novamente</button>
-    </div>
+            <app-kpi-card
+              rotulo="Aluguéis em andamento"
+              [valor]="r.alugueis.emAndamento"
+              [alerta]="r.alugueis.atrasados > 0 ? r.alugueis.atrasados + ' atrasado(s)' : ''"
+              [apoio]="r.alugueis.atrasados === 0 ? 'nenhum atrasado' : ''"
+              link="/alugueis"
+              [consulta]="{ status: 'EmAndamento' }"
+            />
 
-    <ng-container *ngIf="estado === 'pronto' && resumo as r">
-      <div class="kpi-grid">
-        <a class="kpi" routerLink="/veiculos">
-          <span class="kpi-rotulo">Frota disponível</span>
-          <strong class="kpi-valor">{{ r.frota.disponiveis }}<small> de {{ r.frota.total }}</small></strong>
-          <span class="kpi-apoio">{{ r.frota.emUso }} em uso</span>
-        </a>
+            <app-kpi-card rotulo="Reservados" [valor]="r.alugueis.reservados" apoio="aguardando retirada" link="/alugueis" [consulta]="{ status: 'Reservado' }" />
 
-        <a class="kpi" routerLink="/alugueis" [queryParams]="{ status: 'EmAndamento' }">
-          <span class="kpi-rotulo">Aluguéis em andamento</span>
-          <strong class="kpi-valor">{{ r.alugueis.emAndamento }}</strong>
-          <span class="kpi-apoio kpi-alerta" *ngIf="r.alugueis.atrasados > 0">
-            <i class="bi bi-exclamation-triangle" aria-hidden="true"></i> {{ r.alugueis.atrasados }} atrasado(s)
-          </span>
-          <span class="kpi-apoio" *ngIf="r.alugueis.atrasados === 0">nenhum atrasado</span>
-        </a>
+            <app-kpi-card
+              rotulo="Faturamento do mês"
+              [valor]="formatarMoeda(r.financeiro.receitaDoMes)"
+              [tendencia]="variacaoReceita().tendencia"
+              [tendenciaTexto]="variacaoReceita().texto"
+              [apoio]="r.financeiro.devolucoesDoMes + ' devolução(ões)'"
+              link="/devolucoes"
+            />
 
-        <a class="kpi" routerLink="/alugueis" [queryParams]="{ status: 'Reservado' }">
-          <span class="kpi-rotulo">Reservados</span>
-          <strong class="kpi-valor">{{ r.alugueis.reservados }}</strong>
-          <span class="kpi-apoio">aguardando retirada</span>
-        </a>
+            <app-kpi-card rotulo="Clientes" [valor]="r.totalClientes" apoio="cadastrados" link="/clientes" />
+          </div>
 
-        <a class="kpi" routerLink="/devolucoes">
-          <span class="kpi-rotulo">Faturamento do mês</span>
-          <strong class="kpi-valor">{{ formatarMoeda(r.financeiro.receitaDoMes) }}</strong>
-          <span class="kpi-apoio" [ngClass]="'tendencia-' + variacaoReceita().tendencia">
-            <i class="bi" aria-hidden="true"
-               [ngClass]="variacaoReceita().tendencia === 'alta' ? 'bi-arrow-up' : variacaoReceita().tendencia === 'queda' ? 'bi-arrow-down' : 'bi-dash'"></i>
-            {{ variacaoReceita().texto }}
-          </span>
-          <span class="kpi-apoio">{{ r.financeiro.devolucoesDoMes }} devolução(ões)</span>
-        </a>
-
-        <a class="kpi" routerLink="/clientes">
-          <span class="kpi-rotulo">Clientes</span>
-          <strong class="kpi-valor">{{ r.totalClientes }}</strong>
-          <span class="kpi-apoio">cadastrados</span>
-        </a>
-      </div>
-
-      <figure class="grafico">
-        <figcaption class="grafico-titulo">Aluguéis e faturamento nos últimos {{ r.ultimosMeses.length }} meses</figcaption>
-        <ol class="barras" aria-hidden="true">
-          <li *ngFor="let m of r.ultimosMeses">
-            <span class="barra-valor">{{ m.alugueis }}</span>
-            <span class="barra" [style.height.%]="alturaBarra(m.alugueis)"></span>
-            <span class="barra-mes">{{ rotuloMes(m.ano, m.mes) }}</span>
-          </li>
-        </ol>
-        <details class="grafico-tabela">
-          <summary>Ver como tabela</summary>
-          <table class="table table-sm mb-0">
-            <caption class="visually-hidden">Aluguéis iniciados e faturamento por mês</caption>
-            <thead><tr><th scope="col">Mês</th><th scope="col" class="text-end">Aluguéis</th><th scope="col" class="text-end">Faturamento</th></tr></thead>
-            <tbody>
-              <tr *ngFor="let m of r.ultimosMeses">
-                <th scope="row">{{ rotuloMes(m.ano, m.mes) }}</th>
-                <td class="text-end">{{ m.alugueis }}</td>
-                <td class="text-end">{{ formatarMoeda(m.receita) }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </details>
-      </figure>
-    </ng-container>
+          <app-chart-widget
+            [titulo]="'Aluguéis e faturamento nos últimos ' + r.ultimosMeses.length + ' meses'"
+            descricao="Barras: aluguéis iniciados no mês. Linha: faturamento das devoluções."
+            [opcoes]="opcoesGrafico()"
+            [carregando]="false"
+            (recarregar)="carregarResumo()"
+          >
+            <table tabela class="grafico-tabela text-body-m w-full">
+              <caption class="sr-only">Aluguéis iniciados e faturamento por mês</caption>
+              <thead>
+                <tr class="text-muted-foreground border-border border-b text-left">
+                  <th scope="col" class="py-2 pr-4 font-medium">Mês</th>
+                  <th scope="col" class="py-2 pr-4 text-right font-medium">Aluguéis</th>
+                  <th scope="col" class="py-2 text-right font-medium">Faturamento</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (m of r.ultimosMeses; track m.ano * 100 + m.mes) {
+                  <tr class="border-border border-b last:border-0">
+                    <th scope="row" class="py-2 pr-4 text-left font-normal">{{ rotuloMes(m.ano, m.mes) }}</th>
+                    <td class="tabular py-2 pr-4 text-right">{{ m.alugueis }}</td>
+                    <td class="tabular py-2 text-right">{{ formatarMoeda(m.receita) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </app-chart-widget>
+        }
+      }
+    }
   </section>
 
-  <h2 class="secao-titulo">Acesso rápido</h2>
-  <div class="cards-grid">
-    <a class="atalho-card" *ngFor="let atalho of atalhos" [routerLink]="atalho.rota">
-      <div class="atalho-icone">
-        <i class="bi" [ngClass]="atalho.icone"></i>
-      </div>
-      <div class="atalho-texto">
-        <h2>{{ atalho.titulo }}</h2>
-        <p>{{ atalho.descricao }}</p>
-      </div>
-      <i class="bi bi-arrow-right atalho-seta"></i>
-    </a>
-  </div>
-</div>
+  <section aria-labelledby="titulo-atalhos" class="flex flex-col gap-4">
+    <h2 id="titulo-atalhos" class="text-title-l">Acesso rápido</h2>
+    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      @for (atalho of atalhos(); track atalho.rota) {
+        <a
+          class="atalho-card border-border bg-card hover:bg-surface-container flex items-center gap-4 rounded-xl border p-4 transition-colors"
+          [routerLink]="atalho.rota"
+        >
+          <span class="bg-secondary text-secondary-foreground flex size-11 shrink-0 items-center justify-center rounded-full">
+            <ng-icon [name]="atalho.icone" class="text-xl" aria-hidden="true" />
+          </span>
+          <span class="min-w-0 flex-1">
+            <span class="text-title-s text-foreground block">{{ atalho.titulo }}</span>
+            <span class="text-body-s text-muted-foreground block">{{ atalho.descricao }}</span>
+          </span>
+          <ng-icon name="lucideArrowRight" class="text-muted-foreground" aria-hidden="true" />
+        </a>
+      }
+    </div>
+  </section>
+</app-page>

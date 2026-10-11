@@ -1,128 +1,67 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, ActivatedRoute, ParamMap } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { CondutoresService } from './condutores.service';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { HlmInputImports } from '@spartan-ng/helm/input';
+import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
+import { FormProtegido } from '../../core/form-guard';
+import { crudForm } from '../../shared/form-fields/crud-form';
+import { FormActionsComponent } from '../../shared/form-fields/form-actions.component';
+import { FormErrorsComponent } from '../../shared/form-fields/form-errors.component';
+import { FormFieldComponent } from '../../shared/form-fields/form-field.component';
+import { FormSectionComponent } from '../../shared/form-fields/form-section.component';
+import { FormSkeletonComponent } from '../../shared/form-fields/form-skeleton.component';
+import { PageHeaderComponent } from '../../shared/layout/page-header.component';
+import { PageComponent } from '../../shared/layout/page.component';
+import { MascaraDirective } from '../../shared/mascaras/mascara.directive';
+import { MENSAGENS_CPF, VALIDADORES_CPF } from '../../shared/validators/documentos';
+import { ClienteDto } from '../clientes/cliente.model';
 import { ClientesService } from '../clientes/clientes.service';
 import { CondutorDto } from './condutor.model';
-import { ClienteDto } from '../clientes/cliente.model';
-import { Subscription } from 'rxjs';
-import { CommonModule } from '@angular/common';
-import { VALIDADORES_CPF } from '../../shared/validators/documentos';
-import { MascaraDirective } from '../../shared/mascaras/mascara.directive';
-import { mensagensDeErro } from '../../core/api-error';
+import { CondutoresService } from './condutores.service';
 
 @Component({
   selector: 'app-condutor-form',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MascaraDirective],
-  templateUrl: './condutor-form.component.html',
-  styleUrls: ['../scss/global.scss']
+  imports: [
+    ReactiveFormsModule, HlmInputImports, HlmNativeSelectImports, MascaraDirective, PageComponent, PageHeaderComponent,
+    FormSectionComponent, FormFieldComponent, FormActionsComponent, FormErrorsComponent, FormSkeletonComponent
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './condutor-form.component.html'
 })
-export class CondutorFormComponent implements OnInit, OnDestroy {
-  form!: FormGroup;
-  id?: string | null = null;
-  loading = false;
-  editMode = false;
-  serverErrors: string[] = [];
-  clientes: ClienteDto[] = [];
+export class CondutorFormComponent implements OnInit, FormProtegido {
+  private readonly svc = inject(CondutoresService);
+  private readonly clientesSvc = inject(ClientesService);
 
-  private sub: Subscription | null = null;
+  readonly clientes = signal<ClienteDto[]>([]);
+  readonly mensagensCpf = MENSAGENS_CPF;
 
-  constructor(
-    private fb: FormBuilder,
-    private svc: CondutoresService,
-    private clientesSvc: ClientesService,
-    private route: ActivatedRoute,
-    private router: Router,
-    private snack: MatSnackBar
-  ) {
-    this.form = this.fb.group({
-      nome: ['', Validators.required],
-      cpf: ['', VALIDADORES_CPF],
-      cnh: ['', Validators.required],
-      validadeCnh: ['', Validators.required],
-      telefone: ['', Validators.required],
-      email: ['', Validators.email],
-      clienteId: ['', Validators.required]
-    });
-  }
+  readonly form = inject(NonNullableFormBuilder).group({
+    nome: ['', Validators.required],
+    cpf: ['', VALIDADORES_CPF],
+    cnh: ['', Validators.required],
+    validadeCnh: ['', Validators.required],
+    telefone: ['', Validators.required],
+    email: ['', Validators.email],
+    clienteId: ['', Validators.required]
+  });
 
-  ngOnInit() {
-    this.carregarClientes();
+  private readonly crud = crudForm<CondutorDto, typeof this.form.controls>({
+    form: this.form,
+    obter: id => this.svc.obter(id),
+    criar: payload => this.svc.criar(payload),
+    atualizar: (id, payload) => this.svc.atualizar(id, payload),
+    rotaLista: '/condutores',
+    singular: 'condutor',
+    aoCarregar: c =>
+      this.form.patchValue({ ...c, email: c.email ?? '', validadeCnh: (c.validadeCnh ?? '').slice(0, 10) })
+  });
+  readonly editMode = this.crud.editMode;
+  readonly carregando = this.crud.carregando;
+  readonly salvando = this.crud.salvando;
+  readonly erros = this.crud.erros;
+  readonly salvar = this.crud.salvar;
+  readonly cancelar = this.crud.cancelar;
 
-    this.sub = this.route.paramMap.subscribe((params: ParamMap) => {
-      this.id = params.get('id');
-      this.editMode = !!this.id;
-
-      if (this.editMode && this.id) {
-        this.carregar(this.id);
-      }
-    });
-  }
-
-  ngOnDestroy() {
-    this.sub?.unsubscribe();
-  }
-
-  carregarClientes() {
-    this.clientesSvc.listar().subscribe({
-      next: clientes => this.clientes = clientes,
-      error: () => this.snack.open('Erro ao carregar clientes', 'Fechar', { duration: 4000 })
-    });
-  }
-
-  carregar(id: string) {
-    this.loading = true;
-    this.svc.obter(id).subscribe({
-      next: c => {
-        this.form.patchValue(c);
-        this.loading = false;
-      },
-      error: () => {
-        this.loading = false;
-        this.snack.open('Erro ao carregar condutor', 'Fechar', { duration: 4000 });
-        this.router.navigate(['/condutores']);
-      }
-    });
-  }
-
-  salvar() {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      this.snack.open('Verifique os campos obrigatórios', 'Fechar', { duration: 3500 });
-      return;
-    }
-
-    const payload: CondutorDto = this.form.getRawValue();
-    this.loading = true;
-
-    const successHandler = () => {
-      this.loading = false;
-      this.snack.open(this.editMode ? 'Condutor atualizado' : 'Condutor criado', 'Fechar', { duration: 3000 });
-      this.router.navigate(['/condutores']);
-    };
-
-    const errorHandler = (err: unknown) => {
-      this.loading = false;
-      this.serverErrors = mensagensDeErro(err);
-      this.snack.open(this.serverErrors[0], 'Fechar', { duration: 4000 });
-    };
-
-    if (this.editMode && this.id) {
-      this.svc.atualizar(this.id, payload).subscribe({
-        next: successHandler,
-        error: errorHandler
-      });
-    } else {
-      this.svc.criar(payload).subscribe({
-        next: successHandler,
-        error: errorHandler
-      });
-    }
-  }
-
-  cancelar() {
-    this.router.navigate(['/condutores']);
+  ngOnInit(): void {
+    this.clientesSvc.listar().subscribe({ next: clientes => this.clientes.set(clientes) });
   }
 }

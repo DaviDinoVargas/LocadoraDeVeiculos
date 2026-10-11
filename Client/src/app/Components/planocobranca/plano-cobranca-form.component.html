@@ -1,94 +1,50 @@
-<div class="container mt-3">
-  <h4 *ngIf="!editMode">Novo Plano de Cobrança</h4>
-  <h4 *ngIf="editMode">Editar Plano de Cobrança</h4>
+<form [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+  <app-page largura="form">
+    <app-page-header
+      [titulo]="editMode() ? 'Editar plano de cobrança' : 'Novo plano de cobrança'"
+      descricao="Define a diária e o preço por quilômetro cobrados dos veículos de um grupo."
+      voltarPara="/planos-cobranca"
+      rotuloVoltar="Planos de cobrança"
+    />
 
-  <form [formGroup]="form" (ngSubmit)="salvar()">
-    <!-- Nome -->
-    <div class="mb-3">
-      <label class="form-label">Nome do Plano</label>
-      <input class="form-control" formControlName="nome"/>
-      <div *ngIf="form.controls['nome'].invalid && form.controls['nome'].touched"
-           class="text-danger small">
-        Nome é obrigatório.
-      </div>
-    </div>
+    <app-form-errors [erros]="erros()" />
 
-    <!-- Grupo de Automóvel -->
-    <div class="mb-3">
-      <label class="form-label">Grupo de Automóvel</label>
-      <select class="form-select" formControlName="grupoAutomovelId">
-        <option value="">Selecione um grupo</option>
-        <option *ngFor="let grupo of grupos" [value]="grupo.id">{{ grupo.nome }}</option>
-      </select>
-      <div *ngIf="form.controls['grupoAutomovelId'].invalid && form.controls['grupoAutomovelId'].touched"
-           class="text-danger small">
-        Grupo de automóvel é obrigatório.
-      </div>
-    </div>
+    @if (carregando()) {
+      <app-form-skeleton />
+    } @else {
+      <app-form-section titulo="Plano" descricao="A que grupo de veículos o plano se aplica.">
+        <app-form-field class="col-span-12 sm:col-span-6" label="Nome do plano" required>
+          <input hlmInput formControlName="nome" autocomplete="off" />
+        </app-form-field>
+        <app-form-field class="col-span-12 sm:col-span-6" label="Grupo de veículo" required>
+          <hlm-native-select class="w-full" formControlName="grupoAutomovelId">
+            <option hlmNativeSelectOption value="">Selecione um grupo</option>
+            @for (grupo of grupos(); track grupo.id) {
+              <option hlmNativeSelectOption [value]="grupo.id">{{ grupo.nome }}</option>
+            }
+          </hlm-native-select>
+        </app-form-field>
+      </app-form-section>
 
-    <!-- Preço Diária -->
-    <div class="mb-3">
-      <label class="form-label">Preço Diária (R$)</label>
-      <input type="number"
-             step="0.01"
-             min="0"
-             class="form-control"
-             formControlName="precoDiaria"/>
-      <div *ngIf="form.controls['precoDiaria'].invalid && form.controls['precoDiaria'].touched"
-           class="text-danger small">
-        Preço diária deve ser maior ou igual a 0.
-      </div>
-    </div>
+      <app-form-section titulo="Preços" descricao="O valor do aluguel é calculado no servidor com estes preços.">
+        <app-form-field class="col-span-12 sm:col-span-4" label="Preço da diária" required [mensagens]="mensagensPreco">
+          <div class="relative">
+            <span class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2" aria-hidden="true">R$</span>
+            <input hlmInput type="number" formControlName="precoDiaria" step="0.01" min="0" inputmode="decimal" class="pl-10" />
+          </div>
+        </app-form-field>
+        <app-form-field class="col-span-12 sm:col-span-4" label="Preço por km" [mensagens]="mensagensPreco" hint="Cobrado acima do limite de km livre.">
+          <div class="relative">
+            <span class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2" aria-hidden="true">R$</span>
+            <input hlmInput type="number" formControlName="precoPorKm" step="0.01" min="0" inputmode="decimal" class="pl-10" />
+          </div>
+        </app-form-field>
+        <app-form-field class="col-span-12 sm:col-span-4" label="Km livre (limite)" [mensagens]="mensagensPreco" hint="Quilômetros sem cobrança extra.">
+          <input hlmInput type="number" formControlName="kmLivreLimite" step="1" min="0" inputmode="numeric" />
+        </app-form-field>
+      </app-form-section>
+    }
 
-    <!-- Preço por Km -->
-    <div class="mb-3">
-      <label class="form-label">Preço por Km (R$)</label>
-      <input type="number"
-             step="0.01"
-             min="0"
-             class="form-control"
-             formControlName="precoPorKm"/>
-      <div *ngIf="form.controls['precoPorKm'].invalid && form.controls['precoPorKm'].touched"
-           class="text-danger small">
-        Preço por Km deve ser maior ou igual a 0.
-      </div>
-    </div>
-
-    <!-- Km Livre Limite -->
-    <div class="mb-3">
-      <label class="form-label">Km Livre Limite</label>
-      <input type="number"
-             step="1"
-             min="0"
-             class="form-control"
-             formControlName="kmLivreLimite"/>
-      <div *ngIf="form.controls['kmLivreLimite'].invalid && form.controls['kmLivreLimite'].touched"
-           class="text-danger small">
-        Km Livre Limite deve ser maior ou igual a 0.
-      </div>
-    </div>
-
-    <!-- Botões -->
-    <div class="d-flex gap-2">
-      <button class="btn btn-primary"
-              type="submit"
-              [disabled]="loading">
-        <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
-        {{ editMode ? 'Salvar' : 'Criar' }}
-      </button>
-      <button class="btn btn-secondary"
-              type="button"
-              (click)="cancelar()"
-              [disabled]="loading">
-        Cancelar
-      </button>
-    </div>
-
-    <!-- Erros do servidor -->
-    <div *ngIf="serverErrors.length > 0" class="alert alert-danger mt-3">
-      <ul class="mb-0">
-        <li *ngFor="let error of serverErrors">{{ error }}</li>
-      </ul>
-    </div>
-  </form>
-</div>
+    <app-form-actions [salvando]="salvando()" [alterado]="form.dirty" [rotuloSalvar]="editMode() ? 'Salvar alterações' : 'Criar plano'" (cancelar)="cancelar()" />
+  </app-page>
+</form>

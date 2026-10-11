@@ -1,73 +1,74 @@
-import { Component, OnInit, inject } from '@angular/core';
-import { Router, ActivatedRoute } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { DevolucoesService } from './devolucoes.service';
-import { DevolucaoCompletoDto, NIVEL_COMBUSTIVEL } from './devolucao.model';
-import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule } from '@angular/forms';
-import { AlugueisService } from '../alugueis/alugueis.service';
-import { AluguelCompletoDto } from '../alugueis/aluguel.model';
-import { PdfService } from '../pdf/pdf.service';
-import { ConfirmacaoService } from '../../core/confirmacao.service';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import { NgIcon } from '@ng-icons/core';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmSkeleton } from '@spartan-ng/helm/skeleton';
 import { filter } from 'rxjs/operators';
+import { ConfirmacaoService } from '../../core/confirmacao.service';
+import { NotificacaoService } from '../../core/notificacao.service';
+import { formatarData, formatarMoeda } from '../../shared/data-table/data-table.util';
+import { PageHeaderComponent } from '../../shared/layout/page-header.component';
+import { PageComponent } from '../../shared/layout/page.component';
+import { AluguelCompletoDto } from '../alugueis/aluguel.model';
+import { AlugueisService } from '../alugueis/alugueis.service';
+import { PdfService } from '../pdf/pdf.service';
+import { DevolucaoCompletoDto, NIVEL_COMBUSTIVEL } from './devolucao.model';
+import { DevolucoesService } from './devolucoes.service';
 
 @Component({
   selector: 'app-devolucao-view',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
-  templateUrl: './devolucao-view.component.html',
-  styleUrls: ['../scss/global.scss']
+  imports: [NgIcon, HlmButtonImports, HlmSkeleton, PageComponent, PageHeaderComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './devolucao-view.component.html'
 })
 export class DevolucaoViewComponent implements OnInit {
+  private readonly svc = inject(DevolucoesService);
+  private readonly aluguelSvc = inject(AlugueisService);
+  private readonly pdfSvc = inject(PdfService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly confirmacao = inject(ConfirmacaoService);
+  private readonly notificacao = inject(NotificacaoService);
 
-  devolucao?: DevolucaoCompletoDto;
-  aluguel?: AluguelCompletoDto;
-  loading = false;
-  gerandoPdf = false;
+  readonly devolucao = signal<DevolucaoCompletoDto | undefined>(undefined);
+  readonly aluguel = signal<AluguelCompletoDto | undefined>(undefined);
+  readonly carregando = signal(false);
+  readonly gerandoPdf = signal(false);
 
-  constructor(
-    private svc: DevolucoesService,
-    private aluguelSvc: AlugueisService,
-    private pdfSvc: PdfService,
-    private route: ActivatedRoute,
-    private router: Router,
-    private snack: MatSnackBar
-  ) {}
-
-  ngOnInit() {
+  ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.carregar(id);
     }
   }
 
-  carregar(id: string) {
-    this.loading = true;
+  carregar(id: string): void {
+    this.carregando.set(true);
     this.svc.obter(id).subscribe({
       next: d => {
-        this.devolucao = d;
-        this.loading = false;
+        this.devolucao.set(d);
+        this.carregando.set(false);
         this.aluguelSvc.obter(d.aluguelId).subscribe({
-          next: a => (this.aluguel = a),
-          error: () => {} // recibo ainda funciona sem os dados extras do aluguel
+          next: a => this.aluguel.set(a),
+          error: () => undefined // o recibo ainda funciona sem os dados extras do aluguel
         });
       },
       error: () => {
-        this.loading = false;
-        this.snack.open('Erro ao carregar devolução', 'Fechar', { duration: 4000 });
-        this.router.navigate(['/devolucoes']);
+        this.carregando.set(false);
+        void this.router.navigate(['/devolucoes']);
       }
     });
   }
 
-  baixarRecibo() {
-    if (!this.devolucao || !this.aluguel) return;
-    this.gerandoPdf = true;
+  baixarRecibo(): void {
+    const devolucao = this.devolucao();
+    const aluguel = this.aluguel();
+    if (!devolucao || !aluguel) return;
+    this.gerandoPdf.set(true);
     try {
-      this.pdfSvc.gerarReciboDevolucao(this.devolucao, this.aluguel);
+      this.pdfSvc.gerarReciboDevolucao(devolucao, aluguel);
     } finally {
-      this.gerandoPdf = false;
+      this.gerandoPdf.set(false);
     }
   }
 
@@ -76,39 +77,27 @@ export class DevolucaoViewComponent implements OnInit {
   }
 
   formatarData(dataString?: string): string {
-    if (!dataString) return '';
-    const data = new Date(dataString);
-    return data.toLocaleDateString('pt-BR');
+    return dataString ? formatarData(dataString) : '—';
   }
 
   formatarMoeda(valor?: number): string {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(valor ?? 0);
+    return formatarMoeda(valor ?? 0);
   }
 
-  excluir() {
-    const id = this.devolucao?.id;
+  excluir(): void {
+    const id = this.devolucao()?.id;
     if (!id) return;
 
-    this.confirmacao.confirmar({ titulo: 'Confirmar exclusão', mensagem: 'Deseja realmente excluir esta devolução?', confirmar: 'Excluir', destrutivo: true })
+    this.confirmacao
+      .confirmar({ titulo: 'Confirmar exclusão', mensagem: 'Deseja realmente excluir esta devolução?', confirmar: 'Excluir devolução', destrutivo: true })
       .pipe(filter(Boolean))
       .subscribe(() => {
         this.svc.excluir(id).subscribe({
           next: () => {
-            this.snack.open('Devolução excluída com sucesso', 'Fechar', { duration: 3000 });
-            this.router.navigate(['/devolucoes']);
-          },
-          error: (err) => {
-            console.error('Erro ao excluir devolução:', err);
-            this.snack.open('Falha ao excluir devolução', 'Fechar', { duration: 4000 });
+            this.notificacao.sucesso('Devolução excluída com sucesso');
+            void this.router.navigate(['/devolucoes']);
           }
         });
       });
-  }
-
-  voltar() {
-    this.router.navigate(['/devolucoes']);
   }
 }
