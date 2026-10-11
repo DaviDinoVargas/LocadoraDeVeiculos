@@ -1,8 +1,0 @@
-**/__pycache__/
-**/.pytest_cache/
-**/*.pyc
-*.pt
-*.pth
-FaceAuth/data/
-tests/
-requirements-dev.txt
