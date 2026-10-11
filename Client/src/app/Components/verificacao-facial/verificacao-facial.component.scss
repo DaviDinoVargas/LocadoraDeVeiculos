@@ -89,6 +89,10 @@
   background: #5f6368;
 }
 
+.acoes button.perigo {
+  background: var(--app-color-danger, #dc2626);
+}
+
 .acoes button:disabled {
   opacity: 0.5;
   cursor: default;

@@ -3,6 +3,7 @@
   <p class="subtitulo">
     Cadastre seu rosto uma vez e use a verificação para confirmar sua identidade
     antes de operações sensíveis (ex.: retirada de veículo no balcão).
+    Você pode apagar o rosto cadastrado quando quiser.
   </p>
 
   <div class="face-card">
@@ -35,6 +36,9 @@
       </button>
       <button type="button" [disabled]="estadoCamera !== 'ativa' || processando || !cadastrado" (click)="verificarIdentidade()">
         Verificar identidade
+      </button>
+      <button type="button" class="perigo" *ngIf="cadastrado" [disabled]="processando" (click)="apagarRosto()">
+        Apagar meu rosto
       </button>
     </div>
 

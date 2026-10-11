@@ -7,7 +7,7 @@
       "^/api/cameras": ""
     }
   },
-  "/api/ml/**": {
+  "/api/ml/chat": {
     "target": "http://localhost:8000",
     "secure": false,
     "changeOrigin": true,

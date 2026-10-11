@@ -134,4 +134,34 @@ describe('AuthService', () => {
       expect(service.isLoggedIn()).toBeTrue();
     });
   });
+
+  describe('rosto', () => {
+    it('consulta o status pela Web API', () => {
+      let cadastrado: boolean | undefined;
+      service.statusRosto().subscribe(r => (cadastrado = r.cadastrado));
+
+      const req = httpMock.expectOne('/api/auth/rosto');
+      expect(req.request.method).toBe('GET');
+      req.flush({ cadastrado: true });
+
+      expect(cadastrado).toBeTrue();
+    });
+
+    it('verifica a identidade enviando só a imagem (o servidor descobre quem é pelo JWT)', () => {
+      service.verificarRosto('data:image/jpeg;base64,abc').subscribe();
+
+      const req = httpMock.expectOne('/api/auth/rosto/verificar');
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ imagemBase64: 'data:image/jpeg;base64,abc' });
+      req.flush({ confirmado: true, confianca: 0.97 });
+    });
+
+    it('apaga o rosto do usuário logado com DELETE /auth/rosto', () => {
+      service.removerRosto().subscribe();
+
+      const req = httpMock.expectOne('/api/auth/rosto');
+      expect(req.request.method).toBe('DELETE');
+      req.flush(null, { status: 204, statusText: 'No Content' });
+    });
+  });
 });

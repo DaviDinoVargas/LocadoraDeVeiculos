@@ -73,6 +73,21 @@ export class AuthService {
     });
   }
 
+  /** O USUÁRIO LOGADO TEM ROSTO CADASTRADO? (consulta via Web API; o ML não é acessível ao navegador) */
+  statusRosto(): Observable<{ cadastrado: boolean }> {
+    return this.http.get<{ cadastrado: boolean }>(`${this.baseUrl}/rosto`);
+  }
+
+  /** CONFERE SE A IMAGEM É DO PRÓPRIO USUÁRIO LOGADO */
+  verificarRosto(imagemBase64: string): Observable<{ confirmado: boolean; confianca: number }> {
+    return this.http.post<{ confirmado: boolean; confianca: number }>(`${this.baseUrl}/rosto/verificar`, { imagemBase64 });
+  }
+
+  /** APAGA O ROSTO CADASTRADO DO USUÁRIO LOGADO (o login facial deixa de funcionar até cadastrar de novo) */
+  removerRosto(): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/rosto`);
+  }
+
   /** ROTACIONAR TOKEN */
   rotacionarToken(): Observable<AccessToken> {
     const token = this.getAccessToken();
