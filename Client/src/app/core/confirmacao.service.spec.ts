@@ -1,7 +1,5 @@
 import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { MatDialog } from '@angular/material/dialog';
 import { ConfirmacaoService } from './confirmacao.service';
 
 describe('ConfirmacaoService — substitui o confirm() nativo', () => {
@@ -12,10 +10,12 @@ describe('ConfirmacaoService — substitui o confirm() nativo', () => {
   const botao = (texto: string) =>
     Array.from(overlay().querySelectorAll('button')).find(b => b.textContent?.trim() === texto) as HTMLButtonElement;
 
-  // afterClosed() emite depois do ciclo de fechamento do diálogo; espera assentar antes de conferir.
+  // O fechamento do diálogo emite depois do ciclo de animação; espera assentar antes de conferir.
   const aguardar = async () => {
-    app.tick();
-    await new Promise(r => setTimeout(r, 30));
+    for (let i = 0; i < 30; i++) {
+      app.tick();
+      await new Promise(r => setTimeout(r, 30));
+    }
   };
 
   const abrir = (...args: Parameters<ConfirmacaoService['confirmar']>) => {
@@ -26,12 +26,9 @@ describe('ConfirmacaoService — substitui o confirm() nativo', () => {
   };
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideNoopAnimations()] });
     service = TestBed.inject(ConfirmacaoService);
     app = TestBed.inject(ApplicationRef);
   });
-
-  afterEach(() => TestBed.inject(MatDialog).closeAll());
 
   it('mostra título, mensagem e rótulos de ação específicos', () => {
     abrir({ titulo: 'Confirmar exclusão', mensagem: 'Deseja realmente excluir este veículo?', confirmar: 'Excluir' });
@@ -42,17 +39,18 @@ describe('ConfirmacaoService — substitui o confirm() nativo', () => {
     expect(botao('Cancelar')).toBeDefined();
   });
 
-  it('ação destrutiva: botão vermelho e aviso de que não dá para desfazer', () => {
+  it('ação destrutiva: botão destrutivo e aviso de que não dá para desfazer', () => {
     abrir({ mensagem: 'Excluir?', confirmar: 'Excluir', destrutivo: true });
 
-    expect(botao('Excluir').classList).toContain('btn-danger');
+    expect(botao('Excluir').className).toContain('bg-destructive');
     expect(overlay().textContent).toContain('Esta ação não pode ser desfeita.');
   });
 
-  it('ação comum não é vermelha nem avisa de irreversibilidade', () => {
+  it('ação comum não é destrutiva nem avisa de irreversibilidade', () => {
     abrir({ mensagem: 'Iniciar?', confirmar: 'Iniciar aluguel' });
 
-    expect(botao('Iniciar aluguel').classList).toContain('btn-primary');
+    expect(botao('Iniciar aluguel').className).toContain('bg-primary');
+    expect(botao('Iniciar aluguel').className).not.toContain('bg-destructive');
     expect(overlay().textContent).not.toContain('não pode ser desfeita');
   });
 
@@ -74,10 +72,10 @@ describe('ConfirmacaoService — substitui o confirm() nativo', () => {
     expect(resultado()).toBeFalse();
   });
 
-  it('fechar o diálogo sem escolher (Esc / clique fora) conta como false', async () => {
+  it('fechar o diálogo sem escolher (Esc) conta como false', async () => {
     const resultado = abrir('Excluir?');
 
-    TestBed.inject(MatDialog).closeAll();
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true }));
     await aguardar();
 
     expect(resultado()).toBeFalse();

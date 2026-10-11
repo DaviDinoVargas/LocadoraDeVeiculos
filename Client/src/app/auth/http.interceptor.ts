@@ -2,13 +2,13 @@ import { HttpInterceptorFn, HttpRequest, HttpHandlerFn, HttpEvent, HttpErrorResp
 import { inject } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { NotificacaoService } from '../core/notificacao.service';
 import { SILENCIAR_ERRO } from '../core/http-context';
 import { mensagensDeErro } from '../core/api-error';
 
 // Interceptor de Erro HTTP
 export const HttpErrorInterceptor: HttpInterceptorFn = (req, next) => {
-  const snackBar = inject(MatSnackBar);
+  const notificacao = inject(NotificacaoService);
 
   if (req.context.get(SILENCIAR_ERRO)) {
     return next(req);
@@ -16,14 +16,6 @@ export const HttpErrorInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
-      console.error('HTTP Error:', {
-        url: req.url,
-        status: error.status,
-        statusText: error.statusText,
-        error: error.error,
-        headers: error.headers
-      });
-
       let errorMessage = 'Erro na requisição';
 
       if (error.error instanceof ErrorEvent) {
@@ -59,11 +51,7 @@ export const HttpErrorInterceptor: HttpInterceptorFn = (req, next) => {
         }
       }
 
-      snackBar.open(errorMessage, 'Fechar', {
-        duration: 5000,
-        horizontalPosition: 'center',
-        verticalPosition: 'top'
-      });
+      notificacao.erro(errorMessage);
 
       return throwError(() => error);
     })

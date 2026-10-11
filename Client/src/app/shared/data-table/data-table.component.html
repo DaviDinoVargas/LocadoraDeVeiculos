@@ -1,0 +1,379 @@
+<div class="flex flex-col gap-3">
+  <!-- Barra de ferramentas: busca, filtros, colunas, densidade, exportar, atualizar -->
+  <div class="flex flex-wrap items-center gap-2" role="search">
+    <div class="relative w-full sm:w-80">
+      <ng-icon
+        name="lucideSearch"
+        class="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2"
+        aria-hidden="true"
+      />
+      <input
+        #campoBusca
+        hlmInput
+        type="search"
+        class="rounded-full pr-10 pl-10 [&::-webkit-search-cancel-button]:hidden"
+        [value]="termo()"
+        [attr.aria-label]="'Buscar em ' + itens()"
+        [placeholder]="'Buscar em ' + itens() + '…'"
+        (input)="aoDigitar(campoBusca.value)"
+        (keydown)="teclasBusca($event)"
+      />
+      @if (termo()) {
+        <button
+          type="button"
+          hlmBtn
+          variant="ghost"
+          size="icon-sm"
+          class="absolute top-1/2 right-1 -translate-y-1/2"
+          aria-label="Limpar busca"
+          (click)="limparBusca(); campoBusca.focus()"
+        >
+          <ng-icon name="lucideX" aria-hidden="true" />
+        </button>
+      } @else {
+        <kbd
+          class="text-label-s border-border bg-muted text-muted-foreground pointer-events-none absolute top-1/2 right-3 hidden -translate-y-1/2 rounded-md border px-1.5 py-0.5 sm:inline"
+          aria-hidden="true"
+          >/</kbd
+        >
+      }
+    </div>
+
+    @if (colunasFiltraveis().length) {
+      <button hlmBtn variant="outline" type="button" [hlmDropdownMenuTrigger]="menuFiltros" align="start">
+        <ng-icon name="lucideListFilter" aria-hidden="true" />
+        Filtros
+        @if (chips().length) {
+          <span class="bg-primary text-primary-foreground text-label-s rounded-full px-1.5">{{ chips().length }}</span>
+        }
+      </button>
+    }
+
+    <ng-content select="[filtros]" />
+
+    <div class="ml-auto flex items-center gap-1">
+      <button hlmBtn variant="ghost" size="icon" type="button" aria-label="Atualizar lista" (click)="recarregar.emit()">
+        <ng-icon name="lucideRefreshCw" aria-hidden="true" />
+      </button>
+      <button hlmBtn variant="ghost" size="icon" type="button" aria-label="Colunas visíveis" [hlmDropdownMenuTrigger]="menuColunas" align="end">
+        <ng-icon name="lucideColumns3" aria-hidden="true" />
+      </button>
+      <button hlmBtn variant="ghost" size="icon" type="button" aria-label="Densidade da tabela" [hlmDropdownMenuTrigger]="menuDensidade" align="end">
+        <ng-icon name="lucideRows3" aria-hidden="true" />
+      </button>
+      <button
+        hlmBtn
+        variant="ghost"
+        size="icon"
+        type="button"
+        aria-label="Exportar CSV"
+        [disabled]="!totalFiltrado()"
+        (click)="exportar()"
+      >
+        <ng-icon name="lucideDownload" aria-hidden="true" />
+      </button>
+    </div>
+  </div>
+
+  <!-- Filtros ativos como chips removíveis -->
+  @if (chips().length || busca()) {
+    <div class="flex flex-wrap items-center gap-2" aria-label="Filtros ativos">
+      @if (busca()) {
+        <span class="bg-secondary text-secondary-foreground text-label-m inline-flex items-center gap-1 rounded-lg py-1 pr-1 pl-3">
+          Busca: “{{ busca() }}”
+          <button type="button" class="hover:bg-foreground/10 flex size-6 items-center justify-center rounded-full" aria-label="Remover busca" (click)="limparBusca()">
+            <ng-icon name="lucideX" class="text-sm" aria-hidden="true" />
+          </button>
+        </span>
+      }
+      @for (chip of chips(); track chip.colunaId + chip.valor) {
+        <span class="bg-secondary text-secondary-foreground text-label-m inline-flex items-center gap-1 rounded-lg py-1 pr-1 pl-3">
+          {{ chip.texto }}
+          <button
+            type="button"
+            class="hover:bg-foreground/10 flex size-6 items-center justify-center rounded-full"
+            [attr.aria-label]="'Remover filtro ' + chip.texto"
+            (click)="removerFiltro(chip.colunaId, chip.valor)"
+          >
+            <ng-icon name="lucideX" class="text-sm" aria-hidden="true" />
+          </button>
+        </span>
+      }
+      <button hlmBtn variant="ghost" size="sm" type="button" (click)="limparFiltros()">Limpar tudo</button>
+    </div>
+  }
+
+  <!-- Conteúdo: erro, vazio, sem resultado, ou a tabela -->
+  @if (erro()) {
+    <app-error-state [descricao]="mensagemErro()" (repetir)="recarregar.emit()" />
+  } @else if (semDados()) {
+    <app-empty-state [titulo]="tituloVazio()" [descricao]="descricaoVazio()">
+      <ng-content select="[acaoVazia]" />
+    </app-empty-state>
+  } @else if (semResultados()) {
+    <app-empty-state
+      titulo="Nenhum resultado para os filtros aplicados"
+      descricao="Nada corresponde à busca e aos filtros atuais. Remova algum deles para ver mais registros."
+      icone="lucideSearch"
+    >
+      <button hlmBtn variant="outline" type="button" (click)="limparFiltros()">Limpar filtros</button>
+    </app-empty-state>
+  } @else {
+    <div class="border-border bg-card overflow-hidden rounded-xl border" [attr.aria-busy]="carregando()">
+      <!-- Desktop/tablet: tabela -->
+      <div hlmTableContainer class="hidden md:block">
+        <table hlmTable>
+          <caption class="sr-only">
+            Lista de {{ itens() }}. {{ intervalo() }}.
+          </caption>
+          <thead hlmTHead class="bg-surface-container">
+            <tr hlmTr class="hover:bg-transparent">
+              @for (coluna of colunasVisiveis(); track coluna.id) {
+                <th
+                  hlmTh
+                  scope="col"
+                  [class]="classeAlinhamento(coluna) + ' ' + classeResponsiva(coluna)"
+                  [attr.aria-sort]="coluna.ordenavel === false ? null : sentidoOrdenacao(coluna.id)"
+                >
+                  @if (coluna.ordenavel === false) {
+                    {{ coluna.cabecalho }}
+                  } @else {
+                    <button
+                      type="button"
+                      class="hover:text-foreground focus-visible:ring-ring inline-flex min-h-8 items-center gap-1 rounded-md"
+                      [class.flex-row-reverse]="classeAlinhamento(coluna).includes('text-right')"
+                      (click)="alternarOrdenacao(coluna)"
+                    >
+                      {{ coluna.cabecalho }}
+                      <ng-icon
+                        [name]="sentidoOrdenacao(coluna.id) === 'ascending' ? 'lucideArrowUp' : sentidoOrdenacao(coluna.id) === 'descending' ? 'lucideArrowDown' : 'lucideArrowUpDown'"
+                        class="text-sm"
+                        [class.opacity-40]="sentidoOrdenacao(coluna.id) === 'none'"
+                        aria-hidden="true"
+                      />
+                    </button>
+                  }
+                </th>
+              }
+              @if (acoesLinha().length) {
+                <th hlmTh scope="col" class="bg-surface-container sticky right-0 w-14"><span class="sr-only">Ações</span></th>
+              }
+            </tr>
+          </thead>
+          <tbody hlmTBody>
+            @if (carregando() && !dados().length) {
+              @for (n of esqueleto; track n) {
+                <tr hlmTr>
+                  @for (coluna of colunasVisiveis(); track coluna.id) {
+                    <td hlmTd [class]="classeLinha() + ' ' + classeResponsiva(coluna)"><hlm-skeleton class="block h-4 w-3/4" /></td>
+                  }
+                  @if (acoesLinha().length) {
+                    <td hlmTd [class]="classeLinha()"></td>
+                  }
+                </tr>
+              }
+            } @else {
+              @for (linha of linhasPagina(); track idDe(linha)) {
+                <tr
+                  hlmTr
+                  [class.cursor-pointer]="linhasClicaveis()"
+                  (click)="linhasClicaveis() && linhaClique.emit(linha)"
+                >
+                  @for (coluna of colunasVisiveis(); track coluna.id) {
+                    <td hlmTd [class]="classeLinha() + ' ' + classeAlinhamento(coluna) + ' ' + classeResponsiva(coluna)">
+                      <ng-container
+                        [ngTemplateOutlet]="celulaCustom(coluna) ?? padrao"
+                        [ngTemplateOutletContext]="{ $implicit: linha, coluna: coluna }"
+                      />
+                    </td>
+                  }
+                  @if (acoesLinha().length) {
+                    <td hlmTd [class]="classeLinha() + ' bg-card sticky right-0 text-right'" (click)="$event.stopPropagation()">
+                      @if (acoesDe(linha).length) {
+                        <button
+                          hlmBtn
+                          variant="ghost"
+                          size="icon-sm"
+                          type="button"
+                          [attr.aria-label]="'Ações para ' + (tituloLinha()(linha) || item())"
+                          [hlmDropdownMenuTrigger]="menuAcoes"
+                          [hlmDropdownMenuTriggerData]="{ linha: linha }"
+                          align="end"
+                        >
+                          <ng-icon name="lucideEllipsisVertical" aria-hidden="true" />
+                        </button>
+                      }
+                    </td>
+                  }
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Mobile: lista de cartões (sem rolagem horizontal) -->
+      <ul class="divide-border divide-y md:hidden">
+        @if (carregando() && !dados().length) {
+          @for (n of esqueleto; track n) {
+            <li class="flex flex-col gap-2 p-4">
+              <hlm-skeleton class="block h-4 w-1/2" />
+              <hlm-skeleton class="block h-3 w-3/4" />
+            </li>
+          }
+        } @else {
+          @for (linha of linhasPagina(); track idDe(linha)) {
+            <li
+              class="flex items-start gap-2 p-4"
+              [class.cursor-pointer]="linhasClicaveis()"
+              (click)="linhasClicaveis() && linhaClique.emit(linha)"
+            >
+              <div class="flex min-w-0 flex-1 flex-col gap-2">
+                @for (coluna of colunasVisiveis(); track coluna.id; let i = $index) {
+                  @if (i === 0) {
+                    <div class="text-title-s text-foreground truncate">
+                      <ng-container
+                        [ngTemplateOutlet]="celulaCustom(coluna) ?? padrao"
+                        [ngTemplateOutletContext]="{ $implicit: linha, coluna: coluna }"
+                      />
+                    </div>
+                  } @else if (i <= 4) {
+                    <div class="text-body-m flex items-center justify-between gap-3">
+                      <span class="text-muted-foreground">{{ coluna.cabecalho }}</span>
+                      <span class="min-w-0 truncate text-right">
+                        <ng-container
+                          [ngTemplateOutlet]="celulaCustom(coluna) ?? padrao"
+                          [ngTemplateOutletContext]="{ $implicit: linha, coluna: coluna }"
+                        />
+                      </span>
+                    </div>
+                  }
+                }
+              </div>
+              @if (acoesLinha().length && acoesDe(linha).length) {
+                <button
+                  hlmBtn
+                  variant="ghost"
+                  size="icon"
+                  type="button"
+                  [attr.aria-label]="'Ações para ' + (tituloLinha()(linha) || item())"
+                  [hlmDropdownMenuTrigger]="menuAcoes"
+                  [hlmDropdownMenuTriggerData]="{ linha: linha }"
+                  align="end"
+                  (click)="$event.stopPropagation()"
+                >
+                  <ng-icon name="lucideEllipsisVertical" aria-hidden="true" />
+                </button>
+              }
+            </li>
+          }
+        }
+      </ul>
+
+      <!-- Rodapé: contador e paginação -->
+      <div class="border-border bg-surface-container text-body-m text-muted-foreground flex flex-wrap items-center justify-between gap-3 border-t px-4 py-2">
+        <p aria-live="polite">{{ intervalo() }}</p>
+        <div class="flex flex-wrap items-center gap-3">
+          <label class="flex items-center gap-2">
+            <span>Por página</span>
+            <hlm-native-select size="sm" [value]="'' + (tamanhoPagina())" (valueChange)="definirTamanho($event)" aria-label="Linhas por página">
+              @for (t of tamanhosPagina; track t) {
+                <option hlmNativeSelectOption [value]="'' + t">{{ t }}</option>
+              }
+            </hlm-native-select>
+          </label>
+          <nav class="flex items-center gap-1" aria-label="Paginação">
+            <button hlmBtn variant="ghost" size="icon-sm" type="button" aria-label="Primeira página" [disabled]="paginaAtual() <= 1" (click)="irParaPagina(1)">
+              <ng-icon name="lucideChevronsLeft" aria-hidden="true" />
+            </button>
+            <button hlmBtn variant="ghost" size="icon-sm" type="button" aria-label="Página anterior" [disabled]="paginaAtual() <= 1" (click)="irParaPagina(paginaAtual() - 1)">
+              <ng-icon name="lucideChevronLeft" aria-hidden="true" />
+            </button>
+            <span class="px-2 tabular-nums">Página {{ paginaAtual() }} de {{ totalPaginas() }}</span>
+            <button hlmBtn variant="ghost" size="icon-sm" type="button" aria-label="Próxima página" [disabled]="paginaAtual() >= totalPaginas()" (click)="irParaPagina(paginaAtual() + 1)">
+              <ng-icon name="lucideChevronRight" aria-hidden="true" />
+            </button>
+            <button hlmBtn variant="ghost" size="icon-sm" type="button" aria-label="Última página" [disabled]="paginaAtual() >= totalPaginas()" (click)="irParaPagina(totalPaginas())">
+              <ng-icon name="lucideChevronsRight" aria-hidden="true" />
+            </button>
+          </nav>
+        </div>
+      </div>
+    </div>
+  }
+</div>
+
+<!-- Célula padrão: selo para enum/booleano; texto (truncado com dica) nos demais -->
+<ng-template #padrao let-linha let-coluna="coluna">
+  @if (coluna.tipo === 'enum' || coluna.tipo === 'booleano') {
+    @if (texto(coluna, linha) === '—') {
+      <span class="text-muted-foreground">—</span>
+    } @else {
+      <app-status-badge [texto]="texto(coluna, linha)" [tom]="tomDe(coluna, linha)" />
+    }
+  } @else if (coluna.truncar) {
+    <span class="block truncate" [style.max-width.ch]="coluna.truncar" [attr.title]="texto(coluna, linha)">{{ texto(coluna, linha) }}</span>
+  } @else {
+    {{ texto(coluna, linha) }}
+  }
+</ng-template>
+
+<!-- Menus -->
+<ng-template #menuFiltros>
+  <hlm-dropdown-menu class="max-h-96 w-64">
+    @for (coluna of colunasFiltraveis(); track coluna.id) {
+      <hlm-dropdown-menu-label>{{ coluna.cabecalho }}</hlm-dropdown-menu-label>
+      <hlm-dropdown-menu-group>
+        @for (opcao of opcoesDe(coluna); track opcao.valor) {
+          <button hlmDropdownMenuCheckbox type="button" [checked]="filtroMarcado(coluna.id, opcao.valor)" (triggered)="alternarFiltro(coluna.id, opcao.valor)">
+            {{ opcao.rotulo }}
+            <hlm-dropdown-menu-checkbox-indicator />
+          </button>
+        }
+      </hlm-dropdown-menu-group>
+      <hlm-dropdown-menu-separator />
+    }
+    <button hlmDropdownMenuItem type="button" [disabled]="!chips().length" (triggered)="limparFiltros()">Limpar filtros</button>
+  </hlm-dropdown-menu>
+</ng-template>
+
+<ng-template #menuColunas>
+  <hlm-dropdown-menu class="max-h-96 w-60">
+    <hlm-dropdown-menu-label>Colunas visíveis</hlm-dropdown-menu-label>
+    <hlm-dropdown-menu-group>
+      @for (coluna of colunas(); track coluna.id) {
+        <button hlmDropdownMenuCheckbox type="button" [checked]="visibilidade()[coluna.id] !== false" (triggered)="alternarColuna(coluna.id)">
+          {{ coluna.cabecalho }}
+          <hlm-dropdown-menu-checkbox-indicator />
+        </button>
+      }
+    </hlm-dropdown-menu-group>
+    <hlm-dropdown-menu-separator />
+    <button hlmDropdownMenuItem type="button" (triggered)="restaurarColunas()">Restaurar padrão</button>
+  </hlm-dropdown-menu>
+</ng-template>
+
+<ng-template #menuDensidade>
+  <hlm-dropdown-menu class="w-48">
+    <hlm-dropdown-menu-label>Densidade</hlm-dropdown-menu-label>
+    <hlm-dropdown-menu-group>
+      @for (d of densidades; track d) {
+        <button hlmDropdownMenuCheckbox type="button" [checked]="densidade() === d" (triggered)="definirDensidade(d)">
+          {{ rotuloDensidade[d] }}
+          <hlm-dropdown-menu-checkbox-indicator />
+        </button>
+      }
+    </hlm-dropdown-menu-group>
+  </hlm-dropdown-menu>
+</ng-template>
+
+<ng-template #menuAcoes let-linha="linha">
+  <hlm-dropdown-menu class="w-48">
+    @for (acao of acoesDe(linha); track acao.rotulo) {
+      <button hlmDropdownMenuItem type="button" [variant]="acao.destrutiva ? 'destructive' : 'default'" (triggered)="acao.executar(linha)">
+        <ng-icon [name]="acao.icone" aria-hidden="true" />
+        {{ acao.rotulo }}
+      </button>
+    }
+  </hlm-dropdown-menu>
+</ng-template>

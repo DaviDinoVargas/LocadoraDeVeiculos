@@ -2,13 +2,10 @@
    Cor da marca: roxo baseline do M3 (#6750A4), decisão do usuário. Toda cor, raio e sombra
    do app vem daqui — nada de hex solto dentro de componentes. */
 
-@layer theme, base, bootstrap, components, utilities;
+@layer theme, base, components, utilities;
 
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/preflight.css" layer(base);
-/* Bootstrap ainda alimenta as telas não migradas; fica numa camada abaixo dos utilitários do
-   Tailwind e será removido na limpeza final da migração. */
-@import "bootstrap/dist/css/bootstrap.min.css" layer(bootstrap);
 @import "tailwindcss/utilities.css";
 @import "@spartan-ng/brain/hlm-tailwind-preset.css";
 @import "@fontsource-variable/inter";
@@ -169,6 +166,7 @@
   --color-on-primary-container: var(--md-on-primary-container);
   --color-tertiary: var(--md-tertiary);
   --color-tertiary-container: var(--md-tertiary-container);
+  --color-on-error: var(--md-on-error);
   --color-error-container: var(--md-error-container);
   --color-on-error-container: var(--md-on-error-container);
   --color-outline: var(--md-outline);

@@ -1,69 +1,59 @@
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { Router, ActivatedRoute, RouterModule } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { AuthService } from './auth.service';
-import { CommonModule } from '@angular/common';
-import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatIconModule } from '@angular/material/icon';
+import { ChangeDetectionStrategy, Component, ElementRef, OnDestroy, OnInit, inject, signal, viewChild } from '@angular/core';
+import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { NgIcon } from '@ng-icons/core';
+import { HlmAlertImports } from '@spartan-ng/helm/alert';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmInputImports } from '@spartan-ng/helm/input';
+import { NotificacaoService } from '../core/notificacao.service';
+import { FormFieldComponent } from '../shared/form-fields/form-field.component';
 import { WebcamCaptureService, WebcamErro } from '../shared/webcam-capture.service';
 import { AuthShellComponent } from './auth-shell.component';
+import { AuthService } from './auth.service';
 
 @Component({
   selector: 'app-login',
-  standalone: true,
   imports: [
-    CommonModule,
     ReactiveFormsModule,
-    RouterModule,
-    MatCardModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatProgressSpinnerModule,
-    MatIconModule,
+    RouterLink,
+    NgIcon,
+    HlmButtonImports,
+    HlmInputImports,
+    HlmAlertImports,
+    FormFieldComponent,
     AuthShellComponent
   ],
-  templateUrl: './login.component.html',
-  styleUrls: ['./scss/auth-shared-styles.css']
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './login.component.html'
 })
 export class LoginComponent implements OnInit, OnDestroy {
-  @ViewChild('video') videoRef?: ElementRef<HTMLVideoElement>;
-  @ViewChild('canvas') canvasRef?: ElementRef<HTMLCanvasElement>;
+  private readonly fb = inject(NonNullableFormBuilder);
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly notificacao = inject(NotificacaoService);
+  private readonly webcam = inject(WebcamCaptureService);
 
-  form: FormGroup;
-  returnUrl: string;
-  loading = false;
-  showPassword = false;
+  private readonly video = viewChild<ElementRef<HTMLVideoElement>>('video');
+  private readonly canvas = viewChild<ElementRef<HTMLCanvasElement>>('canvas');
 
-  modoFacial = false;
-  cameraAtiva = false;
+  readonly form = this.fb.group({
+    email: ['', [Validators.required, Validators.email]],
+    senha: ['', Validators.required]
+  });
 
-  constructor(
-    private fb: FormBuilder,
-    private auth: AuthService,
-    private router: Router,
-    private route: ActivatedRoute,
-    private snackBar: MatSnackBar,
-    private webcam: WebcamCaptureService
-  ) {
-    this.form = this.fb.group({
-      email: ['', [Validators.required, Validators.email]],
-      senha: ['', Validators.required]
-    });
+  readonly returnUrl: string = this.route.snapshot.queryParams['returnUrl'] || '/home';
+  readonly carregando = signal(false);
+  readonly mostrarSenha = signal(false);
+  /** Mensagem do último erro de entrada (fica na tela, ligada ao formulário; nunca revela se o e-mail existe). */
+  readonly erro = signal('');
 
-    // Pega a URL de retorno dos query params
-    this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/home';
-  }
+  readonly modoFacial = signal(false);
+  readonly cameraAtiva = signal(false);
 
   ngOnInit(): void {
-    // Verifica se já está logado
     if (this.auth.isLoggedIn()) {
-      this.router.navigateByUrl(this.returnUrl);
+      void this.router.navigateByUrl(this.returnUrl);
     }
   }
 
@@ -71,115 +61,101 @@ export class LoginComponent implements OnInit, OnDestroy {
     this.webcam.desligar();
   }
 
-  toggleShowPassword(): void {
-    this.showPassword = !this.showPassword;
+  alternarSenha(): void {
+    this.mostrarSenha.update(v => !v);
   }
 
   async alternarModoFacial(): Promise<void> {
-    this.modoFacial = !this.modoFacial;
+    this.erro.set('');
 
-    if (!this.modoFacial) {
+    if (this.modoFacial()) {
       this.webcam.desligar();
-      this.cameraAtiva = false;
+      this.cameraAtiva.set(false);
+      this.modoFacial.set(false);
       return;
     }
 
-    if (this.form.get('email')?.invalid) {
-      this.snackBar.open('Informe seu e-mail para entrar com reconhecimento facial.', 'Fechar', { duration: 3500 });
-      this.modoFacial = false;
+    if (this.form.controls.email.invalid) {
+      this.form.controls.email.markAsTouched();
+      this.erro.set('Informe seu e-mail para entrar com reconhecimento facial.');
       return;
     }
+
+    this.modoFacial.set(true);
+    const video = this.video()?.nativeElement;
+    if (!video) return;
 
     try {
-      if (this.videoRef) {
-        await this.webcam.ligar(this.videoRef.nativeElement);
-        this.cameraAtiva = true;
-      }
+      await this.webcam.ligar(video);
+      this.cameraAtiva.set(true);
     } catch (e) {
-      const mensagem = e instanceof WebcamErro ? e.message : 'Não foi possível acessar a câmera. Verifique as permissões do navegador.';
-      this.snackBar.open(mensagem, 'Fechar', { duration: 7000 });
-      this.modoFacial = false;
+      this.erro.set(e instanceof WebcamErro ? e.message : 'Não foi possível acessar a câmera. Verifique as permissões do navegador.');
+      this.modoFacial.set(false);
     }
   }
 
   entrarComRosto(): void {
-    const email = this.form.get('email')?.value;
-    if (!email || !this.videoRef || !this.canvasRef || this.loading) {
-      return;
-    }
+    const video = this.video()?.nativeElement;
+    const canvas = this.canvas()?.nativeElement;
+    const email = this.form.controls.email.value;
+    if (!email || !video || !canvas || this.carregando()) return;
 
-    const imagem = this.webcam.capturarFrameBase64(this.videoRef.nativeElement, this.canvasRef.nativeElement);
-    if (!imagem) {
-      return;
-    }
+    const imagem = this.webcam.capturarFrameBase64(video, canvas);
+    if (!imagem) return;
 
-    this.loading = true;
+    this.carregando.set(true);
+    this.erro.set('');
     this.auth.entrarComRosto(email, imagem).subscribe({
       next: () => {
-        this.loading = false;
+        this.carregando.set(false);
         this.webcam.desligar();
-        this.snackBar.open('Login facial realizado com sucesso!', 'Fechar', { duration: 2000 });
-        this.router.navigateByUrl(this.returnUrl).catch(() => this.router.navigate(['/home']));
+        this.notificacao.sucesso('Login facial realizado com sucesso');
+        this.irParaDestino();
       },
-      error: (err) => {
-        this.loading = false;
-        const mensagem = err.status === 422
-          ? 'Nenhum rosto detectado. Aproxime-se da câmera e tente novamente.'
-          : 'Não foi possível confirmar sua identidade. Tente novamente ou entre com sua senha.';
-        this.snackBar.open(mensagem, 'Fechar', { duration: 4500 });
+      error: err => {
+        this.carregando.set(false);
+        this.erro.set(
+          err.status === 422
+            ? 'Nenhum rosto detectado. Aproxime-se da câmera e tente novamente.'
+            : 'Não foi possível confirmar sua identidade. Tente novamente ou entre com sua senha.'
+        );
       }
     });
   }
 
-  submit(): void {
+  entrar(): void {
     if (this.form.invalid) {
-      this.snackBar.open('Por favor, preencha o formulário corretamente.', 'Fechar', { duration: 3000 });
+      this.form.markAllAsTouched();
       return;
     }
 
-    this.loading = true;
-    const { email, senha } = this.form.value;
+    this.carregando.set(true);
+    this.erro.set('');
+    const { email, senha } = this.form.getRawValue();
 
     this.auth.autenticar(email, senha).subscribe({
       next: () => {
-        this.loading = false;
-
-        this.snackBar.open('Login realizado com sucesso!', 'Fechar', {
-          duration: 2000,
-          horizontalPosition: 'center',
-          verticalPosition: 'top'
-        });
-
-        // Adiciona um pequeno delay para garantir que o token foi salvo
-        setTimeout(() => {
-          this.router.navigateByUrl(this.returnUrl).then(success => {
-            if (!success) {
-              this.router.navigate(['/home']);
-            }
-          }).catch(() => {
-            this.router.navigate(['/home']);
-          });
-        }, 100);
+        this.carregando.set(false);
+        this.notificacao.sucesso('Login realizado com sucesso');
+        this.irParaDestino();
       },
-      error: (err) => {
-        this.loading = false;
-
-        let errorMessage = 'Falha na autenticação. Verifique suas credenciais.';
-
+      error: err => {
+        this.carregando.set(false);
         if (err.status === 401) {
-          errorMessage = 'Email ou senha incorretos.';
+          this.erro.set('E-mail ou senha incorretos.');
         } else if (err.status === 0) {
-          errorMessage = 'Não foi possível conectar ao servidor. Verifique sua conexão.';
-        } else if (err.error?.message) {
-          errorMessage = err.error.message;
+          this.erro.set('Não foi possível conectar ao servidor. Verifique sua conexão.');
+        } else {
+          this.erro.set(err.error?.message ?? 'Falha na autenticação. Verifique suas credenciais.');
         }
-
-        this.snackBar.open(errorMessage, 'Fechar', {
-          duration: 5000,
-          horizontalPosition: 'center',
-          verticalPosition: 'top'
-        });
       }
     });
+  }
+
+  private irParaDestino(): void {
+    this.router.navigateByUrl(this.returnUrl).then(
+      ok => ok || this.router.navigate(['/home']),
+      () => this.router.navigate(['/home'])
+    );
   }
 }

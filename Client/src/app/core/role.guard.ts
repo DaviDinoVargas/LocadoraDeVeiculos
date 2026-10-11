@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { NotificacaoService } from './notificacao.service';
 import { map } from 'rxjs/operators';
 import { AuthService } from '../auth/auth.service';
 import { cargoPodeAcessar } from './permissoes';
@@ -14,7 +14,7 @@ import { cargoPodeAcessar } from './permissoes';
 export const roleGuard: CanActivateFn = (route) => {
   const auth = inject(AuthService);
   const router = inject(Router);
-  const snack = inject(MatSnackBar);
+  const notificacao = inject(NotificacaoService);
 
   const papeis = route.data['roles'] as readonly string[] | undefined;
 
@@ -25,7 +25,7 @@ export const roleGuard: CanActivateFn = (route) => {
         return true;
       }
 
-      snack.open('Você não tem permissão para acessar esta página.', 'Fechar', { duration: 4000 });
+      notificacao.aviso('Você não tem permissão para acessar esta página.');
       return router.createUrlTree(['/home']);
     })
   );

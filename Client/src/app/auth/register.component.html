@@ -2,51 +2,81 @@
   titulo="Comece a organizar sua locadora hoje mesmo"
   [destaques]="['Cadastro de veículos e clientes em minutos', 'Cupons e programas de fidelidade', 'Relatórios e recibos em PDF']"
 >
-  <div class="auth-form-header">
-    <h2>Criar conta</h2>
-    <p>Preencha os dados para começar.</p>
-  </div>
+  <header class="mb-6">
+    <h2 class="text-headline-s text-foreground">Criar conta</h2>
+    <p class="text-body-m text-muted-foreground mt-1">Preencha os dados para começar.</p>
+  </header>
 
-  <form [formGroup]="form" (ngSubmit)="submit()">
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Nome Completo</mat-label>
-      <input matInput formControlName="nomeCompleto" required>
-      <mat-error *ngIf="form.get('nomeCompleto')?.hasError('required')">Nome é obrigatório</mat-error>
-    </mat-form-field>
+  <form [formGroup]="form" (ngSubmit)="registrar()" class="flex flex-col gap-4" novalidate>
+    @if (erro()) {
+      <div hlmAlert variant="destructive">
+        <ng-icon name="lucideCircleAlert" aria-hidden="true" />
+        <p hlmAlertDescription>{{ erro() }}</p>
+      </div>
+    }
 
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Email</mat-label>
-      <input matInput type="email" formControlName="email" required>
-      <mat-error *ngIf="form.get('email')?.hasError('required')">Email é obrigatório</mat-error>
-      <mat-error *ngIf="form.get('email')?.hasError('email')">Email inválido</mat-error>
-    </mat-form-field>
+    <app-form-field label="Nome completo" required>
+      <input hlmInput formControlName="nomeCompleto" autocomplete="name" />
+    </app-form-field>
 
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Senha</mat-label>
-      <input matInput [type]="showPassword ? 'text' : 'password'" formControlName="senha" required>
-      <button mat-icon-button matSuffix type="button" (click)="toggleShowPassword()" [attr.aria-label]="'Mostrar senha'" [attr.aria-pressed]="showPassword">
-        <mat-icon>{{showPassword ? 'visibility_off' : 'visibility'}}</mat-icon>
-      </button>
-      <mat-error *ngIf="form.get('senha')?.hasError('required')">Senha é obrigatória</mat-error>
-    </mat-form-field>
+    <app-form-field label="E-mail" required>
+      <input hlmInput type="email" formControlName="email" autocomplete="email" />
+    </app-form-field>
 
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Confirmar Senha</mat-label>
-      <input matInput [type]="showConfirmPassword ? 'text' : 'password'" formControlName="confirmarSenha" required>
-      <button mat-icon-button matSuffix type="button" (click)="toggleShowConfirmPassword()" [attr.aria-label]="'Mostrar senha'" [attr.aria-pressed]="showConfirmPassword">
-        <mat-icon>{{showConfirmPassword ? 'visibility_off' : 'visibility'}}</mat-icon>
-      </button>
-      <mat-error *ngIf="form.get('confirmarSenha')?.hasError('required')">Confirmação de senha é obrigatória</mat-error>
-      <mat-error *ngIf="form.hasError('mismatch')">As senhas não coincidem</mat-error>
-    </mat-form-field>
+    <app-form-field label="Senha" required>
+      <div class="relative">
+        <input hlmInput [type]="mostrarSenha() ? 'text' : 'password'" formControlName="senha" autocomplete="new-password" class="pr-11" />
+        <button
+          type="button"
+          hlmBtn
+          variant="ghost"
+          size="icon-sm"
+          class="absolute top-1/2 right-1 -translate-y-1/2"
+          [attr.aria-label]="mostrarSenha() ? 'Ocultar senha' : 'Mostrar senha'"
+          [attr.aria-pressed]="mostrarSenha()"
+          (click)="alternarSenha()"
+        >
+          <ng-icon [name]="mostrarSenha() ? 'lucideEyeOff' : 'lucideEye'" aria-hidden="true" />
+        </button>
+      </div>
+    </app-form-field>
 
-    <button mat-raised-button color="primary" type="submit" [disabled]="loading" class="full-width login-btn">
-      <mat-spinner diameter="20" *ngIf="loading"></mat-spinner>
-      <span *ngIf="!loading">Registrar</span>
+    <app-form-field label="Confirmar senha" required [mensagens]="mensagensConfirmacao">
+      <div class="relative">
+        <input
+          hlmInput
+          [type]="mostrarConfirmacao() ? 'text' : 'password'"
+          formControlName="confirmarSenha"
+          autocomplete="new-password"
+          class="pr-11"
+        />
+        <button
+          type="button"
+          hlmBtn
+          variant="ghost"
+          size="icon-sm"
+          class="absolute top-1/2 right-1 -translate-y-1/2"
+          [attr.aria-label]="mostrarConfirmacao() ? 'Ocultar confirmação de senha' : 'Mostrar confirmação de senha'"
+          [attr.aria-pressed]="mostrarConfirmacao()"
+          (click)="alternarConfirmacao()"
+        >
+          <ng-icon [name]="mostrarConfirmacao() ? 'lucideEyeOff' : 'lucideEye'" aria-hidden="true" />
+        </button>
+      </div>
+    </app-form-field>
+
+    <button hlmBtn size="lg" type="submit" class="w-full" [disabled]="carregando()" [attr.aria-busy]="carregando()">
+      @if (carregando()) {
+        <ng-icon name="lucideLoader2" class="animate-spin motion-reduce:animate-none" aria-hidden="true" />
+        Criando conta…
+      } @else {
+        Criar conta
+      }
     </button>
   </form>
 
-  <p class="auth-footer-link">
-    Já tem uma conta? <a routerLink="/login">Entrar</a>
+  <p class="text-body-m text-muted-foreground mt-6 text-center">
+    Já tem uma conta?
+    <a routerLink="/login" class="text-primary font-medium underline-offset-4 hover:underline">Entrar</a>
   </p>
 </app-auth-shell>

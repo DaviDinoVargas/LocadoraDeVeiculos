@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRouteSnapshot, provideRouter, Router, RouterStateSnapshot, UrlTree } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { NotificacaoService } from './notificacao.service';
+import { criarNotificacaoFalsa } from './testing/notificacao-fake.spec';
 import { Observable, Subject, of } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { roleGuard } from './role.guard';
@@ -25,7 +26,7 @@ describe('cargoPodeAcessar', () => {
 
 describe('roleGuard', () => {
   let cargo: string | undefined;
-  let snack: jasmine.SpyObj<MatSnackBar>;
+  let notificacao: jasmine.SpyObj<NotificacaoService>;
 
   const rota = (roles?: readonly string[]) =>
     ({ data: roles ? { roles } : {} }) as unknown as ActivatedRouteSnapshot;
@@ -35,11 +36,11 @@ describe('roleGuard', () => {
         .subscribe(resolve));
 
   beforeEach(() => {
-    snack = jasmine.createSpyObj('MatSnackBar', ['open']);
+    notificacao = criarNotificacaoFalsa();
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
-        { provide: MatSnackBar, useValue: snack },
+        { provide: NotificacaoService, useValue: notificacao },
         { provide: AuthService, useValue: { getUsuario: () => (cargo ? { cargo } : null), garantirSessao: () => of(true) } }
       ]
     });
@@ -48,7 +49,7 @@ describe('roleGuard', () => {
   it('deixa a Empresa entrar em rota só-Empresa', async () => {
     cargo = 'Empresa';
     expect(await executar(SOMENTE_EMPRESA)).toBeTrue();
-    expect(snack.open).not.toHaveBeenCalled();
+    expect(notificacao.aviso).not.toHaveBeenCalled();
   });
 
   it('manda o Funcionario para /home com aviso quando a rota é só-Empresa', async () => {
@@ -57,7 +58,7 @@ describe('roleGuard', () => {
 
     expect(resultado instanceof UrlTree).toBeTrue();
     expect(TestBed.inject(Router).serializeUrl(resultado as UrlTree)).toBe('/home');
-    expect(snack.open).toHaveBeenCalled();
+    expect(notificacao.aviso).toHaveBeenCalled();
   });
 
   it('deixa o Funcionario entrar em rota liberada para os dois papéis', async () => {
@@ -79,13 +80,13 @@ describe('roleGuard', () => {
     await pendente;
 
     expect(resultado).toBeTrue();
-    expect(snack.open).not.toHaveBeenCalled();
+    expect(notificacao.aviso).not.toHaveBeenCalled();
   });
 
   it('sem sessão deixa o AuthGuard decidir (não abre aviso de permissão)', async () => {
     TestBed.inject(AuthService).garantirSessao = () => of(false);
 
     expect(await executar(SOMENTE_EMPRESA)).toBeTrue();
-    expect(snack.open).not.toHaveBeenCalled();
+    expect(notificacao.aviso).not.toHaveBeenCalled();
   });
 });

@@ -1,90 +1,45 @@
-import { Component, signal, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
-import { LogoutWidgetComponent } from "./auth/logout-widget.component";
-import { ChatbotWidgetComponent } from "./Components/chatbot/chatbot-widget.component";
-
+import { HlmToaster } from '@spartan-ng/helm/sonner';
+import { filter, map, startWith } from 'rxjs';
 import { AuthService } from './auth/auth.service';
-import { SidebarComponent } from "./Components/sidebar/sidebar.component";
-import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule } from '@angular/forms';
-import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSnackBarModule } from '@angular/material/snack-bar';
-import { filter } from 'rxjs';
+import { ChatbotWidgetComponent } from './Components/chatbot/chatbot-widget.component';
+import { TemaService } from './core/tema.service';
+import { AppShellComponent } from './shared/layout/app-shell.component';
+
+// Telas sem barra lateral/superior (autenticação)
+const ROTAS_SEM_CHROME = ['/login', '/registrar'];
 
 @Component({
   selector: 'app-root',
-  standalone: true,
-  imports: [
-    CommonModule,
-    RouterOutlet,
-    ReactiveFormsModule,
-    MatCardModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatProgressSpinnerModule,
-    MatSnackBarModule,
-    LogoutWidgetComponent,
-    SidebarComponent,
-    ChatbotWidgetComponent
-  ],
+  imports: [RouterOutlet, AppShellComponent, ChatbotWidgetComponent, HlmToaster],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-logout-widget></app-logout-widget>
-    <div class="app-container">
-      <!-- Sidebar só aparece em rotas permitidas -->
-      <app-sidebar #sidebar *ngIf="showSidebar"></app-sidebar>
-      <main class="app-main" [class.collapsed]="sidebar?.collapsed && !sidebar?.isMobile">
-        <router-outlet></router-outlet>
-      </main>
-    </div>
-    <app-chatbot-widget></app-chatbot-widget>
-  `,
-  styles: [`
-    .app-container {
-      display: flex;
-      flex-direction: row;
-      height: 100vh;
-      width: 100%;
-      overflow: hidden;
-    }
-
-    .app-main {
-      flex: 1;
-      padding: 16px;
-      box-sizing: border-box;
-      height: 100%;
-      overflow-y: auto; /* Permite scroll vertical se necessário */
-      transition: margin-left 180ms ease;
-      margin-left: 260px; /* Largura padrão da sidebar */
-    }
-
-    /* Ajusta a margem quando a sidebar está colapsada */
-    .app-main.collapsed {
-      margin-left: 64px;
-    }
-
-    @media (max-width: 800px) {
-      .app-main {
-        margin-left: 0 !important;
-        width: 100%;
-        padding-top: 72px; /* Espaço para o botão hambúrguer */
-      }
-    }
-  `]
+    <app-shell [comChrome]="comChrome()">
+      <router-outlet />
+    </app-shell>
+    <app-chatbot-widget />
+    <hlm-toaster position="top-right" [theme]="tema.tema() === 'escuro' ? 'dark' : 'light'" richColors closeButton />
+  `
 })
 export class AppComponent {
-  @ViewChild('sidebar') sidebar?: SidebarComponent;
+  private readonly router = inject(Router);
+  private readonly auth = inject(AuthService);
+  protected readonly tema = inject(TemaService);
 
-  private hideRoutes = ['/login', '/registrar'];
+  private readonly url = toSignal(
+    this.router.events.pipe(
+      filter(e => e instanceof NavigationEnd),
+      map(() => this.router.url),
+      startWith(this.router.url)
+    ),
+    { initialValue: this.router.url }
+  );
 
-  constructor(private router: Router, private auth: AuthService) {}
-
-  get showSidebar(): boolean {
-    const path = this.router.url.split('?')[0].split('#')[0];
-    return !this.hideRoutes.includes(path) && this.auth.isLoggedIn();
-  }
+  /** Com sessão ativa e fora das telas de autenticação, mostra a casca completa. */
+  protected readonly comChrome = computed(() => {
+    const caminho = this.url().split('?')[0].split('#')[0];
+    return !ROTAS_SEM_CHROME.includes(caminho) && this.auth.isLoggedIn();
+  });
 }

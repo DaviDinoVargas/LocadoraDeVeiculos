@@ -2,7 +2,7 @@ import { Directive, ElementRef, HostListener, inject, input } from '@angular/cor
 import { NgControl } from '@angular/forms';
 import { somenteDigitos } from '../validators/documentos';
 
-export type TipoMascara = 'cpf' | 'cnpj';
+export type TipoMascara = 'cpf' | 'cnpj' | 'telefone' | 'placa';
 
 /** 12345678900 -> 123.456.789-00 (aplica progressivamente enquanto o usuário digita). */
 export function mascararCpf(valor: string | null | undefined): string {
@@ -23,12 +23,32 @@ export function mascararCnpj(valor: string | null | undefined): string {
     .replace(/^(\d{2})\.(\d{3})\.(\d{3})\/(\d{4})(\d)/, '$1.$2.$3/$4-$5');
 }
 
+/** 11987654321 -> (11) 98765-4321; fixo (10 dígitos) -> (11) 3456-7890 */
+export function mascararTelefone(valor: string | null | undefined): string {
+  const d = somenteDigitos(valor).slice(0, 11);
+  if (d.length <= 2) return d.length ? `(${d}` : '';
+  if (d.length <= 6) return d.replace(/^(\d{2})(\d+)/, '($1) $2');
+  if (d.length <= 10) return d.replace(/^(\d{2})(\d{4})(\d+)/, '($1) $2-$3');
+  return d.replace(/^(\d{2})(\d{5})(\d+)/, '($1) $2-$3');
+}
+
+/** abc1d23 -> ABC-1D23 (letras e números, maiúsculas, hífen depois das 3 letras) */
+export function mascararPlaca(valor: string | null | undefined): string {
+  const t = (valor ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 7);
+  return t.length > 3 ? `${t.slice(0, 3)}-${t.slice(3)}` : t;
+}
+
 export function aplicarMascara(tipo: TipoMascara, valor: string | null | undefined): string {
-  return tipo === 'cpf' ? mascararCpf(valor) : mascararCnpj(valor);
+  switch (tipo) {
+    case 'cpf': return mascararCpf(valor);
+    case 'cnpj': return mascararCnpj(valor);
+    case 'telefone': return mascararTelefone(valor);
+    case 'placa': return mascararPlaca(valor);
+  }
 }
 
 /**
- * Máscara de digitação para CPF/CNPJ: <input formControlName="cpf" appMascara="cpf">.
+ * Máscara de digitação para CPF, CNPJ, telefone e placa: <input formControlName="cpf" appMascara="cpf">.
  * O valor guardado no formulário é o já mascarado, que é o formato que a Web API exige.
  * Antes só o formulário de pessoa física tinha máscara (código próprio) e os demais aceitavam
  * "12345678900" no front para depois a API recusar por formato.
@@ -36,7 +56,7 @@ export function aplicarMascara(tipo: TipoMascara, valor: string | null | undefin
 @Directive({
   selector: 'input[appMascara]',
   standalone: true,
-  host: { '[attr.maxlength]': 'tamanhoMaximo()', inputmode: 'numeric' }
+  host: { '[attr.maxlength]': 'tamanhoMaximo()', '[attr.inputmode]': "appMascara() === 'placa' ? 'text' : 'numeric'" }
 })
 export class MascaraDirective {
   readonly appMascara = input.required<TipoMascara>();
@@ -45,7 +65,8 @@ export class MascaraDirective {
   private readonly ngControl = inject(NgControl, { optional: true, self: true });
 
   tamanhoMaximo(): number {
-    return this.appMascara() === 'cpf' ? 14 : 18;
+    const tamanhos: Record<TipoMascara, number> = { cpf: 14, cnpj: 18, telefone: 15, placa: 8 };
+    return tamanhos[this.appMascara()];
   }
 
   @HostListener('input')

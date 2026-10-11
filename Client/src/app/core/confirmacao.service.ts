@@ -1,5 +1,8 @@
-import { Component, Injectable, inject } from '@angular/core';
-import { MAT_DIALOG_DATA, MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { ChangeDetectionStrategy, Component, Injectable, inject } from '@angular/core';
+import { NgIcon } from '@ng-icons/core';
+import { BrnDialogRef, injectBrnDialogContext } from '@spartan-ng/brain/dialog';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmDialogDescription, HlmDialogFooter, HlmDialogHeader, HlmDialogService, HlmDialogTitle } from '@spartan-ng/helm/dialog';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
@@ -9,48 +12,66 @@ export interface OpcoesConfirmacao {
   /** Rótulo do botão de confirmação: verbo específico ("Excluir", "Iniciar aluguel"), nunca "OK". */
   confirmar?: string;
   cancelar?: string;
-  /** Ação irreversível: botão vermelho e aviso de que não dá para desfazer. */
+  /** Ação irreversível: botão destrutivo e aviso de que não dá para desfazer. */
   destrutivo?: boolean;
 }
 
+type DadosConfirmacao = Required<OpcoesConfirmacao>;
+
 @Component({
   selector: 'app-confirm-dialog',
-  standalone: true,
-  imports: [MatDialogModule],
+  imports: [HlmButtonImports, HlmDialogHeader, HlmDialogTitle, HlmDialogDescription, HlmDialogFooter, NgIcon],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h2 mat-dialog-title id="confirm-titulo">{{ dados.titulo }}</h2>
-    <mat-dialog-content>
-      <p class="mb-1">{{ dados.mensagem }}</p>
+    <hlm-dialog-header class="gap-2">
+      <h2 hlmDialogTitle class="text-title-l flex items-center gap-2 leading-7">
+        @if (dados.destrutivo) {
+          <ng-icon name="lucideTriangleAlert" class="text-destructive text-xl" aria-hidden="true" />
+        }
+        {{ dados.titulo }}
+      </h2>
+      <p hlmDialogDescription class="text-body-m text-muted-foreground">{{ dados.mensagem }}</p>
       @if (dados.destrutivo) {
-        <p class="small text-muted mb-0">Esta ação não pode ser desfeita.</p>
+        <p class="text-body-s text-muted-foreground">Esta ação não pode ser desfeita.</p>
       }
-    </mat-dialog-content>
-    <mat-dialog-actions align="end">
+    </hlm-dialog-header>
+    <hlm-dialog-footer>
       <!-- foco inicial no botão seguro (Cancelar), como pede o padrão de ações destrutivas -->
-      <button type="button" class="btn btn-secondary" [mat-dialog-close]="false" cdkFocusInitial>{{ dados.cancelar }}</button>
-      <button type="button" class="btn" [class.btn-danger]="dados.destrutivo" [class.btn-primary]="!dados.destrutivo" [mat-dialog-close]="true">{{ dados.confirmar }}</button>
-    </mat-dialog-actions>
+      <button hlmBtn variant="outline" type="button" (click)="fechar(false)">{{ dados.cancelar }}</button>
+      <button
+        hlmBtn
+        type="button"
+        [variant]="dados.destrutivo ? 'destructive' : 'default'"
+        (click)="fechar(true)"
+      >
+        {{ dados.confirmar }}
+      </button>
+    </hlm-dialog-footer>
   `
 })
 export class ConfirmDialogComponent {
-  protected readonly dados = inject<Required<OpcoesConfirmacao>>(MAT_DIALOG_DATA);
+  private readonly ref = inject<BrnDialogRef<boolean>>(BrnDialogRef);
+  protected readonly dados = injectBrnDialogContext<DadosConfirmacao>();
+
+  protected fechar(resultado: boolean): void {
+    this.ref.close(resultado);
+  }
 }
 
 /**
  * Substitui o confirm() nativo do navegador (bloqueante, sem estilo e sem acessibilidade) por um
- * diálogo do Angular Material com foco inicial em "Cancelar". Esc, clique fora ou "Cancelar"
- * resultam em false.
+ * diálogo do Spartan com foco inicial em "Cancelar". Esc, clique fora ou "Cancelar" resultam em false.
  *
  *   this.confirmacao.confirmar({ mensagem: 'Excluir este veículo?', confirmar: 'Excluir', destrutivo: true })
  *     .pipe(filter(Boolean)).subscribe(() => ...)
  */
 @Injectable({ providedIn: 'root' })
 export class ConfirmacaoService {
-  private readonly dialog = inject(MatDialog);
+  private readonly dialogos = inject(HlmDialogService);
 
   confirmar(opcoes: OpcoesConfirmacao | string): Observable<boolean> {
     const base = typeof opcoes === 'string' ? { mensagem: opcoes } : opcoes;
-    const dados: Required<OpcoesConfirmacao> = {
+    const dados: DadosConfirmacao = {
       titulo: 'Confirmar ação',
       confirmar: 'Confirmar',
       cancelar: 'Cancelar',
@@ -58,14 +79,13 @@ export class ConfirmacaoService {
       ...base
     };
 
-    return this.dialog
-      .open<ConfirmDialogComponent, Required<OpcoesConfirmacao>, boolean>(ConfirmDialogComponent, {
-        data: dados,
-        autoFocus: 'first-tabbable', // respeita o cdkFocusInitial do botão Cancelar (ação segura)
-        ariaLabelledBy: 'confirm-titulo',
-        width: 'min(92vw, 420px)'
-      })
-      .afterClosed()
-      .pipe(map(resultado => resultado === true));
+    const ref = this.dialogos.open<boolean, DadosConfirmacao>(ConfirmDialogComponent, {
+      context: dados,
+      showCloseButton: false,
+      role: 'alertdialog',
+      autoFocus: 'first-tabbable',
+      closeOnOutsidePointerEvents: true
+    });
+    return ref.closed$.pipe(map(resultado => resultado === true));
   }
 }

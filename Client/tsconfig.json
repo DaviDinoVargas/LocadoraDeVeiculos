@@ -105,6 +105,9 @@
       ],
       "@spartan-ng/helm/field": [
         "./src/app/shared/ui/field/src/index.ts"
+      ],
+      "@spartan-ng/helm/native-select": [
+        "./src/app/shared/ui/native-select/src/index.ts"
       ]
     }
   },

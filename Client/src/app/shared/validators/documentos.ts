@@ -50,3 +50,13 @@ export const cnpjValidator: ValidatorFn = (control: AbstractControl): Validation
 
 export const VALIDADORES_CPF: ValidatorFn[] = [Validators.required, Validators.pattern(PADRAO_CPF), cpfValidator];
 export const VALIDADORES_CNPJ: ValidatorFn[] = [Validators.required, Validators.pattern(PADRAO_CNPJ), cnpjValidator];
+
+// Mensagens específicas dos campos de documento para o `app-form-field` ([mensagens]).
+export const MENSAGENS_CPF = {
+  pattern: 'Use o formato 000.000.000-00.',
+  cpfInvalido: 'CPF inválido: confira os números.'
+};
+export const MENSAGENS_CNPJ = {
+  pattern: 'Use o formato 00.000.000/0000-00.',
+  cnpjInvalido: 'CNPJ inválido: confira os números.'
+};

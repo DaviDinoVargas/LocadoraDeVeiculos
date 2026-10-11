@@ -50,8 +50,7 @@
             ],
             "styles": [
               "src/styles.css",
-              "src/legacy-styles.scss",
-              "src/theme-bootstrap.scss"
+              "src/legacy-styles.scss"
             ]
           },
           "configurations": {
