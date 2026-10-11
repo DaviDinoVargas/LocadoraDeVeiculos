@@ -56,9 +56,7 @@ public class AutenticacaoController(IMediator mediator) : MainController
     [Authorize]
     public async Task<ActionResult<CadastrarRostoResponse>> CadastrarRosto(CadastrarRostoRequest request)
     {
-        var usuarioIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-        if (!Guid.TryParse(usuarioIdClaim, out var usuarioId))
+        if (!TentarObterUsuarioId(out var usuarioId))
             return Unauthorized();
 
         var command = new CadastrarRostoCommand(usuarioId, request.ImagemBase64);
@@ -67,6 +65,56 @@ public class AutenticacaoController(IMediator mediator) : MainController
 
         return ProcessarResultado(result, amostras => Ok(new CadastrarRostoResponse(amostras)));
     }
+
+    // Consulta e remoção exigem login e só enxergam o próprio rosto: não são alvo de força bruta,
+    // então ficam fora do limite de 10 req/min do "auth" (a tela consulta a cada visita).
+    [HttpGet("rosto")]
+    [Authorize]
+    [DisableRateLimiting]
+    public async Task<ActionResult<StatusRostoResponse>> ObterStatusRosto(CancellationToken cancellationToken)
+    {
+        if (!TentarObterUsuarioId(out var usuarioId))
+            return Unauthorized();
+
+        var result = await mediator.Send(new ObterStatusRostoQuery(usuarioId), cancellationToken);
+
+        return ProcessarResultado(result, cadastrado => Ok(new StatusRostoResponse(cadastrado)));
+    }
+
+    [HttpPost("rosto/verificar")]
+    [Authorize]
+    public async Task<ActionResult<VerificarRostoResponse>> VerificarRosto(VerificarRostoRequest request, CancellationToken cancellationToken)
+    {
+        if (!TentarObterUsuarioId(out var usuarioId))
+            return Unauthorized();
+
+        var result = await mediator.Send(new VerificarRostoCommand(usuarioId, request.ImagemBase64), cancellationToken);
+
+        return ProcessarResultado(result, valor => Ok(new VerificarRostoResponse(valor.Confirmado, valor.Confianca)));
+    }
+
+    // Apaga o rosto do PRÓPRIO usuário logado (direito de remover dado biométrico).
+    // Depois disso o login facial deixa de funcionar para ele até cadastrar de novo.
+    [HttpDelete("rosto")]
+    [Authorize]
+    [DisableRateLimiting]
+    public async Task<IActionResult> RemoverRosto(CancellationToken cancellationToken)
+    {
+        if (!TentarObterUsuarioId(out var usuarioId))
+            return Unauthorized();
+
+        var result = await mediator.Send(new RemoverRostoCommand(usuarioId), cancellationToken);
+
+        return ProcessarResultado(result);
+    }
+
+    // Usado pelo serviço de ML para validar o JWT que o Angular envia às câmeras: ele não conhece
+    // a chave de assinatura, então pergunta aqui. Fora do rate limit do "auth" porque o ML consulta
+    // (com cache) a cada requisição do monitoramento.
+    [HttpGet("sessao")]
+    [Authorize]
+    [DisableRateLimiting]
+    public IActionResult ObterSessao() => NoContent();
 
     [HttpPost("rotacionar")]
     public async Task<ActionResult<AccessToken>> Rotacionar()
@@ -98,6 +146,9 @@ public class AutenticacaoController(IMediator mediator) : MainController
             return NoContent();
         });
     }
+
+    private bool TentarObterUsuarioId(out Guid usuarioId) =>
+        Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out usuarioId);
 
     private ActionResult ResponderComToken((AccessToken AccessToken, RefreshToken RefreshToken, string RefreshTokenBruto) valor)
     {
