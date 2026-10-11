@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AlugueisService } from './alugueis.service';
 import { DevolucoesService } from '../devolucoes/devolucoes.service';
+import { PdfService } from '../pdf/pdf.service';
 import { SelecionarAlugueisDto } from './aluguel.model';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
@@ -22,6 +23,7 @@ export class AlugueisListComponent implements OnInit {
   constructor(
     private svc: AlugueisService,
     private devolucoesSvc: DevolucoesService,
+    private pdf: PdfService,
     private router: Router,
     private route: ActivatedRoute,
     private snack: MatSnackBar
@@ -60,6 +62,17 @@ export class AlugueisListComponent implements OnInit {
         this.snack.open('Erro ao listar aluguéis', 'Fechar', { duration: 4000 });
       }
     });
+  }
+
+  private readonly nomesDosFiltros: { [status: string]: string } = {
+    todos: 'Todos os aluguéis', 'em-aberto': 'Em aberto', Reservado: 'Reservados',
+    EmAndamento: 'Em andamento', Concluido: 'Concluídos', Cancelado: 'Cancelados'
+  };
+
+  /** Exporta em PDF exatamente a lista que está na tela (já filtrada por status). */
+  exportarPdf() {
+    if (this.alugueisFiltrados.length === 0) return;
+    this.pdf.gerarRelatorioAlugueis(this.alugueisFiltrados, this.nomesDosFiltros[this.filtroStatus] ?? this.filtroStatus);
   }
 
   // Aluguel concluído: leva à devolução registrada (GET /devolucoes/aluguel/{id}).

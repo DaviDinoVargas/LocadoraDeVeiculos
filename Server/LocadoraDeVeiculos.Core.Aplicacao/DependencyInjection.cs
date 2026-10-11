@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using System;
 using System.Collections.Generic;
 using FluentValidation;
@@ -40,6 +41,9 @@ public static class DependencyInjection
         var assembly = typeof(DependencyInjection).Assembly;
 
         services.AddValidatorsFromAssembly(assembly);
+
+        // Relógio injetável: o dashboard ("atrasados", "do mês") precisa ser testável com data fixa.
+        services.TryAddSingleton(TimeProvider.System);
 
         var licenseKey = configuration["LUCKYPENNY_LICENSE_KEY"];
 

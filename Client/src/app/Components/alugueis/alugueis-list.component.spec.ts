@@ -7,6 +7,7 @@ import { AlugueisService } from './alugueis.service';
 import { DevolucoesService } from '../devolucoes/devolucoes.service';
 import { SelecionarAlugueisDto } from './aluguel.model';
 import { DevolucaoCompletoDto } from '../devolucoes/devolucao.model';
+import { PdfService } from '../pdf/pdf.service';
 
 describe('AlugueisListComponent — filtro de status no servidor e devolução', () => {
   let fixture: ComponentFixture<AlugueisListComponent>;
@@ -96,5 +97,29 @@ describe('AlugueisListComponent — filtro de status no servidor e devolução',
 
     expect(snack.open).toHaveBeenCalledWith('Este aluguel ainda não tem devolução registrada.', 'Fechar', jasmine.anything());
     expect(router.navigate).not.toHaveBeenCalled();
+  });
+  describe('exportar PDF', () => {
+    const botao = () => fixture.nativeElement.querySelector('button.btn-outline-secondary') as HTMLButtonElement;
+
+    it('exporta exatamente a lista que está na tela, com o nome do filtro', () => {
+      const gerar = spyOn(TestBed.inject(PdfService), 'gerarRelatorioAlugueis');
+      component.filtrarPorStatus('Concluido');
+      fixture.detectChanges();
+
+      botao().click();
+
+      expect(gerar).toHaveBeenCalledOnceWith(component.alugueisFiltrados, 'Concluídos');
+    });
+
+    it('com a lista vazia o botão fica desabilitado e nada é exportado', () => {
+      const gerar = spyOn(TestBed.inject(PdfService), 'gerarRelatorioAlugueis');
+      alugueis.listarPorStatus.and.returnValue(of([]));
+      component.filtrarPorStatus('Cancelado');
+      fixture.detectChanges();
+
+      expect(botao().disabled).toBeTrue();
+      component.exportarPdf();
+      expect(gerar).not.toHaveBeenCalled();
+    });
   });
 });

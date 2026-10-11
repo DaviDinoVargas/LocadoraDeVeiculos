@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { DevolucoesService } from './devolucoes.service';
 import { SelecionarDevolucoesDto } from './devolucao.model';
+import { PdfService } from '../pdf/pdf.service';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
 
@@ -19,12 +20,18 @@ export class DevolucoesListComponent implements OnInit {
 
   constructor(
     private svc: DevolucoesService,
+    private pdf: PdfService,
     private router: Router,
     private snack: MatSnackBar
   ) {}
 
   ngOnInit() {
     this.carregar();
+  }
+
+  exportarPdf() {
+    if (this.devolucoes.length === 0) return;
+    this.pdf.gerarRelatorioDevolucoes(this.devolucoes);
   }
 
   carregar() {

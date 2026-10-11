@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { AluguelCompletoDto } from '../alugueis/aluguel.model';
-import { DevolucaoCompletoDto } from '../devolucoes/devolucao.model';
+import { AluguelCompletoDto, SelecionarAlugueisDto } from '../alugueis/aluguel.model';
+import { DevolucaoCompletoDto, SelecionarDevolucoesDto } from '../devolucoes/devolucao.model';
 
 @Injectable({
   providedIn: 'root'
@@ -96,6 +96,108 @@ export class PdfService {
 
     // Salvar PDF
     doc.save(`recibo-devolucao-${devolucao.id}-${dataAtual.replace(/\//g, '-')}.pdf`);
+  }
+
+  // ---- Relatórios em lista (exportam exatamente o que está na tela, já filtrado) ----------------
+
+  /** Monta o relatório de aluguéis; separado de {@link gerarRelatorioAlugueis} para poder ser conferido sem baixar arquivo. */
+  montarRelatorioAlugueis(alugueis: SelecionarAlugueisDto[], filtro: string): jsPDF {
+    const doc = new jsPDF({ orientation: 'landscape' });
+    this.cabecalhoRelatorio(doc, 'Relatório de aluguéis', `Filtro: ${filtro}`);
+
+    autoTable(doc, {
+      startY: 36,
+      head: [['Condutor', 'Veículo', 'Cliente', 'Saída', 'Retorno previsto', 'Valor previsto', 'Status']],
+      body: alugueis.map(a => [
+        a.condutorNome, a.automovelPlaca, a.clienteNome,
+        this.formatarData(a.dataSaida), this.formatarData(a.dataRetornoPrevisto),
+        this.formatarMoeda(a.valorPrevisto), this.statusAluguelTexto(a.status)
+      ]),
+      foot: [[
+        { content: `${alugueis.length} aluguel(éis)`, colSpan: 5 },
+        { content: this.formatarMoeda(alugueis.reduce((s, a) => s + (a.valorPrevisto ?? 0), 0)), styles: { halign: 'right' } },
+        ''
+      ]],
+      theme: 'grid',
+      headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+      footStyles: { fillColor: [235, 238, 243], textColor: 20, fontStyle: 'bold' },
+      columnStyles: { 5: { halign: 'right' } },
+      margin: { left: 14, right: 14 }
+    });
+
+    this.rodapePaginas(doc);
+    return doc;
+  }
+
+  gerarRelatorioAlugueis(alugueis: SelecionarAlugueisDto[], filtro: string): void {
+    this.baixar(this.montarRelatorioAlugueis(alugueis, filtro), `relatorio-alugueis-${this.dataParaArquivo()}.pdf`);
+  }
+
+  montarRelatorioDevolucoes(devolucoes: SelecionarDevolucoesDto[]): jsPDF {
+    const doc = new jsPDF({ orientation: 'landscape' });
+    this.cabecalhoRelatorio(doc, 'Relatório de devoluções', 'Todas as devoluções registradas');
+
+    autoTable(doc, {
+      startY: 36,
+      head: [['Condutor', 'Veículo', 'Cliente', 'Data da devolução', 'Km final', 'Valor total']],
+      body: devolucoes.map(d => [
+        d.condutorNome, d.automovelPlaca, d.clienteNome,
+        this.formatarData(d.dataDevolucao), `${d.quilometragemFinal} km`, this.formatarMoeda(d.valorTotal)
+      ]),
+      foot: [[
+        { content: `${devolucoes.length} devolução(ões)`, colSpan: 5 },
+        { content: this.formatarMoeda(devolucoes.reduce((s, d) => s + (d.valorTotal ?? 0), 0)), styles: { halign: 'right' } }
+      ]],
+      theme: 'grid',
+      headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+      footStyles: { fillColor: [235, 238, 243], textColor: 20, fontStyle: 'bold' },
+      columnStyles: { 4: { halign: 'right' }, 5: { halign: 'right' } },
+      margin: { left: 14, right: 14 }
+    });
+
+    this.rodapePaginas(doc);
+    return doc;
+  }
+
+  gerarRelatorioDevolucoes(devolucoes: SelecionarDevolucoesDto[]): void {
+    this.baixar(this.montarRelatorioDevolucoes(devolucoes), `relatorio-devolucoes-${this.dataParaArquivo()}.pdf`);
+  }
+
+  private cabecalhoRelatorio(doc: jsPDF, titulo: string, subtitulo: string): void {
+    const agora = new Date();
+    doc.setFontSize(16);
+    doc.text(titulo, 14, 16);
+    doc.setFontSize(10);
+    doc.text('Locadora de Veículos', 14, 23);
+    doc.text(subtitulo, 14, 29);
+    doc.text(`Gerado em ${agora.toLocaleDateString('pt-BR')} às ${agora.toLocaleTimeString('pt-BR')}`,
+      doc.internal.pageSize.getWidth() - 14, 23, { align: 'right' });
+  }
+
+  private rodapePaginas(doc: jsPDF): void {
+    const total = doc.getNumberOfPages();
+    for (let pagina = 1; pagina <= total; pagina++) {
+      doc.setPage(pagina);
+      doc.setFontSize(9);
+      doc.text(`Página ${pagina} de ${total}`, doc.internal.pageSize.getWidth() / 2,
+        doc.internal.pageSize.getHeight() - 8, { align: 'center' });
+    }
+  }
+
+  // O jsPDF define save() dentro de cada instância; isolar a chamada permite testar sem baixar arquivo.
+  protected baixar(doc: jsPDF, nomeDoArquivo: string): void {
+    doc.save(nomeDoArquivo);
+  }
+
+  private dataParaArquivo(): string {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  private statusAluguelTexto(status: string): string {
+    const textos: { [key: string]: string } = {
+      Reservado: 'Reservado', EmAndamento: 'Em andamento', Concluido: 'Concluído', Cancelado: 'Cancelado'
+    };
+    return textos[status] ?? status;
   }
 
   private calcularTaxas(aluguel: AluguelCompletoDto): number {
