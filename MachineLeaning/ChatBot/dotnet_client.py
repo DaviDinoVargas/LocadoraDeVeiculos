@@ -2,17 +2,12 @@
 # dados) em nome do usuário logado no Angular. O token JWT do usuário
 # chega no header Authorization da requisição ao /chat e é repassado
 # como está — o chatbot nunca autentica sozinho nem guarda credenciais.
-import os
-
 import httpx
 
-DOTNET_API_URL = os.environ.get('DOTNET_API_URL', 'https://localhost:7064')
+from shared import settings
 
-# O ambiente de desenvolvimento usa o certificado HTTPS autoassinado
-# gerado pelo `dotnet dev-certs`, que não é confiável para um cliente
-# HTTP genérico. Fora de desenvolvimento local, DOTNET_API_VERIFY_SSL=true
-# deve ser usado com um certificado válido.
-VERIFY_SSL = os.environ.get('DOTNET_API_VERIFY_SSL', 'false').lower() in ('1', 'true', 'yes')
+DOTNET_API_URL = settings.DOTNET_API_URL
+VERIFY_SSL = settings.VERIFY_SSL
 
 
 class DotnetApiError(Exception):
@@ -44,4 +39,13 @@ async def listar_automoveis(bearer_token: str | None):
 
 async def listar_alugueis_em_aberto(bearer_token: str | None):
     dados = await _get('/api/alugueis/em-aberto', bearer_token)
+    return dados.get('registros', dados.get('Registros', []))
+
+
+async def obter_resumo_dashboard(bearer_token: str | None):
+    return await _get('/api/dashboard/resumo', bearer_token)
+
+
+async def listar_cupons(bearer_token: str | None):
+    dados = await _get('/api/cupons', bearer_token)
     return dados.get('registros', dados.get('Registros', []))

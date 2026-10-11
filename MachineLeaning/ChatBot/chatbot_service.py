@@ -18,7 +18,12 @@ AJUDA = (
     "perguntar:\n"
     "- \"quantos veículos estão disponíveis?\"\n"
     "- \"qual o status da placa ABC1234?\"\n"
-    "- \"quantos aluguéis estão em aberto?\""
+    "- \"quantos aluguéis estão em aberto?\"\n"
+    "- \"quantos aluguéis estão atrasados?\"\n"
+    "- \"quantos clientes temos?\"\n"
+    "- \"quantas devoluções neste mês?\"\n"
+    "- \"qual o faturamento do mês?\"\n"
+    "- \"quais cupons estão ativos?\""
 )
 
 
@@ -82,6 +87,53 @@ async def _tratar_alugueis_em_aberto(token):
     return f"Há {len(alugueis)} aluguel(éis) em aberto:\n{resumo}{extra}"
 
 
+def _moeda(valor) -> str:
+    inteiro, _, centavos = f"{float(valor or 0):,.2f}".partition('.')
+    return f"R$ {inteiro.replace(',', '.')},{centavos}"
+
+
+async def _tratar_clientes(token):
+    resumo = await dotnet_client.obter_resumo_dashboard(token)
+    total = resumo.get('totalClientes', 0)
+    return f"Há {total} cliente(s) cadastrado(s)."
+
+
+async def _tratar_atrasados(token):
+    resumo = await dotnet_client.obter_resumo_dashboard(token)
+    atrasados = resumo.get('alugueis', {}).get('atrasados', 0)
+    if not atrasados:
+        return "Nenhum aluguel está atrasado no momento."
+    return f"{atrasados} aluguel(éis) em andamento já passaram da data de retorno prevista."
+
+
+async def _tratar_devolucoes(token):
+    resumo = await dotnet_client.obter_resumo_dashboard(token)
+    financeiro = resumo.get('financeiro', {})
+    qtd = financeiro.get('devolucoesDoMes', 0)
+    return f"Foram registradas {qtd} devolução(ões) neste mês, somando {_moeda(financeiro.get('receitaDoMes'))}."
+
+
+async def _tratar_faturamento(token):
+    financeiro = (await dotnet_client.obter_resumo_dashboard(token)).get('financeiro', {})
+    return (
+        f"O faturamento das devoluções deste mês é {_moeda(financeiro.get('receitaDoMes'))} "
+        f"(mês anterior: {_moeda(financeiro.get('receitaMesAnterior'))})."
+    )
+
+
+async def _tratar_cupons(token):
+    cupons = [c for c in await dotnet_client.listar_cupons(token) if c.get('ativo')]
+    if not cupons:
+        return "Não há cupons ativos no momento."
+    linhas = [
+        f"- {c.get('codigo', '?')}: {c.get('descricao', '')} "
+        f"({c.get('usosAtuais', 0)}/{c.get('limiteUsos') or '∞'} usos)"
+        for c in cupons[:10]
+    ]
+    extra = "" if len(cupons) <= 10 else f"\n... e mais {len(cupons) - 10}."
+    return f"Há {len(cupons)} cupom(ns) ativo(s):\n" + "\n".join(linhas) + extra
+
+
 async def responder(mensagem: str, token: str | None) -> str:
     texto = (mensagem or '').strip()
     if not texto:
@@ -93,6 +145,21 @@ async def responder(mensagem: str, token: str | None) -> str:
         match_placa = PADRAO_PLACA.search(texto)
         if match_placa and ('placa' in texto_normalizado or 'veículo' in texto_normalizado or 'veiculo' in texto_normalizado):
             return await _tratar_consulta_placa(match_placa.group(1), token)
+
+        if 'cliente' in texto_normalizado:
+            return await _tratar_clientes(token)
+
+        if 'atrasad' in texto_normalizado:
+            return await _tratar_atrasados(token)
+
+        if 'devolu' in texto_normalizado:
+            return await _tratar_devolucoes(token)
+
+        if any(p in texto_normalizado for p in ['faturamento', 'receita', 'faturou']):
+            return await _tratar_faturamento(token)
+
+        if 'cupom' in texto_normalizado or 'cupon' in texto_normalizado:
+            return await _tratar_cupons(token)
 
         if any(p in texto_normalizado for p in ['disponív', 'disponiv', 'livre']):
             return await _tratar_disponibilidade(token)

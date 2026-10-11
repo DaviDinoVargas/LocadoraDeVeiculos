@@ -87,3 +87,77 @@ def test_responder_quando_api_esta_fora_do_ar_avisa_sem_quebrar(monkeypatch):
     resposta = _run(chatbot_service.responder("veículos disponíveis?", token="fake-token"))
 
     assert "não consegui" in resposta.lower() or "fora do ar" in resposta.lower()
+
+
+# ---- intenções de clientes, devoluções, atrasos, faturamento e cupons (resumo do dashboard) ----
+
+RESUMO = {
+    "frota": {"total": 2, "emUso": 1, "disponiveis": 1},
+    "alugueis": {"emAndamento": 1, "reservados": 0, "atrasados": 2},
+    "financeiro": {"receitaDoMes": 1234.5, "receitaMesAnterior": 10, "devolucoesDoMes": 3},
+    "totalClientes": 7,
+}
+
+
+def _fake_resumo(monkeypatch, resumo=RESUMO):
+    async def fake(token):
+        return resumo
+
+    monkeypatch.setattr(chatbot_service.dotnet_client, "obter_resumo_dashboard", fake)
+
+
+def test_responder_quantos_clientes(monkeypatch):
+    _fake_resumo(monkeypatch)
+    assert "7 cliente" in _run(chatbot_service.responder("quantos clientes temos?", token="t"))
+
+
+def test_responder_alugueis_atrasados(monkeypatch):
+    _fake_resumo(monkeypatch)
+    assert "2 aluguel" in _run(chatbot_service.responder("tem algum aluguel atrasado?", token="t"))
+
+
+def test_responder_sem_atrasados_diz_que_nao_ha(monkeypatch):
+    _fake_resumo(monkeypatch, {**RESUMO, "alugueis": {"atrasados": 0}})
+    assert "Nenhum aluguel" in _run(chatbot_service.responder("aluguéis atrasados", token="t"))
+
+
+def test_responder_devolucoes_do_mes_formata_moeda_brasileira(monkeypatch):
+    _fake_resumo(monkeypatch)
+    resposta = _run(chatbot_service.responder("quantas devoluções neste mês?", token="t"))
+    assert "3 devolu" in resposta and "R$ 1.234,50" in resposta
+
+
+def test_responder_faturamento(monkeypatch):
+    _fake_resumo(monkeypatch)
+    resposta = _run(chatbot_service.responder("qual o faturamento?", token="t"))
+    assert "R$ 1.234,50" in resposta and "R$ 10,00" in resposta
+
+
+def test_responder_cupons_lista_so_os_ativos(monkeypatch):
+    async def fake(token):
+        return [
+            {"codigo": "NATAL10", "descricao": "Natal", "ativo": True, "usosAtuais": 1, "limiteUsos": 5},
+            {"codigo": "VELHO", "descricao": "Antigo", "ativo": False, "usosAtuais": 0, "limiteUsos": None},
+        ]
+
+    monkeypatch.setattr(chatbot_service.dotnet_client, "listar_cupons", fake)
+    resposta = _run(chatbot_service.responder("quais cupons estão ativos?", token="t"))
+    assert "NATAL10" in resposta and "VELHO" not in resposta and "1 cupom" in resposta
+
+
+def test_placa_continua_tendo_prioridade_sobre_as_novas_intencoes(monkeypatch):
+    async def fake_alugueis(token):
+        return []
+
+    async def fake_automoveis(token):
+        return [{"placa": "ABC1D23", "marca": "Fiat", "modelo": "Uno"}]
+
+    monkeypatch.setattr(chatbot_service.dotnet_client, "listar_alugueis_em_aberto", fake_alugueis)
+    monkeypatch.setattr(chatbot_service.dotnet_client, "listar_automoveis", fake_automoveis)
+    # "cliente" aparece na frase, mas a placa deve vencer
+    resposta = _run(chatbot_service.responder("a placa ABC1D23 é de algum cliente?", token="t"))
+    assert "Fiat" in resposta
+
+
+def test_ajuda_lista_as_novas_perguntas():
+    assert "cupons" in chatbot_service.AJUDA and "faturamento" in chatbot_service.AJUDA
