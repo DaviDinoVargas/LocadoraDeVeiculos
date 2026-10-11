@@ -49,9 +49,13 @@ export class VeiculosListComponent implements OnInit {
     });
   }
 
+  // Grupo escolhido no filtro ('' = todos). A consulta é feita no servidor (GET /automoveis/grupo/{id}).
+  private grupoFiltroId = '';
+
   carregar() {
     this.loading = true;
-    this.svc.listar().subscribe({
+    const origem$ = this.grupoFiltroId ? this.svc.listarPorGrupo(this.grupoFiltroId) : this.svc.listar();
+    origem$.subscribe({
       next: v => {
         this.veiculos = v;
         this.veiculosFiltrados = [...v];
@@ -65,18 +69,16 @@ export class VeiculosListComponent implements OnInit {
     });
   }
 
+  // Antes o <select> alterava veiculosFiltrados mas a tabela renderizava `veiculos`: o filtro
+  // não fazia nada na tela.
   filtrarPorGrupo(event: any) {
-    const grupoId = event.target.value;
-    if (!grupoId) {
-      this.veiculosFiltrados = [...this.veiculos];
-    } else {
-      this.veiculosFiltrados = this.veiculos.filter(v => v.grupoAutomovelId === grupoId);
-    }
+    this.grupoFiltroId = event.target.value;
+    this.carregar();
   }
 
-  obterNomeGrupo(grupoId: string): string {
-    const grupo = this.grupos.find(g => g.id === grupoId);
-    return grupo ? grupo.nome : '—';
+  // O nome vem na própria lista (o Funcionario não pode ler /grupos-automovel para resolvê-lo).
+  obterNomeGrupo(veiculo: VeiculoDto): string {
+    return veiculo.grupoAutomovelNome || this.grupos.find(g => g.id === veiculo.grupoAutomovelId)?.nome || '—';
   }
 
   formatarPlaca(placa: string): string {

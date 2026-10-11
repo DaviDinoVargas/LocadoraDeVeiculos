@@ -27,9 +27,6 @@ export class AlugueisService {
     return this.http.get<any>(`${this.base}/status/${status}`).pipe(map(raw => this.extractData<SelecionarAlugueisDto[]>(raw)));
   }
 
-  listarEmAberto(): Observable<SelecionarAlugueisDto[]> {
-    return this.http.get<any>(`${this.base}/em-aberto`).pipe(map(raw => this.extractData<SelecionarAlugueisDto[]>(raw)));
-  }
 
     selecionarEmAberto(): Observable<SelecionarAlugueisDto[]> {
     return this.http.get<any>(`${this.base}/em-aberto`).pipe(
@@ -69,13 +66,5 @@ export class AlugueisService {
     return this.http.delete<any>(`${this.base}/${id}`).pipe(map(raw => this.extractData<void>(raw)));
   }
 
-  buscarPorPlaca(placa: string): Observable<SelecionarAlugueisDto[]> {
-    return this.http.get<any>(`${this.base}/em-aberto`).pipe(
-      map(raw => this.extractData<SelecionarAlugueisDto[]>(raw)),
-      map(alugueis => alugueis.filter(a =>
-        a.automovelPlaca && a.automovelPlaca.toUpperCase().includes(placa.toUpperCase())
-      ))
-    );
-  }
 }
 

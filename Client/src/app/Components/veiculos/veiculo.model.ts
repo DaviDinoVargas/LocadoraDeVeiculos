@@ -9,6 +9,7 @@ export interface VeiculoDto {
   ano: number;
   foto?: string;
   grupoAutomovelId: string;
+  grupoAutomovelNome?: string;
 }
 
 export interface VeiculoComGrupoDto extends VeiculoDto {

@@ -1,4 +1,5 @@
 export interface ClienteDto {
+  documentoPrincipal?: string; // CPF ou CNPJ, como vem na lista geral
   id?: string;
   nome: string;
   telefone: string;

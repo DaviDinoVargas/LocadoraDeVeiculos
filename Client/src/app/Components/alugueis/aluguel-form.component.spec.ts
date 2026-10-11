@@ -11,6 +11,7 @@ import { VeiculosService } from '../veiculos/veiculos.service';
 import { TaxasServicosService } from '../taxa-servico/taxas-servicos.service';
 import { AluguelDto, SimulacaoAluguelDto } from './aluguel.model';
 import { VeiculoDto } from '../veiculos/veiculo.model';
+import { CondutorDto } from '../condutor/condutor.model';
 import { CuponsService } from '../cupons/cupons.service';
 import { DesafiosCupomService } from '../desafios-cupom/desafios-cupom.service';
 import { ProgressoDesafioDto } from '../desafios-cupom/desafio-cupom.model';
@@ -21,6 +22,7 @@ describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
   let alugueis: jasmine.SpyObj<AlugueisService>;
   let veiculos: jasmine.SpyObj<VeiculosService>;
   let cupons: jasmine.SpyObj<CuponsService>;
+  let condutores: jasmine.SpyObj<CondutoresService>;
   let desafios: jasmine.SpyObj<DesafiosCupomService>;
 
   const fusca = { id: 'v1', placa: 'AAA1A11', marca: 'VW', modelo: 'Fusca' } as VeiculoDto;
@@ -38,6 +40,8 @@ describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
     veiculos = jasmine.createSpyObj('VeiculosService', ['listar', 'listarDisponiveis']);
     veiculos.listar.and.returnValue(of([fusca, uno]));
     veiculos.listarDisponiveis.and.returnValue(of([uno]));
+    condutores = jasmine.createSpyObj('CondutoresService', ['listarPorCliente']);
+    condutores.listarPorCliente.and.returnValue(of([{ id: 'd1', nome: 'Condutor 1', cpf: '1', clienteId: 'c1' } as CondutorDto]));
     cupons = jasmine.createSpyObj('CuponsService', ['validar']);
     cupons.validar.and.returnValue(of({ valido: true, motivoInvalido: null, valorDesconto: 39, valorComDesconto: 351 }));
     desafios = jasmine.createSpyObj('DesafiosCupomService', ['progressoDoCliente']);
@@ -49,7 +53,7 @@ describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
         provideRouter([]),
         { provide: AlugueisService, useValue: alugueis },
         { provide: ClientesService, useValue: { listar: () => of([]) } },
-        { provide: CondutoresService, useValue: { listar: () => of([]) } },
+        { provide: CondutoresService, useValue: condutores },
         { provide: VeiculosService, useValue: veiculos },
         { provide: CuponsService, useValue: cupons },
         { provide: DesafiosCupomService, useValue: desafios },
@@ -347,6 +351,40 @@ describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
       expect(texto).toContain('Meta cumprida');
       expect(texto).toContain('Usar cupom FIEL10');
       expect(texto).toContain('3 de 10 aluguéis');
+    });
+  });
+  describe('condutores do cliente (consulta no servidor)', () => {
+    it('ao escolher o cliente, carrega só os condutores dele', () => {
+      component.form.patchValue({ clienteId: 'c1' });
+
+      expect(condutores.listarPorCliente).toHaveBeenCalledOnceWith('c1');
+      expect(component.condutoresFiltrados.map(c => c.id)).toEqual(['d1']);
+    });
+
+    it('trocar de cliente descarta o condutor que não é dele', () => {
+      component.form.patchValue({ clienteId: 'c1' });
+      component.form.patchValue({ condutorId: 'd1' });
+      condutores.listarPorCliente.and.returnValue(of([]));
+
+      component.form.patchValue({ clienteId: 'c2' });
+
+      expect(component.form.get('condutorId')?.value).toBe('');
+    });
+
+    it('mantém o condutor escolhido quando ele pertence ao cliente (ex.: ao carregar a edição)', () => {
+      component.form.patchValue({ clienteId: 'c1', condutorId: 'd1' });
+
+      expect(component.form.get('condutorId')?.value).toBe('d1');
+    });
+
+    it('sem cliente a lista fica vazia e o campo pede para escolher o cliente primeiro', () => {
+      component.form.patchValue({ clienteId: 'c1' });
+      component.form.patchValue({ clienteId: '' });
+      fixture.detectChanges();
+
+      expect(component.condutoresFiltrados).toEqual([]);
+      expect(fixture.nativeElement.querySelector('select[formControlName="condutorId"] option').textContent)
+        .toContain('Selecione um cliente primeiro');
     });
   });
 });

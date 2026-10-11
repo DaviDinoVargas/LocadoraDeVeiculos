@@ -70,4 +70,26 @@ describe('ClientesListComponent — menu "Novo Cliente"', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/clientes/new/pf']);
     expect(router.navigate).toHaveBeenCalledWith(['/clientes/new/pj']);
   });
+  describe('obterDocumentoPrincipal', () => {
+    it('lista geral (só documentoPrincipal): formata CPF e CNPJ — a coluna ficava vazia', () => {
+      const c = fixture.componentInstance;
+
+      expect(c.obterDocumentoPrincipal({ tipoCliente: 'PessoaFisica', documentoPrincipal: '12345678900' })).toBe('123.456.789-00');
+      expect(c.obterDocumentoPrincipal({ tipoCliente: 'PessoaJuridica', documentoPrincipal: '12345678000199' })).toBe('12.345.678/0001-99');
+    });
+
+    it('listas pf/pj (cpf/cnpj no objeto) continuam funcionando', () => {
+      const c = fixture.componentInstance;
+
+      expect(c.obterDocumentoPrincipal({ cpf: '12345678900' })).toBe('123.456.789-00');
+      expect(c.obterDocumentoPrincipal({ cnpj: '12345678000199' })).toBe('12.345.678/0001-99');
+    });
+
+    it('já formatado é mantido e ausente vira "—"', () => {
+      const c = fixture.componentInstance;
+
+      expect(c.obterDocumentoPrincipal({ documentoPrincipal: '123.456.789-00' })).toBe('123.456.789-00');
+      expect(c.obterDocumentoPrincipal({})).toBe('—');
+    });
+  });
 });

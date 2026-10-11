@@ -120,7 +120,8 @@ namespace LocadoraDeVeiculos.WebApi.Controllers
                         r.CapacidadeTanque,
                         r.Ano,
                         r.Foto,
-                        r.GrupoAutomovelId
+                        r.GrupoAutomovelId,
+                        r.GrupoAutomovelNome
                     ))
                     .ToList()
                     .AsReadOnly();
@@ -159,7 +160,8 @@ namespace LocadoraDeVeiculos.WebApi.Controllers
                         r.CapacidadeTanque,
                         r.Ano,
                         r.Foto,
-                        r.GrupoAutomovelId))
+                        r.GrupoAutomovelId,
+                        r.GrupoAutomovelNome))
                     .ToList();
 
                 return Ok(new SelecionarAutomoveisDisponiveisResponse(registros));
@@ -218,7 +220,8 @@ namespace LocadoraDeVeiculos.WebApi.Controllers
                         r.CapacidadeTanque,
                         r.Ano,
                         r.Foto,
-                        r.GrupoAutomovelId
+                        r.GrupoAutomovelId,
+                        r.GrupoAutomovelNome
                     ))
                     .ToList()
                     .AsReadOnly();

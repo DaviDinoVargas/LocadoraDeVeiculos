@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AlugueisService } from './alugueis.service';
+import { DevolucoesService } from '../devolucoes/devolucoes.service';
 import { SelecionarAlugueisDto } from './aluguel.model';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
@@ -14,13 +15,13 @@ import { ReactiveFormsModule } from '@angular/forms';
   styleUrls: ['../scss/global.scss']
 })
 export class AlugueisListComponent implements OnInit {
-  alugueis: SelecionarAlugueisDto[] = [];
   alugueisFiltrados: SelecionarAlugueisDto[] = [];
   loading = false;
   filtroStatus: string = 'todos';
 
   constructor(
     private svc: AlugueisService,
+    private devolucoesSvc: DevolucoesService,
     private router: Router,
     private route: ActivatedRoute,
     private snack: MatSnackBar
@@ -35,11 +36,22 @@ export class AlugueisListComponent implements OnInit {
   }
 
   carregar() {
+    this.filtrarPorStatus(this.filtroStatus);
+  }
+
+  // O filtro é feito no servidor: todos -> GET /alugueis, em-aberto -> /alugueis/em-aberto e
+  // cada status -> /alugueis/status/{status} (antes carregava tudo e filtrava na memória).
+  filtrarPorStatus(status: string) {
+    this.filtroStatus = status;
     this.loading = true;
-    this.svc.listar().subscribe({
+
+    const origem$ = status === 'todos' ? this.svc.listar()
+      : status === 'em-aberto' ? this.svc.selecionarEmAberto()
+      : this.svc.listarPorStatus(status);
+
+    origem$.subscribe({
       next: a => {
-        this.alugueis = a;
-        this.filtrarPorStatus(this.filtroStatus);
+        this.alugueisFiltrados = a;
         this.loading = false;
       },
       error: (err) => {
@@ -50,29 +62,13 @@ export class AlugueisListComponent implements OnInit {
     });
   }
 
-  filtrarPorStatus(status: string) {
-    this.filtroStatus = status;
-    if (status === 'todos') {
-      this.alugueisFiltrados = [...this.alugueis];
-    } else if (status === 'em-aberto') {
-      this.carregarEmAberto();
-    } else {
-      this.alugueisFiltrados = this.alugueis.filter(a => a.status === status);
-    }
-  }
+  // Aluguel concluído: leva à devolução registrada (GET /devolucoes/aluguel/{id}).
+  verDevolucao(aluguelId?: string) {
+    if (!aluguelId) return;
 
-  carregarEmAberto() {
-    this.loading = true;
-    this.svc.listarEmAberto().subscribe({
-      next: a => {
-        this.alugueisFiltrados = a;
-        this.loading = false;
-      },
-      error: (err) => {
-        this.loading = false;
-        console.error('Erro ao listar aluguéis em aberto:', err);
-        this.snack.open('Erro ao listar aluguéis em aberto', 'Fechar', { duration: 4000 });
-      }
+    this.devolucoesSvc.obterPorAluguelId(aluguelId).subscribe({
+      next: d => this.router.navigate([`/devolucoes/${d.id}`]),
+      error: () => this.snack.open('Este aluguel ainda não tem devolução registrada.', 'Fechar', { duration: 4000 })
     });
   }
 

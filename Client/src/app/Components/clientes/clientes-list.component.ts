@@ -90,13 +90,15 @@ export class ClientesListComponent implements OnInit {
     });
   }
 
+  // A lista geral (GET /clientes) devolve só `documentoPrincipal`; cpf/cnpj só existem nas listas
+  // pf/pj e no detalhe. Antes a coluna "Documento" ficava vazia na aba "Todos".
   obterDocumentoPrincipal(cliente: any): string {
-    if (this.modoLista === 'pf' || cliente.tipoCliente === 'PessoaFisica') {
-      return this.formatarCPF(cliente.cpf || '');
-    } else if (this.modoLista === 'pj' || cliente.tipoCliente === 'PessoaJuridica') {
-      return this.formatarCNPJ(cliente.cnpj || '');
-    }
-    return '';
+    const documento: string = cliente.documentoPrincipal || cliente.cpf || cliente.cnpj || '';
+    const digitos = documento.replace(/\D/g, '');
+
+    if (digitos.length === 11) return this.formatarCPF(digitos);
+    if (digitos.length === 14) return this.formatarCNPJ(digitos);
+    return documento || '—';
   }
 
   obterTipoCliente(cliente: any): string {

@@ -35,7 +35,6 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
   serverErrors: string[] = [];
 
   clientes: ClienteDto[] = [];
-  condutores: CondutorDto[] = [];
   condutoresFiltrados: CondutorDto[] = [];
   veiculos: VeiculoDto[] = [];
   veiculosDisponiveis: VeiculoDto[] = [];
@@ -68,6 +67,7 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
   // Desafios do cliente selecionado (GET /desafios-cupom/cliente/{id}/progresso)
   progressoDesafios: ProgressoDesafioDto[] = [];
   private desafiosSub?: Subscription;
+  private condutoresSub?: Subscription;
   private readonly periodoCarregado$ = new Subject<void>();
   private disponibilidadeSub?: Subscription;
 
@@ -103,6 +103,7 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
     this.iniciarDisponibilidade();
     this.iniciarCupom();
     this.iniciarDesafios();
+    this.iniciarCondutores();
 
     this.sub = this.route.paramMap.subscribe((params: ParamMap) => {
       this.id = params.get('id');
@@ -120,11 +121,11 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
     this.disponibilidadeSub?.unsubscribe();
     this.cupomSub?.unsubscribe();
     this.desafiosSub?.unsubscribe();
+    this.condutoresSub?.unsubscribe();
   }
 
   carregarDados() {
     this.carregarClientes();
-    this.carregarCondutores();
     this.carregarVeiculos();
     this.carregarTaxasServicos();
   }
@@ -133,16 +134,6 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
     this.clientesSvc.listar().subscribe({
       next: clientes => this.clientes = clientes,
       error: () => this.snack.open('Erro ao carregar clientes', 'Fechar', { duration: 4000 })
-    });
-  }
-
-  carregarCondutores() {
-    this.condutoresSvc.listar().subscribe({
-      next: condutores => {
-        this.condutores = condutores;
-        this.condutoresFiltrados = [...condutores];
-      },
-      error: () => this.snack.open('Erro ao carregar condutores', 'Fechar', { duration: 4000 })
     });
   }
 
@@ -164,17 +155,26 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
     });
   }
 
-  onClienteChange(event: any) {
-    const clienteId = event.target.value;
-    if (clienteId) {
-      // Filtrar condutores por cliente selecionado
-      this.condutoresFiltrados = this.condutores.filter(c => c.clienteId === clienteId);
+  // Condutores do cliente escolhido (GET /condutores/cliente/{id}). Antes carregava TODOS os
+  // condutores e filtrava na memória, e na edição a lista continuava com todos.
+  private iniciarCondutores() {
+    this.condutoresSub = this.form.get('clienteId')!.valueChanges.pipe(
+      distinctUntilChanged(),
+      switchMap(clienteId => clienteId
+        ? this.condutoresSvc.listarPorCliente(clienteId).pipe(catchError(() => {
+            this.snack.open('Erro ao carregar os condutores do cliente', 'Fechar', { duration: 4000 });
+            return of([] as CondutorDto[]);
+          }))
+        : of([] as CondutorDto[]))
+    ).subscribe(condutores => {
+      this.condutoresFiltrados = condutores;
 
-      // Resetar condutor selecionado
-      this.form.patchValue({ condutorId: '' });
-    } else {
-      this.condutoresFiltrados = [...this.condutores];
-    }
+      // Condutor escolhido que não pertence ao cliente atual deixa de valer.
+      const atual = this.form.get('condutorId')!.value;
+      if (atual && !condutores.some(c => c.id === atual)) {
+        this.form.patchValue({ condutorId: '' });
+      }
+    });
   }
 
   onTaxaChange(event: any, taxa: TaxaServicoDto) {

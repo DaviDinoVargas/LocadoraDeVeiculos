@@ -97,6 +97,13 @@
                       *ngIf="a.status === 'EmAndamento'">
                 <i class="bi bi-check-circle"></i>
               </button>
+              <button class="btn btn-outline-secondary"
+                      (click)="verDevolucao(a.id)"
+                      title="Ver devolução"
+                      aria-label="Ver devolução"
+                      *ngIf="a.status === 'Concluido'">
+                <i class="bi bi-receipt"></i>
+              </button>
             </div>
           </td>
         </tr>

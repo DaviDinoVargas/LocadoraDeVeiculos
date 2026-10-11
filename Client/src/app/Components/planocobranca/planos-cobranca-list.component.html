@@ -31,7 +31,7 @@
       <tbody>
         <tr *ngFor="let p of planos">
           <td>{{ p.nome }}</td>
-          <td>{{ p.grupoAutomovelId }}</td>
+          <td>{{ p.grupoAutomovelNome || '—' }}</td>
           <td>{{ formatarMoeda(p.precoDiaria) }}</td>
           <td>{{ p.precoPorKm ? formatarMoeda(p.precoPorKm) : '-' }}</td>
           <td>{{ p.kmLivreLimite ?? '-' }}</td>

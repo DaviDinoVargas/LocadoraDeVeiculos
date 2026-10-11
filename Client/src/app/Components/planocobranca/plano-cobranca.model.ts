@@ -5,6 +5,7 @@ export interface PlanoCobrancaDto {
   precoDiaria: number;
   precoPorKm?: number;
   kmLivreLimite?: number;
+  grupoAutomovelNome?: string;
 }
 
 export interface PlanoCobrancaComGrupoDto extends PlanoCobrancaDto {

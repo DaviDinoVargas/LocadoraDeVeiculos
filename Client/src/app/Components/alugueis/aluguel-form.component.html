@@ -6,7 +6,7 @@
     <!-- Cliente -->
     <div class="mb-3">
       <label class="form-label">Cliente</label>
-      <select class="form-select" formControlName="clienteId" (change)="onClienteChange($event)">
+      <select class="form-select" formControlName="clienteId">
         <option value="">Selecione um cliente</option>
         <option *ngFor="let cliente of clientes" [value]="cliente.id">{{ cliente.nome }}</option>
       </select>
@@ -20,7 +20,7 @@
     <div class="mb-3">
       <label class="form-label">Condutor</label>
       <select class="form-select" formControlName="condutorId">
-        <option value="">Selecione um condutor</option>
+        <option value="">{{ form.controls['clienteId'].value ? 'Selecione um condutor' : 'Selecione um cliente primeiro' }}</option>
         <option *ngFor="let condutor of condutoresFiltrados" [value]="condutor.id">{{ condutor.nome }} ({{ condutor.cpf }})</option>
       </select>
       <div *ngIf="form.controls['condutorId'].invalid && form.controls['condutorId'].touched"

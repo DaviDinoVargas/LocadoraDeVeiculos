@@ -44,13 +44,26 @@ export class TaxasServicosListComponent implements OnInit {
     });
   }
 
+  // Filtro no servidor (GET /taxas-servicos/tipo/{tipo}); "todos" reaproveita a lista já carregada.
   filtrarPorTipo(event: any) {
     const tipo = event.target.value;
     if (!tipo) {
       this.taxasFiltradas = [...this.taxas];
-    } else {
-      this.taxasFiltradas = this.taxas.filter(t => t.tipoCalculo === tipo);
+      return;
     }
+
+    this.loading = true;
+    this.svc.listarPorTipo(tipo).subscribe({
+      next: t => {
+        this.taxasFiltradas = t;
+        this.loading = false;
+      },
+      error: (err) => {
+        this.loading = false;
+        console.error('Erro ao filtrar taxas e serviços:', err);
+        this.snack.open('Erro ao filtrar taxas e serviços', 'Fechar', { duration: 4000 });
+      }
+    });
   }
 
   formatarMoeda(valor: number): string {

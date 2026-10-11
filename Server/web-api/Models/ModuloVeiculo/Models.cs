@@ -56,7 +56,8 @@ namespace LocadoraDeVeiculos.WebApi.Models.ModuloAutomovel
         decimal CapacidadeTanque,
         int Ano,
         string? Foto,
-        Guid GrupoAutomovelId
+        Guid GrupoAutomovelId,
+        string GrupoAutomovelNome
     );
 
     public record SelecionarAutomoveisResponse(

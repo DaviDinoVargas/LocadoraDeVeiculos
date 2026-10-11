@@ -5,7 +5,8 @@ public record SelecionarPlanosCobrancaQuery()
     : IRequest<Result<SelecionarPlanosCobrancaResult>>;
 
 public record SelecionarPlanosCobrancaDto(
-    Guid Id, string Nome, decimal PrecoDiaria, decimal PrecoPorKm, int KmLivreLimite);
+    Guid Id, string Nome, decimal PrecoDiaria, decimal PrecoPorKm, int KmLivreLimite,
+    Guid GrupoAutomovelId, string GrupoAutomovelNome);
 
 public record SelecionarPlanosCobrancaResult(
     IReadOnlyList<SelecionarPlanosCobrancaDto> Registros);

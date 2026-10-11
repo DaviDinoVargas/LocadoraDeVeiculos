@@ -43,7 +43,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let v of veiculos">
+        <tr *ngFor="let v of veiculosFiltrados">
           <td>{{ formatarPlaca(v.placa) }}</td>
           <td>{{ v.marca }}</td>
           <td>{{ v.modelo }}</td>
@@ -51,7 +51,7 @@
           <td>{{ v.ano }}</td>
           <td>{{ v.tipoCombustivel }}</td>
           <td>{{ v.capacidadeTanque }}</td>
-          <td>{{ obterNomeGrupo(v.grupoAutomovelId) }}</td>
+          <td>{{ obterNomeGrupo(v) }}</td>
           <td *ngIf="podeEditar" class="text-end">
             <div class="btn-group btn-group-sm">
               <button class="btn btn-outline-primary"
@@ -72,7 +72,7 @@
   </div>
 
   <!-- Mensagem quando não há veículos -->
-  <div *ngIf="!loading && veiculos.length === 0" class="alert alert-info">
+  <div *ngIf="!loading && veiculosFiltrados.length === 0" class="alert alert-info">
     <i class="bi bi-info-circle me-2"></i>
     Nenhum veículo encontrado. Clique em "Novo Veículo" para adicionar.
   </div>
