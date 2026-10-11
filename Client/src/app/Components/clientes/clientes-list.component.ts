@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ClientesService } from './clientes.service';
@@ -165,15 +165,31 @@ export class ClientesListComponent implements OnInit {
 
   novo() {
     if (this.modoLista === 'pf') {
-      this.router.navigate(['/clientes/new/PessoaFisica']);
+      this.router.navigate(['/clientes/new/pf']);
     } else if (this.modoLista === 'pj') {
-      this.router.navigate(['/clientes/new/PessoaJuridica']);
+      this.router.navigate(['/clientes/new/pj']);
     }
   }
 
+  // O menu "Novo Cliente" é controlado pelo Angular: o JS do Bootstrap não é carregado
+  // no projeto (angular.json só inclui o CSS), então data-bs-toggle nunca abria o menu.
+  menuNovoAberto = false;
+
+  alternarMenuNovo(event: Event) {
+    event.stopPropagation();
+    this.menuNovoAberto = !this.menuNovoAberto;
+  }
+
+  @HostListener('document:click')
+  @HostListener('document:keydown.escape')
+  fecharMenuNovo() {
+    this.menuNovoAberto = false;
+  }
+
   novoCliente(tipo: 'pf' | 'pj') {
-  this.router.navigate([`/clientes/new/${tipo}`]);
-}
+    this.menuNovoAberto = false;
+    this.router.navigate([`/clientes/new/${tipo}`]);
+  }
 
   editar(cliente: any) {
     if (this.modoLista === 'pf' || cliente.tipoCliente === 'PessoaFisica' || cliente.cpf) {

@@ -3,26 +3,29 @@
     <h3>{{ titulo }}</h3>
 
     <!-- Botão de novo cliente dinâmico baseado no modo -->
-<div *ngIf="modoLista === 'todos'" class="btn-group">
-  <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-    <i class="bi bi-plus-circle me-1"></i>
-    Novo Cliente
-  </button>
-  <ul class="dropdown-menu">
-    <li><a class="dropdown-item" (click)="novoCliente('pf')">Pessoa Física</a></li>
-    <li><a class="dropdown-item" (click)="novoCliente('pj')">Pessoa Jurídica</a></li>
-  </ul>
-</div>
+    <div *ngIf="modoLista === 'todos'" class="btn-group">
+      <button class="btn btn-primary dropdown-toggle" type="button"
+              aria-haspopup="true" [attr.aria-expanded]="menuNovoAberto"
+              (click)="alternarMenuNovo($event)">
+        <i class="bi bi-plus-circle me-1"></i>
+        Novo Cliente
+      </button>
+      <ul class="dropdown-menu" [class.show]="menuNovoAberto">
+        <li><button type="button" class="dropdown-item" (click)="novoCliente('pf')">Pessoa Física</button></li>
+        <li><button type="button" class="dropdown-item" (click)="novoCliente('pj')">Pessoa Jurídica</button></li>
+      </ul>
+    </div>
 
-<button *ngIf="modoLista === 'pf'" class="btn btn-primary" (click)="novoCliente('pf')">
-  <i class="bi bi-plus-circle me-1"></i>
-  Nova Pessoa Física
-</button>
+    <button *ngIf="modoLista === 'pf'" class="btn btn-primary" (click)="novoCliente('pf')">
+      <i class="bi bi-plus-circle me-1"></i>
+      Nova Pessoa Física
+    </button>
 
-<button *ngIf="modoLista === 'pj'" class="btn btn-primary" (click)="novoCliente('pj')">
-  <i class="bi bi-plus-circle me-1"></i>
-  Nova Pessoa Jurídica
-</button>
+    <button *ngIf="modoLista === 'pj'" class="btn btn-primary" (click)="novoCliente('pj')">
+      <i class="bi bi-plus-circle me-1"></i>
+      Nova Pessoa Jurídica
+    </button>
+  </div>
 
   <!-- Abas para filtrar por tipo (só mostra se for a lista geral) -->
   <div *ngIf="modoLista === 'todos'">

@@ -392,7 +392,7 @@ export class CameraMonitorComponent implements OnInit, OnDestroy {
   navegarParaDevolucao(placa: string) {
     const aluguel = this.placasComAluguel.get(placa);
     if (aluguel && aluguel.id) {
-      this.router.navigate(['/devolucoes/novo', aluguel.id]);
+      this.router.navigate(['/alugueis', aluguel.id, 'devolver']);
     } else {
       this.aluguelService.selecionarEmAberto().subscribe({
         next: (alugueis: SelecionarAlugueisDto[]) => {
@@ -400,7 +400,7 @@ export class CameraMonitorComponent implements OnInit, OnDestroy {
             a.automovelPlaca && a.automovelPlaca.toUpperCase() === placa.toUpperCase()
           );
           if (aluguelParaPlaca && aluguelParaPlaca.id) {
-            this.router.navigate(['/devolucoes/novo', aluguelParaPlaca.id]);
+            this.router.navigate(['/alugueis', aluguelParaPlaca.id, 'devolver']);
           } else {
             alert(`Nenhum aluguel em aberto encontrado para a placa ${placa}`);
           }
