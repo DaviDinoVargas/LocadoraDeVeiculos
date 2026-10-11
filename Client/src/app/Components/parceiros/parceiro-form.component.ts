@@ -6,11 +6,13 @@ import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { ParceirosService } from './parceiros.service';
 import { ParceiroDto, CATEGORIAS_PARCEIRO } from './parceiro.model';
+import { VALIDADORES_CNPJ } from '../../shared/validators/documentos';
+import { MascaraDirective } from '../../shared/mascaras/mascara.directive';
 
 @Component({
   selector: 'app-parceiro-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, MascaraDirective],
   templateUrl: './parceiro-form.component.html',
   styleUrls: ['../scss/global.scss']
 })
@@ -33,7 +35,7 @@ export class ParceiroFormComponent implements OnInit, OnDestroy {
   ) {
     this.form = this.fb.group({
       nome: ['', Validators.required],
-      cnpj: ['', [Validators.required, Validators.pattern(/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/)]],
+      cnpj: ['', VALIDADORES_CNPJ],
       categoria: ['', Validators.required],
       ativo: [true]
     });

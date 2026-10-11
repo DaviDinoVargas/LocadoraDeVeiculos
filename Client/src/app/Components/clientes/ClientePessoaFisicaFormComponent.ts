@@ -6,11 +6,13 @@ import { ClientesService } from './clientes.service';
 import { ClientePessoaFisicaDto, ClientePessoaJuridicaDto } from './cliente.model';
 import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
+import { VALIDADORES_CPF } from '../../shared/validators/documentos';
+import { MascaraDirective } from '../../shared/mascaras/mascara.directive';
 
 @Component({
   selector: 'app-cliente-pessoa-fisica-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, MascaraDirective],
   templateUrl: './cliente-pessoa-fisica-form.component.html',
   styleUrls: ['../scss/global.scss']
 })
@@ -33,7 +35,7 @@ export class ClientePessoaFisicaFormComponent implements OnInit, OnDestroy {
   ) {
     this.form = this.fb.group({
       nome: ['', Validators.required],
-      cpf: ['', [Validators.required, Validators.pattern(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/)]], // Formato com pontos e traço
+      cpf: ['', VALIDADORES_CPF],
       rg: [''],
       cnh: [''],
       validadeCnh: [''],
@@ -107,23 +109,6 @@ export class ClientePessoaFisicaFormComponent implements OnInit, OnDestroy {
   }
 
   // Método para formatar durante a digitação
-  formatarCPFInput(event: any) {
-    let value = event.target.value.replace(/\D/g, '');
-
-    if (value.length > 11) {
-      value = value.substring(0, 11);
-    }
-
-    // Formatar CPF: 000.000.000-00
-    if (value.length <= 11) {
-      value = value.replace(/(\d{3})(\d)/, '$1.$2');
-      value = value.replace(/(\d{3})(\d)/, '$1.$2');
-      value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-    }
-
-    event.target.value = value;
-    this.form.get('cpf')?.setValue(value, { emitEvent: false });
-  }
 
   // Método para formatar RG durante a digitação
   formatarRGInput(event: any) {

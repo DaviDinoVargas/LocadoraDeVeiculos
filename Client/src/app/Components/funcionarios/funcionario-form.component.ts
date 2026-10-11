@@ -6,11 +6,13 @@ import { FuncionariosService } from './funcionarios.service';
 import { FuncionarioDto } from './funcionario.model';
 import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
+import { VALIDADORES_CPF } from '../../shared/validators/documentos';
+import { MascaraDirective } from '../../shared/mascaras/mascara.directive';
 
 @Component({
   selector: 'app-funcionario-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, MascaraDirective],
   templateUrl: './funcionario-form.component.html',
   styleUrls: ['../scss/global.scss']
 })
@@ -35,7 +37,7 @@ export class FuncionarioFormComponent implements OnInit, OnDestroy {
     // Cria o formulário sem validador inicial
     this.form = this.fb.group({
       nomeCompleto: ['', Validators.required],
-      cpf: ['', [Validators.required, Validators.pattern(/^\d{3}\.?\d{3}\.?\d{3}\-?\d{2}$/)]],
+      cpf: ['', VALIDADORES_CPF],
       email: ['', [Validators.email]],
       senha: ['', []],
       confirmarSenha: ['', []],

@@ -6,11 +6,13 @@ import { ClientesService } from './clientes.service';
 import { ClientePessoaJuridicaDto } from './cliente.model';
 import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
+import { VALIDADORES_CNPJ } from '../../shared/validators/documentos';
+import { MascaraDirective } from '../../shared/mascaras/mascara.directive';
 
 @Component({
   selector: 'app-cliente-pessoa-juridica-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, MascaraDirective],
   templateUrl: './cliente-pessoa-juridica-form.component.html',
   styleUrls: ['../scss/global.scss']
 })
@@ -32,7 +34,7 @@ export class ClientePessoaJuridicaFormComponent implements OnInit, OnDestroy {
   ) {
     this.form = this.fb.group({
       nome: ['', Validators.required],
-      cnpj: ['', [Validators.required, Validators.pattern(/^\d{2}\.?\d{3}\.?\d{3}\/?\d{4}\-?\d{2}$/)]],
+      cnpj: ['', VALIDADORES_CNPJ],
       nomeFantasia: [''],
       telefone: ['', Validators.required],
       email: ['', Validators.email],

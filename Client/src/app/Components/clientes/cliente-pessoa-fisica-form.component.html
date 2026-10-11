@@ -20,12 +20,14 @@
       <label class="form-label">CPF <span class="text-danger">*</span></label>
       <input class="form-control"
              formControlName="cpf"
+             appMascara="cpf"
              placeholder="000.000.000-00"
-             (input)="formatarCPFInput($event)"
-             maxlength="14"/>
-      <div *ngIf="form.controls['cpf'].invalid && form.controls['cpf'].touched"
-           class="text-danger small">
-        CPF inválido. Use o formato 000.000.000-00.
+             [attr.aria-invalid]="form.controls['cpf'].invalid && form.controls['cpf'].touched"
+             aria-describedby="cpf-erro"/>
+      <div *ngIf="form.controls['cpf'].invalid && form.controls['cpf'].touched" class="text-danger small" id="cpf-erro">
+        <span *ngIf="form.controls['cpf'].hasError('required')">CPF é obrigatório.</span>
+        <span *ngIf="!form.controls['cpf'].hasError('required') && form.controls['cpf'].hasError('pattern')">Use o formato 000.000.000-00.</span>
+        <span *ngIf="!form.controls['cpf'].hasError('required') && !form.controls['cpf'].hasError('pattern') && form.controls['cpf'].hasError('cpfInvalido')">CPF inválido: confira os números.</span>
       </div>
       <small class="text-muted">Formato: 000.000.000-00</small>
     </div>

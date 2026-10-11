@@ -8,11 +8,13 @@ import { CondutorDto } from './condutor.model';
 import { ClienteDto } from '../clientes/cliente.model';
 import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
+import { VALIDADORES_CPF } from '../../shared/validators/documentos';
+import { MascaraDirective } from '../../shared/mascaras/mascara.directive';
 
 @Component({
   selector: 'app-condutor-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, MascaraDirective],
   templateUrl: './condutor-form.component.html',
   styleUrls: ['../scss/global.scss']
 })
@@ -36,7 +38,7 @@ export class CondutorFormComponent implements OnInit, OnDestroy {
   ) {
     this.form = this.fb.group({
       nome: ['', Validators.required],
-      cpf: ['', [Validators.required, Validators.pattern(/^\d{3}\.?\d{3}\.?\d{3}\-?\d{2}$/)]],
+      cpf: ['', VALIDADORES_CPF],
       cnh: ['', Validators.required],
       validadeCnh: ['', Validators.required],
       telefone: ['', Validators.required],
