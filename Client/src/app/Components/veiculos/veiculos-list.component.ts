@@ -7,6 +7,8 @@ import { VeiculoDto } from './veiculo.model';
 import { GrupoVeiculoDto } from '../grupoveiculos/grupo-veiculo.model';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
+import { AuthService } from '../../auth/auth.service';
+import { SOMENTE_EMPRESA, cargoPodeAcessar } from '../../core/permissoes';
 
 @Component({
   selector: 'app-veiculos-list',
@@ -20,8 +22,12 @@ export class VeiculosListComponent implements OnInit {
   veiculosFiltrados: VeiculoDto[] = [];
   grupos: GrupoVeiculoDto[] = [];
   loading = false;
+  // A API só deixa Empresa criar/editar/excluir veículo e só Empresa ler os grupos
+  // (o Funcionario tomava 403 ao abrir esta tela por causa do filtro de grupo).
+  podeEditar = false;
 
   constructor(
+    private auth: AuthService,
     private svc: VeiculosService,
     private gruposSvc: GruposVeiculoService,
     private router: Router,
@@ -29,7 +35,10 @@ export class VeiculosListComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    this.carregarGrupos();
+    this.podeEditar = cargoPodeAcessar(this.auth.getUsuario()?.cargo, SOMENTE_EMPRESA);
+    if (this.podeEditar) {
+      this.carregarGrupos();
+    }
     this.carregar();
   }
 
@@ -67,7 +76,7 @@ export class VeiculosListComponent implements OnInit {
 
   obterNomeGrupo(grupoId: string): string {
     const grupo = this.grupos.find(g => g.id === grupoId);
-    return grupo ? grupo.nome : grupoId;
+    return grupo ? grupo.nome : '—';
   }
 
   formatarPlaca(placa: string): string {

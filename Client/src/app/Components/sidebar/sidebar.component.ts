@@ -4,12 +4,13 @@ import { MatIcon } from '@angular/material/icon';
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
+import { EMPRESA_E_FUNCIONARIO, SOMENTE_EMPRESA, cargoPodeAcessar } from '../../core/permissoes';
 
 interface MenuItem {
   label: string;
   icon: string;
   path: string;
-  roles: string[];
+  roles: readonly string[];
   module?: string;
   children?: MenuItem[];
   expanded?: boolean;
@@ -93,7 +94,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
         label: 'Home',
         icon: 'home',
         path: '/home',
-        roles: ['Empresa', 'Funcionario'],
+        roles: EMPRESA_E_FUNCIONARIO,
         module: this.modules.dashboard
       },
 
@@ -102,27 +103,27 @@ export class SidebarComponent implements OnInit, OnDestroy {
         label: 'Funcionários',
         icon: 'people',
         path: '/funcionarios',
-        roles: ['Empresa'],
+        roles: SOMENTE_EMPRESA,
         module: this.modules.gestao
       },
       {
         label: 'Clientes',
         icon: 'person',
         path: '/clientes',
-        roles: ['Empresa', 'Funcionario'],
+        roles: EMPRESA_E_FUNCIONARIO,
         module: this.modules.gestao,
         expanded: false,
         children: [
-          { label: 'Todos os Clientes', icon: 'people_outline', path: '/clientes', roles: ['Empresa', 'Funcionario'] },
-          { label: 'Pessoas Físicas', icon: 'person_outline', path: '/clientes/pf', roles: ['Empresa', 'Funcionario'] },
-          { label: 'Pessoas Jurídicas', icon: 'business', path: '/clientes/pj', roles: ['Empresa', 'Funcionario'] }
+          { label: 'Todos os Clientes', icon: 'people_outline', path: '/clientes', roles: EMPRESA_E_FUNCIONARIO },
+          { label: 'Pessoas Físicas', icon: 'person_outline', path: '/clientes/pf', roles: EMPRESA_E_FUNCIONARIO },
+          { label: 'Pessoas Jurídicas', icon: 'business', path: '/clientes/pj', roles: EMPRESA_E_FUNCIONARIO }
         ]
       },
       {
         label: 'Condutores',
         icon: 'drive_eta',
         path: '/condutores',
-        roles: ['Empresa', 'Funcionario'],
+        roles: EMPRESA_E_FUNCIONARIO,
         module: this.modules.gestao
       },
 
@@ -131,13 +132,13 @@ export class SidebarComponent implements OnInit, OnDestroy {
         label: 'Veículos',
         icon: 'directions_car',
         path: '/veiculos',
-        roles: ['Empresa', 'Funcionario'],
+        roles: EMPRESA_E_FUNCIONARIO,
         module: this.modules.gestao,
         expanded: false,
         children: [
-          { label: 'Todos Veículos', icon: 'car_rental', path: '/veiculos', roles: ['Empresa', 'Funcionario'] },
-          { label: 'Grupos', icon: 'category', path: '/grupoveiculos', roles: ['Empresa'] },
-          { label: 'Planos', icon: 'attach_money', path: '/planos-cobranca', roles: ['Empresa'] }
+          { label: 'Todos Veículos', icon: 'car_rental', path: '/veiculos', roles: EMPRESA_E_FUNCIONARIO },
+          { label: 'Grupos', icon: 'category', path: '/grupoveiculos', roles: SOMENTE_EMPRESA },
+          { label: 'Planos', icon: 'attach_money', path: '/planos-cobranca', roles: SOMENTE_EMPRESA }
         ]
       },
 
@@ -146,20 +147,20 @@ export class SidebarComponent implements OnInit, OnDestroy {
         label: 'Aluguéis',
         icon: 'receipt_long',
         path: '/alugueis',
-        roles: ['Empresa', 'Funcionario'],
+        roles: EMPRESA_E_FUNCIONARIO,
         module: this.modules.operacional,
         expanded: false,
         children: [
-          { label: 'Novo Aluguel', icon: 'add_circle', path: '/alugueis/new', roles: ['Empresa', 'Funcionario'] },
-          { label: 'Em Aberto', icon: 'pending_actions', path: '/alugueis?status=em-aberto', roles: ['Empresa', 'Funcionario'] },
-          { label: 'Todos', icon: 'list', path: '/alugueis', roles: ['Empresa', 'Funcionario'] }
+          { label: 'Novo Aluguel', icon: 'add_circle', path: '/alugueis/new', roles: EMPRESA_E_FUNCIONARIO },
+          { label: 'Em Aberto', icon: 'pending_actions', path: '/alugueis?status=em-aberto', roles: EMPRESA_E_FUNCIONARIO },
+          { label: 'Todos', icon: 'list', path: '/alugueis', roles: EMPRESA_E_FUNCIONARIO }
         ]
       },
       {
   label: 'Devoluções',
   icon: 'assignment_returned',
   path: '/devolucoes',
-  roles: ['Empresa', 'Funcionario'],
+  roles: EMPRESA_E_FUNCIONARIO,
   module: this.modules.operacional
 },
 
@@ -168,26 +169,26 @@ export class SidebarComponent implements OnInit, OnDestroy {
         label: 'Taxas e Serviços',
         icon: 'request_quote',
         path: '/taxas-servicos',
-        roles: ['Empresa', 'Funcionario'],
+        roles: EMPRESA_E_FUNCIONARIO,
         module: this.modules.financeiro
       },
       {
         label: 'Parceiros',
         icon: 'business',
         path: '/parceiros',
-        roles: ['Empresa'],
+        roles: SOMENTE_EMPRESA,
         module: this.modules.financeiro
       },
       {
         label: 'Cupons',
         icon: 'local_offer',
         path: '/cupons',
-        roles: ['Empresa'],
+        roles: SOMENTE_EMPRESA,
         module: this.modules.financeiro,
         expanded: false,
         children: [
-          { label: 'Todos os Cupons', icon: 'list', path: '/cupons', roles: ['Empresa'] },
-          { label: 'Desafios de Cupom', icon: 'emoji_events', path: '/desafios-cupom', roles: ['Empresa'] }
+          { label: 'Todos os Cupons', icon: 'list', path: '/cupons', roles: SOMENTE_EMPRESA },
+          { label: 'Desafios de Cupom', icon: 'emoji_events', path: '/desafios-cupom', roles: SOMENTE_EMPRESA }
         ]
       },
 
@@ -196,11 +197,11 @@ export class SidebarComponent implements OnInit, OnDestroy {
         label: 'Configurações',
         icon: 'settings',
         path: '/configuracoes',
-        roles: ['Empresa'],
+        roles: SOMENTE_EMPRESA,
         module: this.modules.configuracoes,
         expanded: false,
         children: [
-          { label: 'Preço Combustível', icon: 'local_gas_station', path: '/configuracoes/combustivel', roles: ['Empresa'] }
+          { label: 'Preço Combustível', icon: 'local_gas_station', path: '/configuracoes/combustivel', roles: SOMENTE_EMPRESA }
         ]
       },
 
@@ -208,7 +209,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
   label: 'Monitoramento',
   icon: 'videocam',
   path: '/camera-monitor',
-  roles: ['Empresa', 'Funcionario'],
+  roles: EMPRESA_E_FUNCIONARIO,
   module: this.modules.operacional
 },
 
@@ -216,20 +217,23 @@ export class SidebarComponent implements OnInit, OnDestroy {
   label: 'Verificação Facial',
   icon: 'face',
   path: '/verificacao-facial',
-  roles: ['Empresa', 'Funcionario'],
+  roles: EMPRESA_E_FUNCIONARIO,
   module: this.modules.operacional
 }
     ];
 
-    this.menuItems = allMenuItems.filter(item =>
-      this.hasPermission(item.roles) &&
-      (!item.children || item.children.some(child => this.hasPermission(child.roles)))
-    );
+    // Filtra também os subitens: antes um Funcionario via "Grupos" e "Planos" (só Empresa)
+    // dentro de Veículos e tomava 403 ao clicar.
+    this.menuItems = allMenuItems
+      .filter(item => this.hasPermission(item.roles))
+      .map(item => item.children
+        ? { ...item, children: item.children.filter(child => this.hasPermission(child.roles)) }
+        : item)
+      .filter(item => !item.children || item.children.length > 0);
   }
 
-  private hasPermission(requiredRoles: string[]): boolean {
-    if (!this.userRole) return false;
-    return requiredRoles.includes(this.userRole);
+  private hasPermission(requiredRoles: readonly string[]): boolean {
+    return cargoPodeAcessar(this.userRole, requiredRoles);
   }
 
   // Métodos de navegação

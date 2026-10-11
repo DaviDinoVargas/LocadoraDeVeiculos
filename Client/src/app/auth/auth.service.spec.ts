@@ -83,4 +83,55 @@ describe('AuthService', () => {
     expect(service.isLoggedIn()).toBeTrue();
     expect(service.getAccessToken()).toBe('token-facial');
   });
+  describe('garantirSessao', () => {
+    const respostaRotacao = () => ({
+      chave: 'token-restaurado',
+      expiracao: new Date(Date.now() + 60_000).toISOString(),
+      usuarioAutenticado: { id: '1', nomeCompleto: 'Usuário Teste', email: 'u@teste.com', cargo: 'Funcionario' }
+    });
+
+    it('já logado: não chama a API', () => {
+      service.autenticar('u@teste.com', 'Senha@123').subscribe();
+      httpMock.expectOne('/api/auth/autenticar').flush(respostaRotacao());
+
+      let resultado: boolean | undefined;
+      service.garantirSessao().subscribe(r => (resultado = r));
+
+      expect(resultado).toBeTrue();
+      httpMock.expectNone('/api/auth/rotacionar');
+    });
+
+    it('chamadas simultâneas (AuthGuard + roleGuard após F5) usam UMA só requisição de rotação', () => {
+      const resultados: boolean[] = [];
+      service.garantirSessao().subscribe(r => resultados.push(r));
+      service.garantirSessao().subscribe(r => resultados.push(r));
+
+      // Dois guards => se fossem duas requisições, o refresh token rotativo invalidaria a segunda
+      const req = httpMock.expectOne('/api/auth/rotacionar');
+      req.flush(respostaRotacao());
+
+      expect(resultados).toEqual([true, true]);
+      expect(service.getUsuario()?.cargo).toBe('Funcionario');
+    });
+
+    it('sem cookie de sessão (401) devolve false e limpa o estado', () => {
+      let resultado: boolean | undefined;
+      service.garantirSessao().subscribe(r => (resultado = r));
+
+      httpMock.expectOne('/api/auth/rotacionar').flush(['sem sessão'], { status: 401, statusText: 'Unauthorized' });
+
+      expect(resultado).toBeFalse();
+      expect(service.isLoggedIn()).toBeFalse();
+    });
+
+    it('depois de terminar, uma nova chamada volta a tentar a restauração', () => {
+      service.garantirSessao().subscribe();
+      httpMock.expectOne('/api/auth/rotacionar').flush(['x'], { status: 401, statusText: 'Unauthorized' });
+
+      service.garantirSessao().subscribe();
+      httpMock.expectOne('/api/auth/rotacionar').flush(respostaRotacao());
+
+      expect(service.isLoggedIn()).toBeTrue();
+    });
+  });
 });

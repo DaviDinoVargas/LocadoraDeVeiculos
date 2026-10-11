@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
+import { map, catchError, finalize, shareReplay } from 'rxjs/operators';
 import { API_BASE_URL } from '../core/api.config';
 
 export interface AccessToken {
@@ -121,6 +121,26 @@ export class AuthService {
         return of(false);
       })
     );
+  }
+
+  private restauracaoEmAndamento$: Observable<boolean> | null = null;
+
+  /**
+   * Garante que há sessão em memória, restaurando-a pelo refresh token se preciso. Chamadas
+   * simultâneas COMPARTILHAM a mesma requisição: o Angular roda os guards de uma mesma rota em
+   * paralelo (AuthGuard e roleGuard) e o refresh token é rotativo -- duas chamadas a
+   * /auth/rotacionar com o mesmo cookie fariam a segunda falhar e derrubar a sessão.
+   */
+  garantirSessao(): Observable<boolean> {
+    if (this.isLoggedIn()) return of(true);
+
+    if (!this.restauracaoEmAndamento$) {
+      this.restauracaoEmAndamento$ = this.tentarRestaurarSessao().pipe(
+        finalize(() => (this.restauracaoEmAndamento$ = null)),
+        shareReplay(1)
+      );
+    }
+    return this.restauracaoEmAndamento$;
   }
 
   /** MAPEAR RESPOSTA DO BACKEND PARA AccessToken */

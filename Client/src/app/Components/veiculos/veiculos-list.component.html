@@ -1,14 +1,14 @@
 <div class="container mt-4">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h3>Veículos</h3>
-    <button class="btn btn-primary" (click)="novo()">
+    <button *ngIf="podeEditar" class="btn btn-primary" (click)="novo()">
       <i class="bi bi-plus-circle me-1"></i>
       Novo Veículo
     </button>
   </div>
 
   <!-- Filtro por Grupo -->
-  <div class="row mb-3">
+  <div class="row mb-3" *ngIf="podeEditar">
     <div class="col-md-4">
       <label class="form-label">Filtrar por Grupo:</label>
       <select class="form-select" (change)="filtrarPorGrupo($event)">
@@ -39,7 +39,7 @@
           <th>Tipo Combustível</th>
           <th>Capacidade Tanque (L)</th>
           <th>Grupo</th>
-          <th class="text-end">Ações</th>
+          <th *ngIf="podeEditar" class="text-end">Ações</th>
         </tr>
       </thead>
       <tbody>
@@ -52,7 +52,7 @@
           <td>{{ v.tipoCombustivel }}</td>
           <td>{{ v.capacidadeTanque }}</td>
           <td>{{ obterNomeGrupo(v.grupoAutomovelId) }}</td>
-          <td class="text-end">
+          <td *ngIf="podeEditar" class="text-end">
             <div class="btn-group btn-group-sm">
               <button class="btn btn-outline-primary"
                       (click)="editar(v.id)"
