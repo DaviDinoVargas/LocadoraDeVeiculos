@@ -1,49 +1,128 @@
 <div class="face-page">
-  <h1>Verificação Facial</h1>
-  <p class="subtitulo">
-    Cadastre seu rosto uma vez e use a verificação para confirmar sua identidade
-    antes de operações sensíveis (ex.: retirada de veículo no balcão).
-    Você pode apagar o rosto cadastrado quando quiser.
-  </p>
+  <header class="face-header">
+    <span class="face-header__icone" aria-hidden="true"><i class="bi bi-person-bounding-box"></i></span>
+    <div>
+      <h1>Verificação facial</h1>
+      <p class="face-header__sub">
+        Cadastre seu rosto uma vez e confirme sua identidade antes de operações sensíveis,
+        como a retirada de um veículo no balcão.
+      </p>
+    </div>
+  </header>
 
-  <div class="face-card">
-    <div class="camera-area">
-      <video #video muted playsinline [class.hidden]="estadoCamera !== 'ativa'"></video>
-      <canvas #canvas class="hidden"></canvas>
+  <div class="face-grid">
+    <!-- Câmera -->
+    <section class="face-camera card-face" aria-label="Câmera">
+      <div class="stage" [class.stage--ativa]="estadoCamera === 'ativa'">
+        <video #video muted playsinline [class.hidden]="estadoCamera !== 'ativa'"></video>
+        <canvas #canvas class="hidden"></canvas>
 
-      <div class="camera-placeholder" *ngIf="estadoCamera !== 'ativa'">
-        <span *ngIf="estadoCamera === 'parada'">Câmera desligada</span>
-        <span *ngIf="estadoCamera === 'ligando'">Ligando câmera...</span>
-        <span *ngIf="estadoCamera === 'erro'">Erro ao acessar a câmera</span>
+        <ng-container *ngIf="estadoCamera === 'ativa'">
+          <span class="stage__ao-vivo"><span class="stage__ponto"></span>Ao vivo</span>
+          <svg class="stage__guia" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <ellipse cx="50" cy="50" rx="21" ry="30" />
+          </svg>
+          <span class="stage__dica">Centralize o rosto no contorno</span>
+        </ng-container>
+
+        <div class="stage__vazio" *ngIf="estadoCamera !== 'ativa'">
+          <span class="stage__vazio-icone" [class.stage__vazio-icone--erro]="estadoCamera === 'erro'" aria-hidden="true">
+            <i class="bi" [ngClass]="estadoCamera === 'erro' ? 'bi-camera-video-off' : 'bi-camera-video'"></i>
+          </span>
+          <ng-container [ngSwitch]="estadoCamera">
+            <p *ngSwitchCase="'ligando'" class="stage__titulo">Ligando a câmera…</p>
+            <ng-container *ngSwitchCase="'erro'">
+              <p class="stage__titulo">Não foi possível acessar a câmera</p>
+              <p class="stage__texto">Libere a permissão de câmera no navegador e tente de novo.</p>
+            </ng-container>
+            <ng-container *ngSwitchDefault>
+              <p class="stage__titulo">Câmera desligada</p>
+              <p class="stage__texto">Ligue a câmera para cadastrar ou verificar seu rosto.</p>
+            </ng-container>
+          </ng-container>
+          <button type="button" class="btn btn-primary btn-lg stage__cta" (click)="ligarCamera()" [disabled]="estadoCamera === 'ligando'">
+            <i class="bi bi-camera-video me-2" aria-hidden="true"></i>{{ estadoCamera === 'erro' ? 'Tentar novamente' : 'Ligar câmera' }}
+          </button>
+        </div>
+
+        <div class="stage__processando" *ngIf="processando" aria-live="polite">
+          <span class="spinner-border" role="status" aria-hidden="true"></span>
+          <span>Processando…</span>
+        </div>
       </div>
-    </div>
 
-    <div class="status-linha">
-      <span class="badge" [class.badge--ok]="cadastrado" [class.badge--pendente]="!cadastrado">
-        {{ cadastrado ? 'Rosto cadastrado' : 'Nenhum rosto cadastrado ainda' }}
-      </span>
-    </div>
+      <div class="face-camera__barra" *ngIf="estadoCamera === 'ativa'">
+        <button type="button" class="btn btn-outline-secondary btn-sm" (click)="pararCamera()">
+          <i class="bi bi-camera-video-off me-1" aria-hidden="true"></i>Desligar câmera
+        </button>
+      </div>
+    </section>
 
-    <div class="acoes">
-      <button type="button" *ngIf="estadoCamera !== 'ativa'" (click)="ligarCamera()">
-        Ligar câmera
-      </button>
-      <button type="button" *ngIf="estadoCamera === 'ativa'" (click)="pararCamera()" class="secundario">
-        Desligar câmera
-      </button>
-      <button type="button" [disabled]="estadoCamera !== 'ativa' || processando" (click)="cadastrarRosto()">
-        Cadastrar meu rosto
-      </button>
-      <button type="button" [disabled]="estadoCamera !== 'ativa' || processando || !cadastrado" (click)="verificarIdentidade()">
-        Verificar identidade
-      </button>
-      <button type="button" class="perigo" *ngIf="cadastrado" [disabled]="processando" (click)="apagarRosto()">
-        Apagar meu rosto
-      </button>
-    </div>
+    <!-- Painel lateral -->
+    <aside class="face-painel">
+      <section class="card-face status" [class.status--ok]="cadastrado">
+        <span class="status__icone" aria-hidden="true">
+          <i class="bi" [ngClass]="cadastrado ? 'bi-patch-check-fill' : 'bi-person-exclamation'"></i>
+        </span>
+        <div>
+          <h2 class="status__titulo">{{ cadastrado ? 'Rosto cadastrado' : 'Nenhum rosto cadastrado' }}</h2>
+          <p class="status__texto">
+            {{ cadastrado
+              ? 'Você já pode usar o login facial e a verificação de identidade.'
+              : 'Cadastre seu rosto para usar o login facial.' }}
+          </p>
+        </div>
+      </section>
 
-    <div class="mensagem" *ngIf="mensagem" [ngClass]="'mensagem--' + mensagemTipo">
-      {{ mensagem }}
-    </div>
+      <section class="card-face acoes-card">
+        <h2 class="secao-titulo">O que deseja fazer?</h2>
+
+        <button type="button" class="btn btn-primary w-100"
+                *ngIf="!cadastrado"
+                [disabled]="estadoCamera !== 'ativa' || processando" (click)="cadastrarRosto()">
+          <i class="bi bi-person-plus me-2" aria-hidden="true"></i>Cadastrar meu rosto
+        </button>
+
+        <ng-container *ngIf="cadastrado">
+          <button type="button" class="btn btn-primary w-100"
+                  [disabled]="estadoCamera !== 'ativa' || processando" (click)="verificarIdentidade()">
+            <i class="bi bi-shield-check me-2" aria-hidden="true"></i>Verificar identidade
+          </button>
+          <button type="button" class="btn btn-outline-secondary w-100"
+                  [disabled]="estadoCamera !== 'ativa' || processando" (click)="cadastrarRosto()">
+            <i class="bi bi-arrow-repeat me-2" aria-hidden="true"></i>Atualizar cadastro
+          </button>
+        </ng-container>
+
+        <p class="acoes-card__aviso" *ngIf="estadoCamera !== 'ativa'">
+          <i class="bi bi-info-circle me-1" aria-hidden="true"></i>Ligue a câmera para continuar.
+        </p>
+
+        <div class="resultado" *ngIf="mensagem" [ngClass]="'resultado--' + mensagemTipo" role="status" aria-live="polite">
+          <i class="bi" aria-hidden="true"
+             [ngClass]="mensagemTipo === 'sucesso' ? 'bi-check-circle-fill' : mensagemTipo === 'erro' ? 'bi-exclamation-triangle-fill' : 'bi-info-circle-fill'"></i>
+          <span>{{ mensagem }}</span>
+        </div>
+      </section>
+
+      <section class="card-face dicas">
+        <h2 class="secao-titulo">Para uma boa leitura</h2>
+        <ul>
+          <li><i class="bi bi-brightness-high" aria-hidden="true"></i>Fique em um local bem iluminado</li>
+          <li><i class="bi bi-person-bounding-box" aria-hidden="true"></i>Rosto de frente e centralizado</li>
+          <li><i class="bi bi-eyeglasses" aria-hidden="true"></i>Sem óculos escuros, boné ou máscara</li>
+        </ul>
+      </section>
+
+      <section class="card-face privacidade" *ngIf="cadastrado">
+        <div>
+          <h2 class="secao-titulo">Seus dados</h2>
+          <p>O rosto cadastrado pode ser apagado a qualquer momento. Depois disso, o login facial deixa de funcionar até você cadastrar de novo.</p>
+        </div>
+        <button type="button" class="btn btn-outline-danger" [disabled]="processando" (click)="apagarRosto()">
+          <i class="bi bi-trash3 me-2" aria-hidden="true"></i>Apagar meu rosto
+        </button>
+      </section>
+    </aside>
   </div>
 </div>
