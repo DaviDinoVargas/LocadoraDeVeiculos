@@ -32,6 +32,8 @@
           }
         </hlm-native-select>
       </label>
+    }
+    @if (podeEditar()) {
       <a acaoVazia hlmBtn routerLink="/veiculos/new">
         <ng-icon name="lucidePlus" aria-hidden="true" />
         Novo veículo

@@ -11,7 +11,7 @@ import { FormSectionComponent } from '../../shared/form-fields/form-section.comp
 import { FormSkeletonComponent } from '../../shared/form-fields/form-skeleton.component';
 import { PageHeaderComponent } from '../../shared/layout/page-header.component';
 import { PageComponent } from '../../shared/layout/page.component';
-import { MascaraDirective } from '../../shared/mascaras/mascara.directive';
+import { MascaraDirective, mascararPlaca } from '../../shared/mascaras/mascara.directive';
 import { GrupoVeiculoDto } from '../grupoveiculos/grupo-veiculo.model';
 import { GruposVeiculoService } from '../grupoveiculos/grupos-veiculo.service';
 import { VeiculoDto } from './veiculo.model';
@@ -55,7 +55,13 @@ export class VeiculoFormComponent implements OnInit, FormProtegido {
     atualizar: (id, payload) => this.svc.atualizar(id, payload),
     rotaLista: '/veiculos',
     singular: 'veículo',
-    aoCarregar: v => this.form.patchValue(v)
+    // A API guarda a placa sem hífen (ABC1D23, 7 caracteres): o formulário mostra com a máscara (ABC-1D23) e
+    // tira o hífen ao enviar. Antes o padrão exigia o hífen e a API recusava o que o formulário aceitava.
+    aoCarregar: v => this.form.patchValue({ ...v, placa: mascararPlaca(v.placa), foto: v.foto ?? '' }),
+    montarPayload: () => {
+      const v = this.form.getRawValue();
+      return { ...v, placa: v.placa.replace('-', '') };
+    }
   });
   readonly editMode = this.crud.editMode;
   readonly carregando = this.crud.carregando;
