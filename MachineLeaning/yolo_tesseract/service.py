@@ -1,3 +1,4 @@
+import os
 import threading
 import time
 
@@ -16,6 +17,10 @@ JANELA_REPETICAO_S = 5.0
 # raramente erra igual em frames diferentes. Exige a mesma placa N vezes na janela abaixo.
 LEITURAS_PARA_CONFIRMAR = 2
 JANELA_CONFIRMACAO_S = 3.0
+# Sem nenhum contato do navegador (polling de /last, stream) por tanto tempo, a câmera é solta.
+# Antes, fechar a aba sem clicar em "Parar" deixava a webcam presa no servidor para sempre, e no
+# Windows a câmera é exclusiva: o reconhecimento facial do navegador ficava esperando/falhando.
+LIMITE_OCIOSO_S = float(os.environ.get('CAMERA_IDLE_TIMEOUT_S', 45))
 # Quantos erros por frame logar antes de silenciar (evita inundar o log).
 MAX_ERROS_LOGADOS = 5
 
@@ -35,6 +40,7 @@ class YoloTessService:
         if not ok_ocr:
             return False, detalhe
 
+        self.registrar_contato()
         with self.lock:
             if cam_index in self.running:
                 log.info('camera %s already running', cam_index)
@@ -59,10 +65,22 @@ class YoloTessService:
             entry['stop'] = True
         return True
 
+    def registrar_contato(self):
+        """O navegador ainda está acompanhando (polling/stream): adia a parada por ociosidade."""
+        self.contato = time.monotonic()
+
+    def _ocioso(self):
+        ultimo = getattr(self, 'contato', None)
+        return ultimo is not None and time.monotonic() - ultimo > LIMITE_OCIOSO_S
+
     def _deve_parar(self, cam_index):
         with self.lock:
             entry = self.running.get(cam_index)
-            return not entry or entry.get('stop')
+            parar = not entry or entry.get('stop')
+        if not parar and self._ocioso():
+            log.warning('camera %s sem contato do navegador há mais de %.0f s; liberando', cam_index, LIMITE_OCIOSO_S)
+            return True
+        return parar
 
     def _process_loop(self, cam_index, on_plate_callback, max_fps):
         interval = 1.0 / max(max_fps, 0.1)

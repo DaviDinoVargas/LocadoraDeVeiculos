@@ -1,6 +1,7 @@
 import os
 import re
 import shutil
+import time
 
 import cv2
 import pytesseract
@@ -39,11 +40,23 @@ def configurar_tesseract() -> str | None:
     return None
 
 
+_cache_ok: tuple[float, str] | None = None
+VALIDADE_CACHE_S = 60.0
+
+
 def ocr_disponivel() -> tuple[bool, str]:
-    """(True, versão) se o binário do Tesseract responde; senão (False, motivo)."""
+    """(True, versão) se o binário do Tesseract responde; senão (False, motivo).
+    O "sim" fica em cache por 60 s: cada consulta executa o tesseract.exe e o /start e o /health
+    chamavam isso a cada requisição."""
+    global _cache_ok
+    agora = time.monotonic()
+    if _cache_ok and agora - _cache_ok[0] < VALIDADE_CACHE_S:
+        return True, _cache_ok[1]
     configurar_tesseract()
     try:
-        return True, str(pytesseract.get_tesseract_version())
+        versao = str(pytesseract.get_tesseract_version())
+        _cache_ok = (agora, versao)
+        return True, versao
     except pytesseract.TesseractNotFoundError:
         return False, (
             "Binário do Tesseract não encontrado. Instale o Tesseract OCR e coloque-o no PATH "

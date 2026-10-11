@@ -40,16 +40,22 @@ class CameraHub:
         self._abrir = abrir
         self._lock = threading.Lock()
         self._cameras: dict[int, _Camera] = {}
+        self._travas_abertura: dict[int, threading.Lock] = {}
 
     # ---- ciclo de vida -------------------------------------------------
     def acquire(self, indice: int) -> bool:
         with self._lock:
-            cam = self._cameras.get(indice)
-            if cam is not None and cam.vivo:
-                cam.refs += 1
-                return True
-            if cam is not None:  # caiu: descarta e tenta abrir de novo
-                self._encerrar_locked(indice)
+            trava = self._travas_abertura.setdefault(indice, threading.Lock())
+        # A abertura de uma webcam pode demorar segundos: fica sob a trava DA CÂMERA (dois pedidos
+        # para o mesmo índice abrem uma vez só) e fora do lock global, que as leituras usam.
+        with trava:
+            with self._lock:
+                cam = self._cameras.get(indice)
+                if cam is not None and cam.vivo:
+                    cam.refs += 1
+                    return True
+                if cam is not None:  # caiu: descarta e tenta abrir de novo
+                    self._encerrar_locked(indice)
 
             cap = self._abrir(indice)
             if cap is None or not cap.isOpened():
@@ -62,7 +68,8 @@ class CameraHub:
 
             cam = _Camera(cap=cap, refs=1)
             cam.thread = threading.Thread(target=self._ler, args=(cam,), daemon=True, name=f'camera-{indice}')
-            self._cameras[indice] = cam
+            with self._lock:
+                self._cameras[indice] = cam
             cam.thread.start()
             return True
 

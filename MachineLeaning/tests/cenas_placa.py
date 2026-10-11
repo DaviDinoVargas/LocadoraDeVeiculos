@@ -6,15 +6,28 @@ import os
 
 import cv2
 import numpy as np
+import pytest
 from PIL import Image, ImageDraw, ImageFont
 
-FONTE = r'C:\Windows\Fonts\arialbd.ttf'
+# Fontes tentadas em ordem (Windows, Linux/CI, macOS). Sem nenhuma, os testes que dependem
+# da cena são pulados em vez de falhar por um motivo que não é do código testado.
+FONTES = [
+    'C:/Windows/Fonts/arialbd.ttf',
+    '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+    '/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf',
+    '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
+    '/System/Library/Fonts/Supplemental/Arial Bold.ttf',
+]
 
 
 def _fonte(tamanho):
-    if os.path.exists(FONTE):
-        return ImageFont.truetype(FONTE, tamanho)
-    return ImageFont.load_default(tamanho)  # Pillow >= 10.1: fonte escalável (Linux/CI sem Arial)
+    for caminho in FONTES:
+        if os.path.exists(caminho):
+            return ImageFont.truetype(caminho, tamanho)
+    try:
+        return ImageFont.load_default(tamanho)  # Pillow >= 10.1: fonte escalável
+    except TypeError:
+        pytest.skip('nenhuma fonte TrueType disponível para desenhar a placa de teste')
 
 
 def desenhar_placa(texto, largura=360, mercosul=True):

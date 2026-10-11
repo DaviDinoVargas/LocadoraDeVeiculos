@@ -2,6 +2,7 @@
 # ticket) exige o JWT de um usuário logado: antes qualquer um que alcançasse o
 # proxy podia ligar/desligar a webcam do servidor e ler as placas detectadas.
 import asyncio
+import os
 import threading
 import time
 from typing import List, Optional
@@ -75,12 +76,32 @@ def total_deteccoes() -> int:
         return len(_detections)
 
 
+# Procurar câmeras abre cada índice em sequência e, no Windows, índice que não existe também demora.
+# Por isso: poucos índices, resultado em cache e uma busca por vez (`?atualizar=true` força).
+MAX_PROBE = int(os.environ.get('CAMERA_MAX_PROBE', 4))
+VALIDADE_LISTA_S = 60.0
+_lista_cache: tuple[float, list[int]] | None = None
+_lista_lock = threading.Lock()
+
+
+def _procurar_cameras(atualizar: bool, abertas: list[int]) -> list[int]:
+    global _lista_cache
+    with _lista_lock:
+        agora = time.monotonic()
+        if not atualizar and _lista_cache and agora - _lista_cache[0] < VALIDADE_LISTA_S:
+            achadas = _lista_cache[1]
+        else:
+            achadas = list_cameras(MAX_PROBE, ignorar=abertas)
+            _lista_cache = (agora, achadas)
+    return sorted(set(achadas) | set(abertas))
+
+
 @router.get("/cameras")
-def get_cameras():
+def get_cameras(atualizar: bool = False):
     """Lista câmeras disponíveis"""
     abertas = hub.abertas()
     try:
-        cams = sorted(set(list_cameras(8, ignorar=abertas)) | set(abertas))
+        cams = _procurar_cameras(atualizar, abertas)
         return {"cameras": cams, "count": len(cams)}
     except Exception as e:  # noqa: BLE001
         log.exception('Erro ao listar câmeras: %s', e)
@@ -112,6 +133,8 @@ def stop_camera(camera_id: int):
 def get_last_detections(limit: int = 50, since: float = 0.0, camera: Optional[int] = None):
     """Últimas detecções, da mais nova para a mais antiga. `since` (epoch em
     segundos) devolve só as posteriores -- usado pelo polling do Angular."""
+    if service is not None:
+        service.registrar_contato()   # o navegador está acompanhando: não solta a câmera por ociosidade
     with _lock:
         itens = [d for d in _detections if d['timestamp'] > since and (camera is None or d['camera'] == camera)]
     itens.reverse()
@@ -164,6 +187,8 @@ async def video_stream(camera_id: int, request: Request):
         ultimo_envio = 0.0
         try:
             while not await request.is_disconnected():
+                if service is not None:
+                    service.registrar_contato()
                 frame, seq = await asyncio.to_thread(hub.read, camera_id, seq, 1.0)
                 if frame is None:
                     if not hub.esta_aberta(camera_id):

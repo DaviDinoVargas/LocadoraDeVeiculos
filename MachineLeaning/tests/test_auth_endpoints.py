@@ -195,3 +195,18 @@ def test_last_nunca_inventa_placas(cameras_client):
     client, _ = cameras_client
     client.app.dependency_overrides[auth.exigir_usuario] = lambda: None
     assert client.get('/last').json()['detections'] == []
+
+
+def test_lista_de_cameras_fica_em_cache_e_atualizar_forca_nova_busca(cameras_client, monkeypatch):
+    client, cam = cameras_client
+    client.app.dependency_overrides[auth.exigir_usuario] = lambda: None
+    chamadas = []
+    monkeypatch.setattr(cam, 'list_cameras', lambda n, ignorar=(): chamadas.append(n) or [0])
+    monkeypatch.setattr(cam, '_lista_cache', None)
+
+    assert client.get('/cameras').json()['cameras'] == [0]
+    assert client.get('/cameras').json()['cameras'] == [0]
+    assert len(chamadas) == 1                      # a segunda veio do cache
+    client.get('/cameras?atualizar=true')
+    assert len(chamadas) == 2
+    assert chamadas[0] == cam.MAX_PROBE

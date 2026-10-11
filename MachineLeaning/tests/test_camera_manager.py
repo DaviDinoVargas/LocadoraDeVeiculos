@@ -120,3 +120,24 @@ def test_acquire_concorrente_abre_uma_vez():
     [t.join() for t in ts]
     assert all(resultados) and len(capturas) == 1
     hub.shutdown()
+
+
+def test_abrir_uma_camera_lenta_nao_trava_a_leitura_de_outra():
+    import shared.camera_manager as cm
+
+    def abrir(indice):
+        if indice == 1:
+            time.sleep(0.8)   # webcam lenta de abrir
+        return FakeCapture()
+
+    hub = cm.CameraHub(abrir)
+    hub.acquire(0)
+    lenta = threading.Thread(target=hub.acquire, args=(1,))
+    lenta.start()
+    time.sleep(0.1)
+    t0 = time.time()
+    frame, _ = hub.read(0, 0, timeout=1.0)
+    assert frame is not None
+    assert time.time() - t0 < 0.4, 'a leitura da câmera 0 ficou esperando a abertura da câmera 1'
+    lenta.join()
+    hub.shutdown()

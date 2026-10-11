@@ -179,3 +179,28 @@ def test_so_confirma_a_placa_depois_de_lida_mais_de_uma_vez(monkeypatch):
     # leitura isolada e antiga não conta
     assert svc._confirmou(leituras, 'XYZ9876', agora) is False
     assert svc._confirmou(leituras, 'XYZ9876', agora + 10) is False
+
+
+# ---- câmera presa no servidor: libera sozinha sem contato do navegador ----
+
+def test_libera_a_camera_quando_o_navegador_some(monkeypatch):
+    monkeypatch.setattr(service_mod, 'LIMITE_OCIOSO_S', 0.3)
+    svc = _service(monkeypatch, lambda _c: None)
+    ok, motivo = svc.start_camera_processing(0, max_fps=50)
+    assert ok, motivo
+    assert svc.hub.esta_aberta(0)
+    # ninguém chama registrar_contato(): como a aba fechada sem "Parar"
+    assert _esperar(lambda: 0 not in svc.running and not svc.hub.esta_aberta(0), timeout=3.0)
+
+
+def test_contato_do_navegador_mantem_a_camera_ligada(monkeypatch):
+    monkeypatch.setattr(service_mod, 'LIMITE_OCIOSO_S', 0.4)
+    svc = _service(monkeypatch, lambda _c: None)
+    svc.start_camera_processing(0, max_fps=50)
+    fim = time.time() + 1.2
+    while time.time() < fim:
+        svc.registrar_contato()      # polling de /last
+        time.sleep(0.1)
+    assert svc.hub.esta_aberta(0) and 0 in svc.running
+    svc.stop_camera(0)
+    assert _esperar(lambda: 0 not in svc.running)

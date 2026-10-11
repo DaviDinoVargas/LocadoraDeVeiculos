@@ -12,6 +12,9 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
 
+# Antes de qualquer import que traga o cv2: abertura rápida da webcam no Windows (ver yolo_tesseract/__init__.py).
+os.environ.setdefault('OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS', '0')
+
 # Configurar o caminho para importar módulos corretamente
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
