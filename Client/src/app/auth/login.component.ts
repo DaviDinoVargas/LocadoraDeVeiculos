@@ -10,7 +10,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
-import { WebcamCaptureService } from '../shared/webcam-capture.service';
+import { WebcamCaptureService, WebcamErro } from '../shared/webcam-capture.service';
 import { AuthShellComponent } from './auth-shell.component';
 
 @Component({
@@ -95,8 +95,9 @@ export class LoginComponent implements OnInit, OnDestroy {
         await this.webcam.ligar(this.videoRef.nativeElement);
         this.cameraAtiva = true;
       }
-    } catch {
-      this.snackBar.open('Não foi possível acessar a câmera. Verifique as permissões do navegador.', 'Fechar', { duration: 4000 });
+    } catch (e) {
+      const mensagem = e instanceof WebcamErro ? e.message : 'Não foi possível acessar a câmera. Verifique as permissões do navegador.';
+      this.snackBar.open(mensagem, 'Fechar', { duration: 7000 });
       this.modoFacial = false;
     }
   }

@@ -4,7 +4,7 @@ import { filter } from 'rxjs/operators';
 import { AuthService } from '../../auth/auth.service';
 import { ConfirmacaoService } from '../../core/confirmacao.service';
 import { mensagensDeErro } from '../../core/api-error';
-import { WebcamCaptureService } from '../../shared/webcam-capture.service';
+import { WebcamCaptureService, WebcamErro } from '../../shared/webcam-capture.service';
 
 type EstadoCamera = 'parada' | 'ligando' | 'ativa' | 'erro';
 
@@ -58,7 +58,10 @@ export class VerificacaoFacialComponent implements OnInit, OnDestroy {
       this.estadoCamera = 'ativa';
     } catch (e) {
       this.estadoCamera = 'erro';
-      this.mostrarMensagem('Não foi possível acessar a câmera. Verifique as permissões do navegador.', 'erro');
+      this.mostrarMensagem(
+        e instanceof WebcamErro ? e.message : 'Não foi possível acessar a câmera. Verifique as permissões do navegador.',
+        'erro'
+      );
     }
   }
 
