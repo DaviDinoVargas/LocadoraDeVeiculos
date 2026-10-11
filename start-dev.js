@@ -7,7 +7,7 @@ console.log('🚀 Iniciando Locadora de Veículos...');
 // Caminhos absolutos (ajuste conforme sua estrutura)
 const basePath = __dirname;
 const angularPath = path.join(basePath, 'Client');
-const pythonPath = path.join(basePath, 'machine learning');
+const pythonPath = path.join(basePath, 'MachineLeaning');
 
 console.log('📁 Caminhos:');
 console.log(`   Angular: ${angularPath}`);
@@ -93,7 +93,7 @@ setTimeout(() => {
   console.log('\n✅ Serviços iniciados!');
   console.log('🌐 Angular: http://localhost:4200');
   console.log('🐍 Python API: http://localhost:8000');
-  console.log('📷 Stream: http://localhost:8000/stream/0');
+  console.log('📚 Docs da API de ML: http://localhost:8000/docs');
   console.log('\n🔄 Use Ctrl+C para encerrar todos os serviços\n');
 }, 5000);
 
