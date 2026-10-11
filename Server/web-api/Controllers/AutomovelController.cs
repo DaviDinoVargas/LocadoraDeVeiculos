@@ -130,6 +130,42 @@ namespace LocadoraDeVeiculos.WebApi.Controllers
             });
         }
 
+        /// <summary>
+        /// Automóveis sem aluguel ativo no período. Usado pelo formulário de aluguel para só oferecer
+        /// veículos livres (antes ele listava todos e o conflito só aparecia como 409 ao salvar).
+        /// </summary>
+        [HttpGet("disponiveis")]
+        public async Task<ActionResult<SelecionarAutomoveisDisponiveisResponse>> SelecionarDisponiveis(
+            [FromQuery] DateTimeOffset dataSaida,
+            [FromQuery] DateTimeOffset dataRetornoPrevisto,
+            [FromQuery] Guid? aluguelId,
+            CancellationToken cancellationToken
+        )
+        {
+            var query = new SelecionarAutomoveisDisponiveisQuery(dataSaida, dataRetornoPrevisto, aluguelId);
+
+            var result = await mediator.Send(query, cancellationToken);
+
+            return ProcessarResultado(result, (valor) =>
+            {
+                var registros = valor.Registros
+                    .Select(r => new Models.ModuloAutomovel.SelecionarAutomoveisDto(
+                        r.Id,
+                        r.Placa,
+                        r.Marca,
+                        r.Cor,
+                        r.Modelo,
+                        r.TipoCombustivel,
+                        r.CapacidadeTanque,
+                        r.Ano,
+                        r.Foto,
+                        r.GrupoAutomovelId))
+                    .ToList();
+
+                return Ok(new SelecionarAutomoveisDisponiveisResponse(registros));
+            });
+        }
+
         [HttpGet("{id:guid}")]
         public async Task<ActionResult<SelecionarAutomovelPorIdResponse>> SelecionarPorId(
             Guid id,

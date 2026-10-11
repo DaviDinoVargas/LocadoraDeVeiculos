@@ -50,6 +50,12 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
   private readonly taxasAlteradas$ = new Subject<void>();
   private simulacaoSub?: Subscription;
 
+  // Disponibilidade: só oferece veículos sem aluguel ativo no período escolhido (antes listava todos
+  // e o conflito só aparecia como 409 depois do envio).
+  avisoDisponibilidade = '';
+  private readonly periodoCarregado$ = new Subject<void>();
+  private disponibilidadeSub?: Subscription;
+
   private sub: Subscription | null = null;
 
   constructor(
@@ -77,6 +83,7 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.carregarDados();
     this.iniciarSimulacao();
+    this.iniciarDisponibilidade();
 
     this.sub = this.route.paramMap.subscribe((params: ParamMap) => {
       this.id = params.get('id');
@@ -91,6 +98,7 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.sub?.unsubscribe();
     this.simulacaoSub?.unsubscribe();
+    this.disponibilidadeSub?.unsubscribe();
   }
 
   carregarDados() {
@@ -121,7 +129,8 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
     this.veiculosSvc.listar().subscribe({
       next: veiculos => {
         this.veiculos = veiculos;
-        this.veiculosDisponiveis = veiculos; // TODO: Filtrar veículos disponíveis
+        // Sem período escolhido não dá para saber quem está livre: mostra todos até as datas serem informadas.
+        this.veiculosDisponiveis = veiculos;
       },
       error: () => this.snack.open('Erro ao carregar veículos', 'Fechar', { duration: 4000 })
     });
@@ -199,6 +208,46 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
     });
   }
 
+  private periodoEscolhido(): { saida: string; retorno: string } | null {
+    const { dataSaida, dataRetornoPrevisto } = this.form.getRawValue();
+    if (!dataSaida || !dataRetornoPrevisto) return null;
+    if (new Date(dataRetornoPrevisto) <= new Date(dataSaida)) return null;
+    return { saida: dataSaida, retorno: dataRetornoPrevisto };
+  }
+
+  private iniciarDisponibilidade() {
+    const mudancas$ = merge(
+      this.form.get('dataSaida')!.valueChanges,
+      this.form.get('dataRetornoPrevisto')!.valueChanges,
+      this.periodoCarregado$
+    );
+
+    this.disponibilidadeSub = mudancas$.pipe(
+      debounceTime(300),
+      map(() => this.periodoEscolhido()),
+      tap(() => (this.avisoDisponibilidade = '')),
+      switchMap(periodo => periodo
+        ? this.veiculosSvc.listarDisponiveis(periodo.saida, periodo.retorno, this.id ?? undefined)
+            .pipe(catchError(() => of(null))) // falhou: volta à lista completa, o servidor ainda valida ao salvar
+        : of(null))
+    ).subscribe(disponiveis => {
+      if (disponiveis === null) {
+        this.veiculosDisponiveis = this.veiculos;
+        return;
+      }
+
+      this.veiculosDisponiveis = disponiveis;
+      const escolhido = this.form.get('automovelId')!.value;
+
+      if (escolhido && !disponiveis.some(v => v.id === escolhido)) {
+        this.form.patchValue({ automovelId: '' });
+        this.avisoDisponibilidade = 'O veículo escolhido não está disponível neste período. Escolha outro.';
+      } else if (disponiveis.length === 0) {
+        this.avisoDisponibilidade = 'Nenhum veículo disponível neste período.';
+      }
+    });
+  }
+
   /** Aluguel já contratado mantém a caução de quando foi feito; aluguel novo usa a vigente. */
   caucaoExibida(): number {
     return this.caucao ?? this.simulacao?.valorCaucao ?? 0;
@@ -221,13 +270,19 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.svc.obter(id).subscribe({
       next: (a: any) => {
-        this.form.patchValue(a);
+        // <input type="date"> só aceita yyyy-MM-dd: com o ISO que a API devolve ele aparecia em branco.
+        this.form.patchValue({
+          ...a,
+          dataSaida: String(a.dataSaida ?? '').slice(0, 10),
+          dataRetornoPrevisto: String(a.dataRetornoPrevisto ?? '').slice(0, 10)
+        });
         this.taxasSelecionadas = a.taxasServicos?.map((t: any) => t.id) || [];
         this.form.patchValue({ taxasServicosIds: this.taxasSelecionadas }, { emitEvent: false });
         this.valorDescontoAtual = a.valorDesconto || 0;
         this.caucao = a.valorCaucao ?? null;
         this.loading = false;
         this.taxasAlteradas$.next(); // calcula o resumo do aluguel carregado
+        this.periodoCarregado$.next(); // e a disponibilidade no período já contratado
       },
       error: () => {
         this.loading = false;

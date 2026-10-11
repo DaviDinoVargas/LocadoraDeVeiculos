@@ -8,6 +8,8 @@ namespace LocadoraDeVeiculos.Core.Dominio.ModuloAluguel
     public interface IRepositorioAluguel : IRepositorio<Aluguel>
     {
         Task<bool> ExisteAluguelAtivoParaAutomovelAsync(Guid automovelId, DateTimeOffset dataSaida, DateTimeOffset dataRetornoPrevisto, Guid? aluguelIdExcluir = null);
+        /// <summary>Ids dos automóveis com aluguel ativo (não cancelado/concluído) que cruza o período.</summary>
+        Task<List<Guid>> SelecionarAutomoveisIndisponiveisAsync(DateTimeOffset dataSaida, DateTimeOffset dataRetornoPrevisto, Guid? aluguelIdExcluir = null);
         Task<bool> VerificarDocumentosCondutorEmDiaAsync(Guid condutorId);
         Task<List<Aluguel>> SelecionarAlugueisAtivosPorAutomovelAsync(Guid automovelId);
         Task<List<Aluguel>> SelecionarAlugueisPorStatusAsync(StatusAluguel status);

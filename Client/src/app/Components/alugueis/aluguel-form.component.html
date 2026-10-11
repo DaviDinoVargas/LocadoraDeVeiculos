@@ -29,19 +29,6 @@
       </div>
     </div>
 
-    <!-- Veículo -->
-    <div class="mb-3">
-      <label class="form-label">Veículo</label>
-      <select class="form-select" formControlName="automovelId">
-        <option value="">Selecione um veículo</option>
-        <option *ngFor="let veiculo of veiculosDisponiveis" [value]="veiculo.id">{{ veiculo.placa }} - {{ veiculo.marca }} {{ veiculo.modelo }}</option>
-      </select>
-      <div *ngIf="form.controls['automovelId'].invalid && form.controls['automovelId'].touched"
-           class="text-danger small">
-        Veículo é obrigatório.
-      </div>
-    </div>
-
     <!-- Datas -->
     <div class="row mb-3">
       <div class="col-md-6">
@@ -60,6 +47,25 @@
           Data de retorno previsto é obrigatória.
         </div>
       </div>
+    </div>
+
+    <!-- Veículo -->
+    <div class="mb-3">
+      <label class="form-label">Veículo</label>
+      <select class="form-select" formControlName="automovelId">
+        <option value="">Selecione um veículo</option>
+        <option *ngFor="let veiculo of veiculosDisponiveis" [value]="veiculo.id">{{ veiculo.placa }} - {{ veiculo.marca }} {{ veiculo.modelo }}</option>
+      </select>
+      <div *ngIf="form.controls['automovelId'].invalid && form.controls['automovelId'].touched"
+           class="text-danger small">
+        Veículo é obrigatório.
+      </div>
+      <div *ngIf="avisoDisponibilidade" class="text-warning-emphasis small mt-1" role="status">
+        <i class="bi bi-exclamation-triangle me-1"></i>{{ avisoDisponibilidade }}
+      </div>
+      <small class="text-muted" *ngIf="!avisoDisponibilidade && !form.controls['dataSaida'].value">
+        Informe as datas para ver só os veículos disponíveis no período.
+      </small>
     </div>
 
     <!-- Taxas e Serviços -->

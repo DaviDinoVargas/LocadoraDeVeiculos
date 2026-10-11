@@ -52,20 +52,41 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloAluguel
             DateTimeOffset dataRetornoPrevisto,
             Guid? aluguelIdExcluir = null)
         {
+            return await AlugueisAtivosNoPeriodo(dataSaida, dataRetornoPrevisto, aluguelIdExcluir)
+                .AnyAsync(a => a.AutomovelId == automovelId);
+        }
+
+        public async Task<List<Guid>> SelecionarAutomoveisIndisponiveisAsync(
+            DateTimeOffset dataSaida,
+            DateTimeOffset dataRetornoPrevisto,
+            Guid? aluguelIdExcluir = null)
+        {
+            return await AlugueisAtivosNoPeriodo(dataSaida, dataRetornoPrevisto, aluguelIdExcluir)
+                .Select(a => a.AutomovelId)
+                .Distinct()
+                .ToListAsync();
+        }
+
+        // Única definição de "aluguel que bloqueia o automóvel": não cancelado, não concluído e com
+        // período que cruza [dataSaida, dataRetornoPrevisto] (extremos incluídos). Cadastro/edição
+        // (409) e a listagem de disponíveis usam a mesma regra, então nunca discordam.
+        private IQueryable<Aluguel> AlugueisAtivosNoPeriodo(
+            DateTimeOffset dataSaida,
+            DateTimeOffset dataRetornoPrevisto,
+            Guid? aluguelIdExcluir)
+        {
             var query = dbContext.Alugueis
-                .Where(a => a.AutomovelId == automovelId &&
-                           a.Status != StatusAluguel.Cancelado &&
-                           a.Status != StatusAluguel.Concluido &&
-                           ((dataSaida >= a.DataSaida && dataSaida <= a.DataRetornoPrevisto) ||
-                            (dataRetornoPrevisto >= a.DataSaida && dataRetornoPrevisto <= a.DataRetornoPrevisto) ||
-                            (dataSaida <= a.DataSaida && dataRetornoPrevisto >= a.DataRetornoPrevisto)));
+                .Where(a => a.Status != StatusAluguel.Cancelado &&
+                            a.Status != StatusAluguel.Concluido &&
+                            a.DataSaida <= dataRetornoPrevisto &&
+                            a.DataRetornoPrevisto >= dataSaida);
 
             if (aluguelIdExcluir.HasValue)
             {
                 query = query.Where(a => a.Id != aluguelIdExcluir.Value);
             }
 
-            return await query.AnyAsync();
+            return query;
         }
 
         public async Task<bool> VerificarDocumentosCondutorEmDiaAsync(Guid condutorId)

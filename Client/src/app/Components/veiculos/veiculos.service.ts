@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { VeiculoDto } from './veiculo.model';
 import { API_BASE_URL } from '../../core/api.config';
@@ -35,6 +35,14 @@ export class VeiculosService {
 
   excluir(id: string): Observable<void> {
     return this.http.delete<any>(`${this.base}/${id}`).pipe(map(raw => this.extractData<void>(raw)));
+  }
+
+  // Veículos sem aluguel ativo no período (mesma regra do 409 ao salvar). Na edição, aluguelId
+  // evita que o próprio aluguel bloqueie o veículo que ele já usa.
+  listarDisponiveis(dataSaida: string, dataRetornoPrevisto: string, aluguelId?: string): Observable<VeiculoDto[]> {
+    let params = new HttpParams().set('dataSaida', dataSaida).set('dataRetornoPrevisto', dataRetornoPrevisto);
+    if (aluguelId) params = params.set('aluguelId', aluguelId);
+    return this.http.get<any>(`${this.base}/disponiveis`, { params }).pipe(map(raw => this.extractData<VeiculoDto[]>(raw)));
   }
 
   listarPorGrupo(grupoId: string): Observable<VeiculoDto[]> {

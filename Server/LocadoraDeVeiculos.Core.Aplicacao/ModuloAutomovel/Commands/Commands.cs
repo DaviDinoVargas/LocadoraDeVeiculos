@@ -86,6 +86,18 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAutomovel.Commands
         string GrupoAutomovelNome
     );
 
+    /// <summary>
+    /// Automóveis livres no período informado (sem aluguel ativo que o cruze). Na edição de um
+    /// aluguel, AluguelIdExcluir evita que o próprio aluguel bloqueie o veículo que ele já usa.
+    /// </summary>
+    public record SelecionarAutomoveisDisponiveisQuery(
+        DateTimeOffset DataSaida,
+        DateTimeOffset DataRetornoPrevisto,
+        Guid? AluguelIdExcluir
+    ) : IRequest<Result<SelecionarAutomoveisDisponiveisResult>>;
+
+    public record SelecionarAutomoveisDisponiveisResult(IReadOnlyList<SelecionarAutomoveisDto> Registros);
+
     public record SelecionarAutomoveisPorGrupoQuery(Guid GrupoId) : IRequest<Result<SelecionarAutomoveisPorGrupoResult>>;
 
     public record SelecionarAutomoveisPorGrupoResult(IReadOnlyList<SelecionarAutomoveisDto> Registros);

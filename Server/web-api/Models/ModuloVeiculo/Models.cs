@@ -77,6 +77,10 @@ namespace LocadoraDeVeiculos.WebApi.Models.ModuloAutomovel
         string GrupoAutomovelNome
     );
 
+    public record SelecionarAutomoveisDisponiveisResponse(
+        IReadOnlyList<SelecionarAutomoveisDto> Registros
+    );
+
     public record SelecionarAutomoveisPorGrupoResponse(
         IReadOnlyList<SelecionarAutomoveisDto> Registros
     );
