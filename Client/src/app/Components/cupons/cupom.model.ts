@@ -12,6 +12,14 @@ export interface CupomDto {
   ativo?: boolean;
 }
 
+// Resposta de POST /api/cupons/validar: confere se o código pode ser usado agora e quanto abate.
+export interface ValidacaoCupomDto {
+  valido: boolean;
+  motivoInvalido: string | null;
+  valorDesconto: number;
+  valorComDesconto: number;
+}
+
 export const TIPOS_DESCONTO = [
   { value: 'Percentual', label: 'Percentual (%)' },
   { value: 'ValorFixo', label: 'Valor fixo (R$)' }

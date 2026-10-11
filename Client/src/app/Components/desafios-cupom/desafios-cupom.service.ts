@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
-import { DesafioCupomDto } from './desafio-cupom.model';
+import { DesafioCupomDto, ProgressoDesafioDto } from './desafio-cupom.model';
 import { API_BASE_URL } from '../../core/api.config';
+import { SILENCIAR_ERRO } from '../../core/http-context';
 
 @Injectable({ providedIn: 'root' })
 export class DesafiosCupomService {
@@ -30,6 +31,13 @@ export class DesafiosCupomService {
 
   atualizar(id: string, payload: DesafioCupomDto): Observable<DesafioCupomDto> {
     return this.http.put<any>(`${this.base}/${id}`, payload).pipe(map(raw => this.extractData<DesafioCupomDto>(raw)));
+  }
+
+  // Metas ativas do cliente e quanto ele já cumpriu (alugueis concluídos no período do desafio).
+  progressoDoCliente(clienteId: string): Observable<ProgressoDesafioDto[]> {
+    return this.http.get<{ progresso: ProgressoDesafioDto[] }>(`${this.base}/cliente/${clienteId}/progresso`, {
+      context: new HttpContext().set(SILENCIAR_ERRO, true)
+    }).pipe(map(raw => raw?.progresso ?? []));
   }
 
   excluir(id: string): Observable<void> {

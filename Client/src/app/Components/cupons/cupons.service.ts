@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
-import { CupomDto } from './cupom.model';
+import { CupomDto, ValidacaoCupomDto } from './cupom.model';
 import { API_BASE_URL } from '../../core/api.config';
+import { SILENCIAR_ERRO } from '../../core/http-context';
 
 @Injectable({ providedIn: 'root' })
 export class CuponsService {
@@ -30,6 +31,14 @@ export class CuponsService {
 
   atualizar(id: string, payload: CupomDto): Observable<CupomDto> {
     return this.http.put<any>(`${this.base}/${id}`, payload).pipe(map(raw => this.extractData<CupomDto>(raw)));
+  }
+
+  // Usada enquanto o usuário digita o código no formulário de aluguel: o resultado (válido ou não)
+  // aparece no próprio formulário, então erros HTTP não abrem snackbar a cada tentativa.
+  validar(codigo: string, valorBase: number): Observable<ValidacaoCupomDto> {
+    return this.http.post<ValidacaoCupomDto>(`${this.base}/validar`, { codigo, valorBase }, {
+      context: new HttpContext().set(SILENCIAR_ERRO, true)
+    });
   }
 
   excluir(id: string): Observable<void> {

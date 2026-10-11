@@ -87,9 +87,44 @@
     <!-- Cupom de Desconto -->
     <div class="mb-3">
       <label class="form-label">Código do Cupom (opcional)</label>
-      <input class="form-control text-uppercase" formControlName="cupomCodigo" placeholder="Ex: BEMVINDO10"/>
-      <div class="mt-1" *ngIf="editMode && valorDescontoAtual > 0">
-        <span class="badge bg-success">Desconto aplicado: {{ formatarMoeda(valorDescontoAtual) }}</span>
+      <input class="form-control text-uppercase"
+             [class.is-valid]="cupomStatus === 'valido'"
+             [class.is-invalid]="cupomStatus === 'invalido'"
+             formControlName="cupomCodigo"
+             placeholder="Ex: BEMVINDO10"
+             aria-describedby="cupom-feedback"/>
+      <div id="cupom-feedback" class="small mt-1" aria-live="polite">
+        <span *ngIf="cupomStatus === 'validando'" class="text-muted">
+          <span class="spinner-border spinner-border-sm me-1"></span>Validando cupom…
+        </span>
+        <span *ngIf="cupomStatus === 'valido'" class="text-success"><i class="bi bi-check-circle me-1"></i>{{ cupomMensagem }}</span>
+        <span *ngIf="cupomStatus === 'invalido'" class="text-danger"><i class="bi bi-x-circle me-1"></i>{{ cupomMensagem }}</span>
+        <span *ngIf="cupomStatus === 'aguardando'" class="text-muted">{{ cupomMensagem }}</span>
+      </div>
+
+      <!-- Desafios do cliente: metas ativas, progresso e o cupom liberado ao cumprir -->
+      <div *ngIf="progressoDesafios.length > 0" class="mt-3" aria-label="Desafios do cliente">
+        <div class="form-label mb-1">Desafios do cliente</div>
+        <ul class="list-unstyled mb-0">
+          <li *ngFor="let d of progressoDesafios" class="mb-2">
+            <div class="d-flex justify-content-between align-items-center small">
+              <span>{{ d.nome }}</span>
+              <span *ngIf="d.cumprido && d.cupomLiberadoCodigo" class="d-flex align-items-center gap-2">
+                <span class="badge bg-success"><i class="bi bi-trophy me-1"></i>Meta cumprida</span>
+                <button type="button" class="btn btn-sm btn-outline-success" (click)="usarCupomDoDesafio(d.cupomLiberadoCodigo)">
+                  Usar cupom {{ d.cupomLiberadoCodigo }}
+                </button>
+              </span>
+              <span *ngIf="!d.cumprido" class="text-muted">{{ d.progresso }} de {{ d.meta }} aluguéis</span>
+            </div>
+            <div class="progress" style="height: 6px"
+                 role="progressbar"
+                 [attr.aria-label]="'Progresso do desafio ' + d.nome"
+                 [attr.aria-valuenow]="percentualDoDesafio(d)" aria-valuemin="0" aria-valuemax="100">
+              <div class="progress-bar" [class.bg-success]="d.cumprido" [style.width.%]="percentualDoDesafio(d)"></div>
+            </div>
+          </li>
+        </ul>
       </div>
     </div>
 
@@ -115,9 +150,9 @@
             <dt class="fw-normal">Taxas e serviços</dt>
             <dd class="mb-0">{{ formatarMoeda(simulacao.valorTaxas) }}</dd>
           </div>
-          <div class="d-flex justify-content-between text-success" *ngIf="valorDescontoAtual > 0">
+          <div class="d-flex justify-content-between text-success" *ngIf="descontoCupom > 0">
             <dt class="fw-normal">Desconto do cupom</dt>
-            <dd class="mb-0">− {{ formatarMoeda(valorDescontoAtual) }}</dd>
+            <dd class="mb-0">− {{ formatarMoeda(descontoCupom) }}</dd>
           </div>
           <div class="d-flex justify-content-between">
             <dt class="fw-normal">Caução (devolvida na entrega)</dt>

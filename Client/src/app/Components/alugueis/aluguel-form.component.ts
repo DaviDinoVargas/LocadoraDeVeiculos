@@ -13,8 +13,11 @@ import { CondutorDto } from '../condutor/condutor.model';
 import { VeiculoDto } from '../veiculos/veiculo.model';
 import { TaxaServicoDto } from '../taxa-servico/taxa-servico.model';
 import { Subject, Subscription, merge, of } from 'rxjs';
-import { catchError, debounceTime, map, switchMap, tap } from 'rxjs/operators';
+import { catchError, debounceTime, distinctUntilChanged, map, switchMap, tap } from 'rxjs/operators';
 import { mensagensDeErro } from '../../core/api-error';
+import { CuponsService } from '../cupons/cupons.service';
+import { DesafiosCupomService } from '../desafios-cupom/desafios-cupom.service';
+import { ProgressoDesafioDto } from '../desafios-cupom/desafio-cupom.model';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -38,7 +41,6 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
   veiculosDisponiveis: VeiculoDto[] = [];
   taxasServicos: TaxaServicoDto[] = [];
   taxasSelecionadas: string[] = [];
-  valorDescontoAtual = 0;
   // Caução do aluguel em edição, vinda do servidor. Em um aluguel novo o servidor copia o valor
   // vigente em Configuracao.ValorGarantia ao salvar (antes o front fixava 1000).
   caucao: number | null = null;
@@ -53,6 +55,19 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
   // Disponibilidade: só oferece veículos sem aluguel ativo no período escolhido (antes listava todos
   // e o conflito só aparecia como 409 depois do envio).
   avisoDisponibilidade = '';
+
+  // Cupom: validado no servidor (POST /cupons/validar) sobre o valor simulado, então o desconto
+  // mostrado é o mesmo que será gravado ao salvar.
+  cupomStatus: 'vazio' | 'aguardando' | 'validando' | 'valido' | 'invalido' = 'vazio';
+  cupomMensagem = '';
+  descontoCupom = 0;
+  private cupomDoAluguel: string | null = null; // cupom já gravado no aluguel em edição
+  private readonly simulacaoAtualizada$ = new Subject<void>();
+  private cupomSub?: Subscription;
+
+  // Desafios do cliente selecionado (GET /desafios-cupom/cliente/{id}/progresso)
+  progressoDesafios: ProgressoDesafioDto[] = [];
+  private desafiosSub?: Subscription;
   private readonly periodoCarregado$ = new Subject<void>();
   private disponibilidadeSub?: Subscription;
 
@@ -65,6 +80,8 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
     private condutoresSvc: CondutoresService,
     private veiculosSvc: VeiculosService,
     private taxasSvc: TaxasServicosService,
+    private cuponsSvc: CuponsService,
+    private desafiosSvc: DesafiosCupomService,
     private route: ActivatedRoute,
     private router: Router,
     private snack: MatSnackBar
@@ -84,6 +101,8 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
     this.carregarDados();
     this.iniciarSimulacao();
     this.iniciarDisponibilidade();
+    this.iniciarCupom();
+    this.iniciarDesafios();
 
     this.sub = this.route.paramMap.subscribe((params: ParamMap) => {
       this.id = params.get('id');
@@ -99,6 +118,8 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
     this.sub?.unsubscribe();
     this.simulacaoSub?.unsubscribe();
     this.disponibilidadeSub?.unsubscribe();
+    this.cupomSub?.unsubscribe();
+    this.desafiosSub?.unsubscribe();
   }
 
   carregarDados() {
@@ -205,6 +226,7 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
       this.simulando = false;
       if (simulacao) this.simulacao = simulacao;
       else if (this.erroSimulacao) this.simulacao = null;
+      this.simulacaoAtualizada$.next();
     });
   }
 
@@ -248,6 +270,66 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
     });
   }
 
+  private iniciarCupom() {
+    const mudancas$ = merge(this.form.get('cupomCodigo')!.valueChanges, this.simulacaoAtualizada$);
+
+    this.cupomSub = mudancas$.pipe(
+      debounceTime(400),
+      map(() => (this.form.get('cupomCodigo')!.value ?? '').trim().toUpperCase()),
+      tap(codigo => {
+        if (!codigo) {
+          this.cupomStatus = 'vazio';
+          this.cupomMensagem = '';
+          this.descontoCupom = 0;
+        } else if (this.editMode && codigo === this.cupomDoAluguel) {
+          this.cupomStatus = 'valido';
+          this.cupomMensagem = 'Cupom já aplicado neste aluguel.';
+        } else if (!this.simulacao) {
+          this.cupomStatus = 'aguardando';
+          this.cupomMensagem = 'Escolha o veículo e as datas para validar o cupom.';
+          this.descontoCupom = 0;
+        } else {
+          this.cupomStatus = 'validando';
+          this.cupomMensagem = '';
+        }
+      }),
+      switchMap(codigo => this.cupomStatus === 'validando'
+        ? this.cuponsSvc.validar(codigo, this.simulacao!.valorPrevisto).pipe(
+            catchError(err => of({
+              valido: false,
+              motivoInvalido: mensagensDeErro(err, 'Não foi possível validar o cupom agora.')[0],
+              valorDesconto: 0,
+              valorComDesconto: this.simulacao!.valorPrevisto
+            })))
+        : of(null))
+    ).subscribe(resultado => {
+      if (!resultado) return;
+      this.cupomStatus = resultado.valido ? 'valido' : 'invalido';
+      this.descontoCupom = resultado.valido ? resultado.valorDesconto : 0;
+      this.cupomMensagem = resultado.valido
+        ? `Desconto de ${this.formatarMoeda(resultado.valorDesconto)} aplicado.`
+        : (resultado.motivoInvalido ?? 'Cupom inválido.');
+    });
+  }
+
+  private iniciarDesafios() {
+    this.desafiosSub = this.form.get('clienteId')!.valueChanges.pipe(
+      distinctUntilChanged(),
+      switchMap(clienteId => clienteId
+        ? this.desafiosSvc.progressoDoCliente(clienteId).pipe(catchError(() => of([] as ProgressoDesafioDto[])))
+        : of([] as ProgressoDesafioDto[]))
+    ).subscribe(progresso => (this.progressoDesafios = progresso));
+  }
+
+  /** Aplica no formulário o cupom liberado por um desafio cumprido. */
+  usarCupomDoDesafio(codigo: string) {
+    this.form.patchValue({ cupomCodigo: codigo });
+  }
+
+  percentualDoDesafio(d: ProgressoDesafioDto): number {
+    return d.meta > 0 ? Math.min(100, Math.round((d.progresso / d.meta) * 100)) : 0;
+  }
+
   /** Aluguel já contratado mantém a caução de quando foi feito; aluguel novo usa a vigente. */
   caucaoExibida(): number {
     return this.caucao ?? this.simulacao?.valorCaucao ?? 0;
@@ -256,7 +338,7 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
   /** Total a pagar: diárias + taxas − desconto do cupom + caução. */
   totalAPagar(): number {
     if (!this.simulacao) return 0;
-    return this.simulacao.valorPrevisto - this.valorDescontoAtual + this.caucaoExibida();
+    return this.simulacao.valorPrevisto - this.descontoCupom + this.caucaoExibida();
   }
 
   formatarMoeda(valor: number): string {
@@ -278,7 +360,8 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
         });
         this.taxasSelecionadas = a.taxasServicos?.map((t: any) => t.id) || [];
         this.form.patchValue({ taxasServicosIds: this.taxasSelecionadas }, { emitEvent: false });
-        this.valorDescontoAtual = a.valorDesconto || 0;
+        this.descontoCupom = a.valorDesconto || 0;
+        this.cupomDoAluguel = a.cupomCodigo ? String(a.cupomCodigo).toUpperCase() : null;
         this.caucao = a.valorCaucao ?? null;
         this.loading = false;
         this.taxasAlteradas$.next(); // calcula o resumo do aluguel carregado
@@ -296,6 +379,13 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       this.snack.open('Verifique os campos obrigatórios', 'Fechar', { duration: 3500 });
+      return;
+    }
+
+    if (this.cupomStatus === 'invalido' || this.cupomStatus === 'validando') {
+      this.snack.open(
+        this.cupomStatus === 'validando' ? 'Aguarde a validação do cupom.' : 'Corrija ou remova o cupom antes de salvar.',
+        'Fechar', { duration: 3500 });
       return;
     }
 
