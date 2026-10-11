@@ -82,6 +82,28 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Commands
         string? CupomCodigo
     );
 
+    /// <summary>
+    /// Calcula, sem gravar nada, quanto custaria um aluguel: diárias do plano do grupo do automóvel
+    /// + taxas/serviços escolhidos, mais a caução vigente da empresa. O cupom (desconto) é
+    /// consultado à parte em ValidarCupomQuery, usando ValorPrevisto como base.
+    /// </summary>
+    public record SimularAluguelQuery(
+        Guid AutomovelId,
+        DateTimeOffset DataSaida,
+        DateTimeOffset DataRetornoPrevisto,
+        List<Guid>? TaxasServicosIds
+    ) : IRequest<Result<SimularAluguelResult>>;
+
+    public record SimularAluguelResult(
+        int Dias,
+        string PlanoNome,
+        decimal PrecoDiaria,
+        decimal ValorDiarias,
+        decimal ValorTaxas,
+        decimal ValorPrevisto,
+        decimal ValorCaucao
+    );
+
     public record SelecionarAlugueisPorStatusQuery(string Status) : IRequest<Result<SelecionarAlugueisPorStatusResult>>;
 
     public record SelecionarAlugueisPorStatusResult(IReadOnlyList<SelecionarAlugueisDto> Registros);

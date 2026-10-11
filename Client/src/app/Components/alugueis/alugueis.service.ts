@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
-import { AluguelDto, AluguelCompletoDto, SelecionarAlugueisDto } from './aluguel.model';
+import { AluguelDto, AluguelCompletoDto, SelecionarAlugueisDto, SimulacaoAluguelDto, SimularAluguelRequest } from './aluguel.model';
+import { SILENCIAR_ERRO } from '../../core/http-context';
 import { API_BASE_URL } from '../../core/api.config';
 
 
@@ -38,6 +39,14 @@ export class AlugueisService {
 
   obter(id: string): Observable<AluguelCompletoDto> {
     return this.http.get<any>(`${this.base}/${id}`).pipe(map(raw => this.extractData<AluguelCompletoDto>(raw)));
+  }
+
+  // Chamada a cada mudança de campo do formulário: o erro é mostrado no próprio painel de valores,
+  // então o interceptor global não deve abrir um snackbar a cada falha.
+  simular(payload: SimularAluguelRequest): Observable<SimulacaoAluguelDto> {
+    return this.http.post<SimulacaoAluguelDto>(`${this.base}/simular`, payload, {
+      context: new HttpContext().set(SILENCIAR_ERRO, true)
+    });
   }
 
   criar(payload: AluguelDto): Observable<AluguelDto> {

@@ -3,10 +3,16 @@ import { inject } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { SILENCIAR_ERRO } from '../core/http-context';
+import { mensagensDeErro } from '../core/api-error';
 
 // Interceptor de Erro HTTP
 export const HttpErrorInterceptor: HttpInterceptorFn = (req, next) => {
   const snackBar = inject(MatSnackBar);
+
+  if (req.context.get(SILENCIAR_ERRO)) {
+    return next(req);
+  }
 
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
@@ -25,10 +31,14 @@ export const HttpErrorInterceptor: HttpInterceptorFn = (req, next) => {
         errorMessage = `Erro: ${error.error.message}`;
       } else {
         // Erro do servidor
-        if (error.status === 400) {
+        if (error.status === 409 || error.status === 422 || error.status === 404) {
+          // Erros de negócio vêm do servidor como array de mensagens (ver core/api-error.ts)
+          const mensagens = mensagensDeErro(error, '');
+          errorMessage = mensagens[0] || (error.status === 404 ? 'Recurso não encontrado.' : 'Operação não permitida.');
+        } else if (error.status === 400) {
           // Erro de validação
-          if (typeof error.error === 'string') {
-            errorMessage = error.error;
+          if (Array.isArray(error.error) || typeof error.error === 'string') {
+            errorMessage = mensagensDeErro(error).join(' ');
           } else if (error.error?.errors) {
             // Para erros de validação do ASP.NET
             const validationErrors = error.error.errors;

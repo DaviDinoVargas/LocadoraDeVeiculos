@@ -26,6 +26,13 @@ namespace LocadoraDeVeiculos.WebApi.Models.ModuloAluguel
         string? CupomCodigo = null
     );
 
+    public record SimularAluguelRequest(
+        Guid AutomovelId,
+        DateTimeOffset DataSaida,
+        DateTimeOffset DataRetornoPrevisto,
+        List<Guid>? TaxasServicosIds = null
+    );
+
     public record IniciarAluguelRequest(Guid Id);
 
     public record CancelarAluguelRequest(Guid Id);
@@ -33,6 +40,16 @@ namespace LocadoraDeVeiculos.WebApi.Models.ModuloAluguel
     public record ExcluirAluguelRequest(Guid Id);
 
     // Responses
+    public record SimularAluguelResponse(
+        int Dias,
+        string PlanoNome,
+        decimal PrecoDiaria,
+        decimal ValorDiarias,
+        decimal ValorTaxas,
+        decimal ValorPrevisto,
+        decimal ValorCaucao
+    );
+
     public record CadastrarAluguelResponse(Guid Id);
 
     public record EditarAluguelResponse(

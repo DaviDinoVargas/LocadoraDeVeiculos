@@ -51,6 +51,28 @@ public sealed class CalculoAluguelServiceTests
     }
 
     [TestMethod]
+    public void Detalhar_SeparaDiariasETaxas_ESomaIgualAoValorPrevisto()
+    {
+        var plano = CriarPlano(precoDiaria: 100m);
+        var saida = new DateTimeOffset(2026, 1, 10, 9, 0, 0, TimeSpan.Zero);
+        var retorno = new DateTimeOffset(2026, 1, 13, 9, 0, 0, TimeSpan.Zero); // 3 dias
+        var taxas = new List<TaxaServico>
+        {
+            new("Seguro", 30m, TipoCalculo.Diario),  // 90
+            new("Limpeza", 50m, TipoCalculo.Fixo)     // 50
+        };
+
+        var detalhe = CalculoAluguelService.Detalhar(plano, saida, retorno, taxas);
+
+        Assert.AreEqual(3, detalhe.Dias);
+        Assert.AreEqual(100m, detalhe.PrecoDiaria);
+        Assert.AreEqual(300m, detalhe.ValorDiarias);
+        Assert.AreEqual(140m, detalhe.ValorTaxas);
+        Assert.AreEqual(440m, detalhe.ValorPrevisto);
+        Assert.AreEqual(CalculoAluguelService.CalcularValorPrevisto(plano, saida, retorno, taxas), detalhe.ValorPrevisto);
+    }
+
+    [TestMethod]
     public void CalcularValorPrevisto_ComTaxaFixaETaxaDiaria_DeveSomarCorretamente()
     {
         var plano = CriarPlano(precoDiaria: 100m);

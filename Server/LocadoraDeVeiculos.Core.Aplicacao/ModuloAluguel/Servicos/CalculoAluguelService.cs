@@ -25,12 +25,29 @@ public static class CalculoAluguelService
         DateTimeOffset dataSaida,
         DateTimeOffset dataRetornoPrevisto,
         IEnumerable<TaxaServico> taxasServicos)
+        => Detalhar(planoCobranca, dataSaida, dataRetornoPrevisto, taxasServicos).ValorPrevisto;
+
+    /// <summary>
+    /// Mesma conta de <see cref="CalcularValorPrevisto"/>, mas devolvendo as parcelas. É a única
+    /// fonte do cálculo: o cadastro/edição gravam o resultado e a simulação (que o formulário
+    /// mostra antes de salvar) devolve exatamente o mesmo número.
+    /// </summary>
+    public static DetalheCalculoAluguel Detalhar(
+        PlanoCobranca planoCobranca,
+        DateTimeOffset dataSaida,
+        DateTimeOffset dataRetornoPrevisto,
+        IEnumerable<TaxaServico> taxasServicos)
     {
         var dias = CalcularDiasContratados(dataSaida, dataRetornoPrevisto);
 
         var valorDiarias = planoCobranca.PrecoDiaria * dias;
         var valorTaxas = taxasServicos.Sum(t => t.CalcularValor(dias));
 
-        return valorDiarias + valorTaxas;
+        return new DetalheCalculoAluguel(dias, planoCobranca.PrecoDiaria, valorDiarias, valorTaxas);
     }
+}
+
+public sealed record DetalheCalculoAluguel(int Dias, decimal PrecoDiaria, decimal ValorDiarias, decimal ValorTaxas)
+{
+    public decimal ValorPrevisto => ValorDiarias + ValorTaxas;
 }

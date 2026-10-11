@@ -41,6 +41,31 @@ namespace LocadoraDeVeiculos.WebApi.Controllers
             });
         }
 
+        [HttpPost("simular")]
+        public async Task<ActionResult<SimularAluguelResponse>> Simular(
+            SimularAluguelRequest request,
+            CancellationToken cancellationToken)
+        {
+            var query = new SimularAluguelQuery(
+                request.AutomovelId,
+                request.DataSaida,
+                request.DataRetornoPrevisto,
+                request.TaxasServicosIds
+            );
+
+            var result = await mediator.Send(query, cancellationToken);
+
+            return ProcessarResultado(result, (valor) => Ok(new SimularAluguelResponse(
+                valor.Dias,
+                valor.PlanoNome,
+                valor.PrecoDiaria,
+                valor.ValorDiarias,
+                valor.ValorTaxas,
+                valor.ValorPrevisto,
+                valor.ValorCaucao
+            )));
+        }
+
         [HttpPut("{id:guid}")]
         public async Task<ActionResult<EditarAluguelResponse>> Editar(
            Guid id,

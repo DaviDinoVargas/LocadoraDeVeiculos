@@ -12,6 +12,24 @@ export interface AluguelDto {
   cupomCodigo?: string | null;
 }
 
+// Resposta de POST /api/alugueis/simular: o mesmo cálculo que o servidor grava ao salvar.
+export interface SimulacaoAluguelDto {
+  dias: number;
+  planoNome: string;
+  precoDiaria: number;
+  valorDiarias: number;
+  valorTaxas: number;
+  valorPrevisto: number; // diárias + taxas, ANTES de qualquer cupom
+  valorCaucao: number;
+}
+
+export interface SimularAluguelRequest {
+  automovelId: string;
+  dataSaida: string;
+  dataRetornoPrevisto: string;
+  taxasServicosIds: string[];
+}
+
 export interface AluguelCompletoDto extends AluguelDto {
   condutorNome?: string;
   automovelPlaca?: string;

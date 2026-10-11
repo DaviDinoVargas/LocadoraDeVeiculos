@@ -7,12 +7,14 @@ import { ClientesService } from '../clientes/clientes.service';
 import { CondutoresService } from '../condutor/condutores.service';
 import { VeiculosService } from '../veiculos/veiculos.service';
 import { TaxasServicosService } from '../taxa-servico/taxas-servicos.service';
-import { AluguelDto, AluguelCompletoDto } from './aluguel.model';
+import { AluguelDto, AluguelCompletoDto, SimulacaoAluguelDto, SimularAluguelRequest } from './aluguel.model';
 import { ClienteDto } from '../clientes/cliente.model';
 import { CondutorDto } from '../condutor/condutor.model';
 import { VeiculoDto } from '../veiculos/veiculo.model';
 import { TaxaServicoDto } from '../taxa-servico/taxa-servico.model';
-import { Subscription } from 'rxjs';
+import { Subject, Subscription, merge, of } from 'rxjs';
+import { catchError, debounceTime, map, switchMap, tap } from 'rxjs/operators';
+import { mensagensDeErro } from '../../core/api-error';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -41,6 +43,13 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
   // vigente em Configuracao.ValorGarantia ao salvar (antes o front fixava 1000).
   caucao: number | null = null;
 
+  // Simulação do preço (POST /alugueis/simular): o servidor é a única fonte do cálculo.
+  simulacao: SimulacaoAluguelDto | null = null;
+  simulando = false;
+  erroSimulacao = '';
+  private readonly taxasAlteradas$ = new Subject<void>();
+  private simulacaoSub?: Subscription;
+
   private sub: Subscription | null = null;
 
   constructor(
@@ -60,7 +69,6 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
       automovelId: ['', Validators.required],
       dataSaida: ['', Validators.required],
       dataRetornoPrevisto: ['', Validators.required],
-      valorPrevisto: [0, [Validators.required, Validators.min(0)]],
       taxasServicosIds: [[]],
       cupomCodigo: ['']
     });
@@ -68,6 +76,7 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.carregarDados();
+    this.iniciarSimulacao();
 
     this.sub = this.route.paramMap.subscribe((params: ParamMap) => {
       this.id = params.get('id');
@@ -81,6 +90,7 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.sub?.unsubscribe();
+    this.simulacaoSub?.unsubscribe();
   }
 
   carregarDados() {
@@ -147,13 +157,57 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
       }
     }
     this.form.patchValue({ taxasServicosIds: this.taxasSelecionadas });
+    this.taxasAlteradas$.next();
   }
 
-  calcularValorTotal(): number {
-    const valorPrevisto = this.form.get('valorPrevisto')?.value || 0;
-    const taxasSelecionadas = this.taxasServicos.filter(t => this.taxasSelecionadas.includes(t.id!));
-    const valorTaxas = taxasSelecionadas.reduce((total, taxa) => total + taxa.preco, 0);
-    return valorPrevisto + valorTaxas + (this.caucao ?? 0);
+  /** Monta o pedido de simulação ou null enquanto faltam veículo/datas válidas. */
+  private montarSimulacao(): SimularAluguelRequest | null {
+    const { automovelId, dataSaida, dataRetornoPrevisto } = this.form.getRawValue();
+    if (!automovelId || !dataSaida || !dataRetornoPrevisto) return null;
+    if (new Date(dataRetornoPrevisto) <= new Date(dataSaida)) return null;
+    return { automovelId, dataSaida, dataRetornoPrevisto, taxasServicosIds: [...this.taxasSelecionadas] };
+  }
+
+  private iniciarSimulacao() {
+    const mudancas$ = merge(
+      this.form.get('automovelId')!.valueChanges,
+      this.form.get('dataSaida')!.valueChanges,
+      this.form.get('dataRetornoPrevisto')!.valueChanges,
+      this.taxasAlteradas$
+    );
+
+    // switchMap cancela a simulação anterior quando o usuário muda outro campo.
+    this.simulacaoSub = mudancas$.pipe(
+      debounceTime(300),
+      map(() => this.montarSimulacao()),
+      tap(pedido => {
+        this.erroSimulacao = '';
+        this.simulando = pedido !== null;
+        if (!pedido) this.simulacao = null;
+      }),
+      switchMap(pedido => pedido
+        ? this.svc.simular(pedido).pipe(
+            catchError(err => {
+              this.erroSimulacao = mensagensDeErro(err, 'Não foi possível calcular o valor agora.')[0];
+              return of(null);
+            }))
+        : of(null))
+    ).subscribe(simulacao => {
+      this.simulando = false;
+      if (simulacao) this.simulacao = simulacao;
+      else if (this.erroSimulacao) this.simulacao = null;
+    });
+  }
+
+  /** Aluguel já contratado mantém a caução de quando foi feito; aluguel novo usa a vigente. */
+  caucaoExibida(): number {
+    return this.caucao ?? this.simulacao?.valorCaucao ?? 0;
+  }
+
+  /** Total a pagar: diárias + taxas − desconto do cupom + caução. */
+  totalAPagar(): number {
+    if (!this.simulacao) return 0;
+    return this.simulacao.valorPrevisto - this.valorDescontoAtual + this.caucaoExibida();
   }
 
   formatarMoeda(valor: number): string {
@@ -169,9 +223,11 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
       next: (a: any) => {
         this.form.patchValue(a);
         this.taxasSelecionadas = a.taxasServicos?.map((t: any) => t.id) || [];
+        this.form.patchValue({ taxasServicosIds: this.taxasSelecionadas }, { emitEvent: false });
         this.valorDescontoAtual = a.valorDesconto || 0;
         this.caucao = a.valorCaucao ?? null;
         this.loading = false;
+        this.taxasAlteradas$.next(); // calcula o resumo do aluguel carregado
       },
       error: () => {
         this.loading = false;
@@ -191,6 +247,9 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
     const raw = this.form.getRawValue();
     const payload: AluguelDto = {
       ...raw,
+      // O servidor descarta este número e recalcula (CalculoAluguelService); é enviado só porque
+      // o contrato da API ainda o carrega.
+      valorPrevisto: this.simulacao?.valorPrevisto ?? 0,
       cupomCodigo: raw.cupomCodigo?.trim() || null,
       status: 'Reservado'
     };
@@ -203,9 +262,9 @@ export class AluguelFormComponent implements OnInit, OnDestroy {
       this.router.navigate(['/alugueis']);
     };
 
-    const errorHandler = (err: any) => {
+    const errorHandler = (err: unknown) => {
       this.loading = false;
-      this.serverErrors = [err?.message ?? 'Erro desconhecido'];
+      this.serverErrors = mensagensDeErro(err);
       this.snack.open(this.serverErrors[0], 'Fechar', { duration: 4000 });
     };
 

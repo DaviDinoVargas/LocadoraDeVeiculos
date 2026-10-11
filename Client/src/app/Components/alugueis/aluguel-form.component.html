@@ -62,20 +62,6 @@
       </div>
     </div>
 
-    <!-- Valor Previsto -->
-    <div class="mb-3">
-      <label class="form-label">Valor Previsto (R$)</label>
-      <input type="number"
-             step="0.01"
-             min="0"
-             class="form-control"
-             formControlName="valorPrevisto"/>
-      <div *ngIf="form.controls['valorPrevisto'].invalid && form.controls['valorPrevisto'].touched"
-           class="text-danger small">
-        Valor previsto deve ser maior que 0.
-      </div>
-    </div>
-
     <!-- Taxas e Serviços -->
     <div class="mb-3">
       <label class="form-label">Taxas e Serviços</label>
@@ -84,6 +70,7 @@
                type="checkbox"
                [value]="taxa.id"
                [id]="'taxa-' + taxa.id"
+               [checked]="taxasSelecionadas.includes(taxa.id!)"
                (change)="onTaxaChange($event, taxa)">
         <label class="form-check-label" [for]="'taxa-' + taxa.id">
           {{ taxa.nome }} - {{ formatarMoeda(taxa.preco) }} ({{ taxa.tipoCalculo === 'Fixo' ? 'Fixo' : 'Diário' }})
@@ -100,15 +87,43 @@
       </div>
     </div>
 
-    <!-- Valor Total -->
-    <div class="mb-3">
-      <label class="form-label">Valor Total Previsto</label>
-      <div class="input-group">
-        <span class="input-group-text">R$</span>
-        <input type="text" class="form-control" [value]="calcularValorTotal() | currency:'BRL':'symbol':'1.2-2'" readonly>
+    <!-- Resumo do valor: calculado pelo servidor (mesmo cálculo que é gravado ao salvar) -->
+    <div class="card mb-3" aria-live="polite" [attr.aria-busy]="simulando">
+      <div class="card-body">
+        <h6 class="card-title">Resumo do valor</h6>
+
+        <p *ngIf="!simulacao && !simulando && !erroSimulacao" class="text-muted small mb-0">
+          Escolha o veículo e as datas para ver o valor do aluguel.
+        </p>
+        <p *ngIf="simulando" class="text-muted small mb-0">
+          <span class="spinner-border spinner-border-sm me-1"></span>Calculando…
+        </p>
+        <p *ngIf="erroSimulacao" class="text-danger small mb-0" role="alert">{{ erroSimulacao }}</p>
+
+        <dl *ngIf="simulacao && !erroSimulacao" class="mb-0 resumo-valor">
+          <div class="d-flex justify-content-between">
+            <dt class="fw-normal">Diárias ({{ simulacao.dias }} × {{ formatarMoeda(simulacao.precoDiaria) }})</dt>
+            <dd class="mb-0">{{ formatarMoeda(simulacao.valorDiarias) }}</dd>
+          </div>
+          <div class="d-flex justify-content-between" *ngIf="simulacao.valorTaxas > 0">
+            <dt class="fw-normal">Taxas e serviços</dt>
+            <dd class="mb-0">{{ formatarMoeda(simulacao.valorTaxas) }}</dd>
+          </div>
+          <div class="d-flex justify-content-between text-success" *ngIf="valorDescontoAtual > 0">
+            <dt class="fw-normal">Desconto do cupom</dt>
+            <dd class="mb-0">− {{ formatarMoeda(valorDescontoAtual) }}</dd>
+          </div>
+          <div class="d-flex justify-content-between">
+            <dt class="fw-normal">Caução (devolvida na entrega)</dt>
+            <dd class="mb-0">{{ formatarMoeda(caucaoExibida()) }}</dd>
+          </div>
+          <hr class="my-2">
+          <div class="d-flex justify-content-between fw-bold">
+            <dt>Total a pagar na retirada</dt>
+            <dd class="mb-0">{{ formatarMoeda(totalAPagar()) }}</dd>
+          </div>
+        </dl>
       </div>
-      <small class="text-muted" *ngIf="caucao !== null; else caucaoPendente">Inclui caução de {{ caucao | currency:'BRL':'symbol':'1.2-2' }}</small>
-      <ng-template #caucaoPendente><small class="text-muted">A caução vigente da locadora é aplicada ao salvar.</small></ng-template>
     </div>
 
     <!-- Botões -->

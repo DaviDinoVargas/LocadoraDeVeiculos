@@ -56,12 +56,13 @@ public sealed class AluguelValidatorsTests
     }
 
     [TestMethod]
-    public void ValorPrevisto_ZeroOuNegativo_EhInvalido()
+    public void ValorPrevisto_NaoEhValidado_PoisOServidorSempreRecalcula()
     {
         var command = ComandoValido(valorPrevisto: 0m);
 
         var resultado = _validator.TestValidate(command);
 
-        resultado.ShouldHaveValidationErrorFor(c => c.ValorPrevisto);
+        resultado.ShouldNotHaveValidationErrorFor(c => c.ValorPrevisto);
+        resultado.ShouldNotHaveAnyValidationErrors();
     }
 }

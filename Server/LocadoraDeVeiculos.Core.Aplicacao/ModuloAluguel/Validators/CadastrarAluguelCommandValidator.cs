@@ -27,9 +27,8 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Validators
                 .GreaterThan(p => p.DataSaida)
                 .WithMessage("A data de retorno previsto deve ser após a data de saída.");
 
-            RuleFor(p => p.ValorPrevisto)
-                .NotEmpty().WithMessage("O campo Valor Previsto é obrigatório.")
-                .GreaterThan(0).WithMessage("O valor previsto deve ser maior que zero.");
+            // ValorPrevisto não é validado: o servidor sempre recalcula (CalculoAluguelService)
+            // e descarta o que o cliente enviar.
         }
     }
 }

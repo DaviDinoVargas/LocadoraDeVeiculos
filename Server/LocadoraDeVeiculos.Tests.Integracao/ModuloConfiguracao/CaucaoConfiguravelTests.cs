@@ -27,7 +27,7 @@ public sealed class CaucaoConfiguravelTests
     private static CadastrarAluguelCommand NovoAluguel(CenarioAluguel c, int diasAFrente = 1) => new(
         c.Condutor.Id, c.Automovel.Id, c.Cliente.Id,
         DateTimeOffset.UtcNow.AddDays(diasAFrente), DateTimeOffset.UtcNow.AddDays(diasAFrente + 2),
-        ValorPrevisto: 1m, // o validator ainda exige > 0; o servidor ignora e calcula (ver A3)
+        ValorPrevisto: 0m, // o servidor ignora o valor e calcula sozinho
         TaxasServicosIds: new());
 
     [TestMethod]
