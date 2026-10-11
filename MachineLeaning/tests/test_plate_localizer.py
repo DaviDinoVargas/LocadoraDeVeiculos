@@ -67,3 +67,48 @@ def test_crop_box_limita_a_margem_aos_limites_do_frame():
     assert recorte.shape[0] <= 100
     assert recorte.shape[1] <= 100
     assert recorte.size > 0
+
+
+# ---- localização da placa por visão clássica (find_plate_regions) ----
+from cenas_placa import cena_com_carro, desenhar_placa  # noqa: E402
+from yolo_tesseract.plate_localizer import find_plate_regions, _iou  # noqa: E402
+import pytest  # noqa: E402
+
+
+@pytest.mark.parametrize('kw', [
+    dict(largura_placa=200),
+    dict(largura_placa=130),
+    dict(largura_placa=130, desfoque=1.2, ruido=6),   # foto de tela de celular: desfocada/ruidosa
+    dict(largura_placa=100, mercosul=False),          # placa antiga (cinza)
+    dict(largura_placa=80),
+])
+def test_localiza_a_placa_dentro_do_carro_mesmo_pequena(kw):
+    frame, carro, placa = cena_com_carro('BRA2E19', **kw)
+
+    regioes = find_plate_regions(frame, carro)
+
+    assert regioes, 'nenhum candidato encontrado'
+    assert max(_iou(r, placa) for r in regioes) > 0.5
+
+
+def test_localiza_placa_sozinha_na_imagem_sem_carro():
+    img = np.full((480, 640, 3), (110, 120, 125), np.uint8)
+    placa = desenhar_placa('BRA2E19', 300)
+    h, w = placa.shape[:2]
+    img[200:200 + h, 150:150 + w] = placa
+
+    regioes = find_plate_regions(img)
+
+    assert regioes
+    assert max(_iou(r, (150, 200, 150 + w, 200 + h)) for r in regioes) > 0.5
+
+
+def test_imagem_sem_placa_nao_gera_candidatos():
+    liso = np.full((480, 640, 3), 120, np.uint8)
+    assert find_plate_regions(liso) == []
+
+
+def test_regioes_ficam_dentro_do_frame():
+    frame, carro, _ = cena_com_carro('ABC1D23', largura_placa=150)
+    for x1, y1, x2, y2 in find_plate_regions(frame, carro):
+        assert 0 <= x1 < x2 <= frame.shape[1] and 0 <= y1 < y2 <= frame.shape[0]

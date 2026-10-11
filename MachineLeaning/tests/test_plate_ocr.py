@@ -40,3 +40,34 @@ def test_tesseract_cmd_invalido_e_ignorado(monkeypatch):
     import yolo_tesseract.tesseract_service as ts
     monkeypatch.setattr(ts, 'TESSERACT_CMD', r'Z:\nao\existe\tesseract.exe')
     assert configurar_tesseract() != r'Z:\nao\existe\tesseract.exe'
+
+
+# ---- leitura de ponta a ponta: localizar + OCR em cenas sintéticas (precisa do Tesseract) ----
+from cenas_placa import cena_com_carro  # noqa: E402
+from yolo_tesseract.plate_localizer import crop_box, find_plate_regions  # noqa: E402
+from yolo_tesseract.tesseract_service import extrair_placa, ocr_plate_image  # noqa: E402
+
+precisa_tesseract = pytest.mark.skipif(not ocr_disponivel()[0], reason='Tesseract não instalado')
+
+
+@pytest.mark.parametrize('texto,esperado', [
+    ('PBRA2E19', 'BRA2E19'),        # borda da placa lida como "P"
+    ('BRASILABC1D23', 'ABC1D23'),   # faixa "BRASIL" do Mercosul junto
+    ('BSRASII', None),              # exigiria 4 correções por posição: lixo, recusa
+    ('XYZ', None),
+])
+def test_extrair_placa_procura_dentro_do_texto(texto, esperado):
+    achada = extrair_placa(texto)
+    assert (achada[0] if achada else None) == esperado
+
+
+@precisa_tesseract
+@pytest.mark.parametrize('kw', [
+    dict(largura_placa=200),
+    dict(largura_placa=130, desfoque=1.2, ruido=6),
+    dict(largura_placa=100, mercosul=False),
+])
+def test_le_a_placa_de_cena_sintetica(kw):
+    frame, carro, _ = cena_com_carro('BRA2E19', **kw)
+    lidas = [ocr_plate_image(crop_box(frame, r, 0.0)) for r in find_plate_regions(frame, carro)]
+    assert 'BRA2E19' in lidas

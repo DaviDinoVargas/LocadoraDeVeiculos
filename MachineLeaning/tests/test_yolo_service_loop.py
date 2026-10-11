@@ -94,3 +94,88 @@ def test_start_recusa_camera_que_nao_abre(monkeypatch):
     svc.hub = CameraHub(lambda i: None)
     ok, motivo = svc.start_camera_processing(7, max_fps=10)
     assert not ok and '7' in motivo
+
+
+# ---- ponta a ponta com cenas sintéticas: detector falso + localizador + OCR de verdade ----
+import pytest  # noqa: E402
+from cenas_placa import cena_com_carro, desenhar_placa  # noqa: E402
+from yolo_tesseract.tesseract_service import ocr_disponivel as _ocr_ok  # noqa: E402
+
+precisa_tesseract = pytest.mark.skipif(not _ocr_ok()[0], reason='Tesseract não instalado')
+
+
+class _CapCena:
+    def __init__(self, frame):
+        self._frame = frame
+
+    def isOpened(self):
+        return True
+
+    def read(self):
+        time.sleep(0.01)
+        return True, self._frame.copy()
+
+    def release(self):
+        pass
+
+
+class _DetectorFixo:
+    def __init__(self, dets):
+        self._dets = dets
+
+    def predict(self, frame, conf=0.35):
+        return self._dets
+
+
+def _servico_com_cena(frame, dets):
+    svc = YoloTessService.__new__(YoloTessService)
+    svc.hub = CameraHub(lambda i: _CapCena(frame))
+    svc.detector = _DetectorFixo(dets)
+    svc.running = {}
+    svc.lock = threading.Lock()
+    return svc
+
+
+def _ler_placas(svc, segundos=6.0):
+    achadas = []
+    ok, motivo = svc.start_camera_processing(0, on_plate_callback=achadas.append, max_fps=20)
+    assert ok, motivo
+    _esperar(lambda: achadas, timeout=segundos)
+    svc.stop_camera(0)
+    _esperar(lambda: 0 not in svc.running)
+    return achadas
+
+
+@precisa_tesseract
+def test_le_placa_pequena_dentro_do_carro_detectado():
+    frame, carro, _ = cena_com_carro('BRA2E19', largura_placa=110, desfoque=1.0, ruido=5)
+    svc = _servico_com_cena(frame, [{'box': carro, 'conf': 0.54, 'class': 2, 'label': 'car'}])
+
+    achadas = _ler_placas(svc)
+
+    assert achadas and achadas[0]['plate'] == 'BRA2E19'
+    assert achadas[0]['confidence'] == 0.54
+
+
+@precisa_tesseract
+def test_le_placa_quando_o_yolo_nao_enxerga_nenhum_veiculo():
+    # foto só da placa: o YOLO COCO não detecta nada, mas a placa ainda deve ser lida
+    img = np.full((480, 640, 3), (110, 120, 125), np.uint8)
+    placa = desenhar_placa('BRA2E19', 300)
+    h, w = placa.shape[:2]
+    img[200:200 + h, 150:150 + w] = placa
+    svc = _servico_com_cena(img, [])
+
+    achadas = _ler_placas(svc)
+
+    assert achadas and achadas[0]['plate'] == 'BRA2E19'
+
+
+def test_so_confirma_a_placa_depois_de_lida_mais_de_uma_vez(monkeypatch):
+    svc = _service(monkeypatch, lambda _c: 'ABC1234')
+    leituras, agora = {}, 100.0
+    assert svc._confirmou(leituras, 'ABC1234', agora) is False
+    assert svc._confirmou(leituras, 'ABC1234', agora + 0.2) is True
+    # leitura isolada e antiga não conta
+    assert svc._confirmou(leituras, 'XYZ9876', agora) is False
+    assert svc._confirmou(leituras, 'XYZ9876', agora + 10) is False
