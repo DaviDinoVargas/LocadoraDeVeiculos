@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../../core/api.config';
@@ -18,7 +18,7 @@ export interface ResumoDashboardDto {
 export class DashboardService {
   private base = `${API_BASE_URL}/dashboard`;
 
-  constructor(private http: HttpClient) {}
+  private readonly http = inject(HttpClient);
 
   // Falha tratada na própria Home (estado de erro com "Tentar novamente"), sem snackbar.
   resumo(): Observable<ResumoDashboardDto> {

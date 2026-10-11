@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { FuncionarioDto } from './funcionario.model';
@@ -10,7 +10,7 @@ export class FuncionariosService {
   // CORRIGIR: Mude de 7043 para 7064
   private base = `${API_BASE_URL}/funcionarios`;
 
-  constructor(private http: HttpClient) {}
+  private readonly http = inject(HttpClient);
 
 
   listar(): Observable<FuncionarioDto[]> {

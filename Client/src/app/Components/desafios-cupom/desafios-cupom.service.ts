@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { DesafioCupomDto, ProgressoDesafioDto } from './desafio-cupom.model';
@@ -10,7 +10,7 @@ import { extrairDados } from '../../core/api-response';
 export class DesafiosCupomService {
   private base = `${API_BASE_URL}/desafios-cupom`;
 
-  constructor(private http: HttpClient) {}
+  private readonly http = inject(HttpClient);
 
 
   listar(): Observable<DesafioCupomDto[]> {

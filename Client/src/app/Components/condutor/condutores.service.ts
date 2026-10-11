@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { CondutorDto } from './condutor.model';
@@ -9,7 +9,7 @@ import { extrairDados } from '../../core/api-response';
 export class CondutoresService {
   private base = `${API_BASE_URL}/condutores`;
 
-  constructor(private http: HttpClient) {}
+  private readonly http = inject(HttpClient);
 
 
   listar(): Observable<CondutorDto[]> {

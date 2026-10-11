@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { TaxaServicoDto } from './taxa-servico.model';
@@ -9,7 +9,7 @@ import { extrairDados } from '../../core/api-response';
 export class TaxasServicosService {
   private base = `${API_BASE_URL}/taxas-servicos`;
 
-  constructor(private http: HttpClient) {}
+  private readonly http = inject(HttpClient);
 
 
   listar(): Observable<TaxaServicoDto[]> {

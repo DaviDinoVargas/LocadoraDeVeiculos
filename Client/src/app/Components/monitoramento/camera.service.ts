@@ -1,4 +1,4 @@
-import { Injectable, OnDestroy } from '@angular/core';
+import { Injectable, OnDestroy, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, Subject, Subscription, EMPTY, of, timer } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
@@ -36,7 +36,7 @@ export class CameraService implements OnDestroy {
   private vistoAte = new Map<number, number>();
   private polling?: Subscription;
 
-  constructor(private http: HttpClient) {}
+  private readonly http = inject(HttpClient);
 
   ngOnDestroy(): void {
     this.pararTodoMonitoramento();

@@ -82,7 +82,7 @@ describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
     expect(alugueis.simular).toHaveBeenCalledOnceWith({
       automovelId: 'v2', dataSaida: '2030-01-10', dataRetornoPrevisto: '2030-01-13', taxasServicosIds: []
     });
-    expect(component.simulacao).toEqual(simulacao);
+    expect(component.simulacao()).toEqual(simulacao);
   }));
 
   it('não simula com retorno antes da saída ou sem veículo', fakeAsync(() => {
@@ -92,7 +92,7 @@ describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
     tick(400);
 
     expect(alugueis.simular).not.toHaveBeenCalled();
-    expect(component.simulacao).toBeNull();
+    expect(component.simulacao()).toBeNull();
   }));
 
   it('inclui as taxas marcadas no pedido de simulação', fakeAsync(() => {
@@ -120,8 +120,8 @@ describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
     tick(400);
     fixture.detectChanges();
 
-    expect(component.erroSimulacao).toContain('plano de cobrança');
-    expect(component.simulacao).toBeNull();
+    expect(component.erroSimulacao()).toContain('plano de cobrança');
+    expect(component.simulacao()).toBeNull();
     const alertas = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('[role="alert"]')).map(a => a.textContent);
     expect(alertas.some(t => t?.includes('plano de cobrança'))).toBeTrue();
   }));
@@ -136,13 +136,13 @@ describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
 
     component.salvar();
 
-    expect(component.serverErrors).toEqual(['O automóvel já está reservado para este período.']);
+    expect(component.serverErrors()).toEqual(['O automóvel já está reservado para este período.']);
   });
   describe('disponibilidade de veículos no período', () => {
     const periodo = { dataSaida: '2030-01-10', dataRetornoPrevisto: '2030-01-13' };
 
     it('antes das datas, oferece todos os veículos (não dá para saber quem está livre)', () => {
-      expect(component.veiculosDisponiveis).toEqual([fusca, uno]);
+      expect(component.veiculosDisponiveis()).toEqual([fusca, uno]);
       expect(veiculos.listarDisponiveis).not.toHaveBeenCalled();
     });
 
@@ -151,7 +151,7 @@ describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
       tick(400);
 
       expect(veiculos.listarDisponiveis).toHaveBeenCalledOnceWith('2030-01-10', '2030-01-13', undefined);
-      expect(component.veiculosDisponiveis).toEqual([uno]);
+      expect(component.veiculosDisponiveis()).toEqual([uno]);
     }));
 
     it('limpa o veículo já escolhido quando ele deixa de estar disponível e avisa', fakeAsync(() => {
@@ -160,7 +160,7 @@ describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
       tick(400);
 
       expect(component.form.get('automovelId')?.value).toBe('');
-      expect(component.avisoDisponibilidade).toContain('não está disponível');
+      expect(component.avisoDisponibilidade()).toContain('não está disponível');
     }));
 
     it('mantém o veículo escolhido quando ele continua disponível', fakeAsync(() => {
@@ -169,7 +169,7 @@ describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
       tick(400);
 
       expect(component.form.get('automovelId')?.value).toBe('v2');
-      expect(component.avisoDisponibilidade).toBe('');
+      expect(component.avisoDisponibilidade()).toBe('');
     }));
 
     it('avisa quando nenhum veículo está livre', fakeAsync(() => {
@@ -177,7 +177,7 @@ describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
       component.form.patchValue(periodo);
       tick(400);
 
-      expect(component.avisoDisponibilidade).toBe('Nenhum veículo disponível neste período.');
+      expect(component.avisoDisponibilidade()).toBe('Nenhum veículo disponível neste período.');
     }));
 
     it('se a consulta falhar, volta à lista completa (o servidor ainda valida ao salvar)', fakeAsync(() => {
@@ -185,7 +185,7 @@ describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
       component.form.patchValue(periodo);
       tick(400);
 
-      expect(component.veiculosDisponiveis).toEqual([fusca, uno]);
+      expect(component.veiculosDisponiveis()).toEqual([fusca, uno]);
     }));
 
     it('não consulta com retorno antes da saída', fakeAsync(() => {
@@ -196,7 +196,7 @@ describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
     }));
 
     it('na edição envia o id do aluguel para ele não bloquear o próprio veículo', fakeAsync(() => {
-      component.id = 'aluguel-1';
+      component.id.set('aluguel-1');
       component.form.patchValue(periodo);
       tick(400);
 
@@ -228,7 +228,7 @@ describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
       component.form.patchValue({ cupomCodigo: '' });
       tick(500);
 
-      expect(component.cupomStatus).toBe('vazio');
+      expect(component.cupomStatus()).toBe('vazio');
       expect(cupons.validar).not.toHaveBeenCalled();
     }));
 
@@ -236,7 +236,7 @@ describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
       component.form.patchValue({ cupomCodigo: 'PROMO10' });
       tick(500);
 
-      expect(component.cupomStatus).toBe('aguardando');
+      expect(component.cupomStatus()).toBe('aguardando');
       expect(cupons.validar).not.toHaveBeenCalled();
     }));
 
@@ -246,8 +246,8 @@ describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
       tick(500);
 
       expect(cupons.validar).toHaveBeenCalledOnceWith('PROMO10', 390);
-      expect(component.cupomStatus).toBe('valido');
-      expect(component.descontoCupom).toBe(39);
+      expect(component.cupomStatus()).toBe('valido');
+      expect(component.descontoCupom()).toBe(39);
       expect(component.totalAPagar()).toBe(390 - 39 + 1000);
     }));
 
@@ -257,9 +257,9 @@ describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
       component.form.patchValue({ clienteId: 'c1', condutorId: 'd1', cupomCodigo: 'VELHO' });
       tick(500);
 
-      expect(component.cupomStatus).toBe('invalido');
-      expect(component.cupomMensagem).toBe('Cupom expirado.');
-      expect(component.descontoCupom).toBe(0);
+      expect(component.cupomStatus()).toBe('invalido');
+      expect(component.cupomMensagem()).toBe('Cupom expirado.');
+      expect(component.descontoCupom()).toBe(0);
 
       component.salvar();
       expect(alugueis.criar).not.toHaveBeenCalled();
@@ -271,8 +271,8 @@ describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
       component.form.patchValue({ cupomCodigo: 'XYZ' });
       tick(500);
 
-      expect(component.cupomStatus).toBe('invalido');
-      expect(component.cupomMensagem).toBe('Cupom não encontrado.');
+      expect(component.cupomStatus()).toBe('invalido');
+      expect(component.cupomMensagem()).toBe('Cupom não encontrado.');
     }));
 
     it('revalida o cupom quando o valor muda (desconto percentual depende da base)', fakeAsync(() => {
@@ -312,7 +312,7 @@ describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
       component.form.patchValue({ clienteId: 'c1' });
 
       expect(desafios.progressoDoCliente).toHaveBeenCalledOnceWith('c1');
-      expect(component.progressoDesafios).toEqual(progresso);
+      expect(component.progressoDesafios()).toEqual(progresso);
     });
 
     it('limpa a lista quando nenhum cliente está selecionado', () => {
@@ -321,7 +321,7 @@ describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
 
       component.form.patchValue({ clienteId: '' });
 
-      expect(component.progressoDesafios).toEqual([]);
+      expect(component.progressoDesafios()).toEqual([]);
     });
 
     it('falha ao buscar o progresso não atrapalha o aluguel (lista vazia)', () => {
@@ -329,7 +329,7 @@ describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
 
       component.form.patchValue({ clienteId: 'c1' });
 
-      expect(component.progressoDesafios).toEqual([]);
+      expect(component.progressoDesafios()).toEqual([]);
     });
 
     it('"Usar cupom" preenche o campo com o cupom liberado pela meta cumprida', () => {
@@ -360,7 +360,7 @@ describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
       component.form.patchValue({ clienteId: 'c1' });
 
       expect(condutores.listarPorCliente).toHaveBeenCalledOnceWith('c1');
-      expect(component.condutoresFiltrados.map(c => c.id)).toEqual(['d1']);
+      expect(component.condutoresFiltrados().map(c => c.id)).toEqual(['d1']);
     });
 
     it('trocar de cliente descarta o condutor que não é dele', () => {
@@ -384,7 +384,7 @@ describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
       component.form.patchValue({ clienteId: '' });
       fixture.detectChanges();
 
-      expect(component.condutoresFiltrados).toEqual([]);
+      expect(component.condutoresFiltrados()).toEqual([]);
       expect(fixture.nativeElement.querySelector('hlm-native-select[formControlName="condutorId"] option').textContent)
         .toContain('Selecione um cliente primeiro');
     });

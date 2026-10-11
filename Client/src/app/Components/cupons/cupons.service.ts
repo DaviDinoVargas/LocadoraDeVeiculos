@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { CupomDto, ValidacaoCupomDto } from './cupom.model';
@@ -10,7 +10,7 @@ import { extrairDados } from '../../core/api-response';
 export class CuponsService {
   private base = `${API_BASE_URL}/cupons`;
 
-  constructor(private http: HttpClient) {}
+  private readonly http = inject(HttpClient);
 
 
   listar(): Observable<CupomDto[]> {

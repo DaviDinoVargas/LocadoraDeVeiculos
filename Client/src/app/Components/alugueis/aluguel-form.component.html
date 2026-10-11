@@ -1,15 +1,15 @@
 <form [formGroup]="form" (ngSubmit)="salvar()" novalidate>
   <app-page largura="total">
     <app-page-header
-      [titulo]="editMode ? 'Editar aluguel' : 'Novo aluguel'"
+      [titulo]="editMode() ? 'Editar aluguel' : 'Novo aluguel'"
       descricao="Escolha o cliente, o veículo e o período. O valor é calculado no servidor."
       voltarPara="/alugueis"
       rotuloVoltar="Aluguéis"
     />
 
-    <app-form-errors [erros]="serverErrors" />
+    <app-form-errors [erros]="serverErrors()" />
 
-    @if (loading && editMode) {
+    @if (loading() && editMode()) {
       <app-form-skeleton />
     } @else {
       <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
@@ -18,15 +18,15 @@
             <app-form-field class="col-span-12 sm:col-span-6" label="Cliente" required>
               <hlm-native-select class="w-full" formControlName="clienteId">
                 <option hlmNativeSelectOption value="">Selecione um cliente</option>
-                @for (cliente of clientes; track cliente.id) {
+                @for (cliente of clientes(); track cliente.id) {
                   <option hlmNativeSelectOption [value]="cliente.id">{{ cliente.nome }}</option>
                 }
               </hlm-native-select>
             </app-form-field>
             <app-form-field class="col-span-12 sm:col-span-6" label="Condutor" required>
               <hlm-native-select class="w-full" formControlName="condutorId">
-                <option hlmNativeSelectOption value="">{{ form.controls['clienteId'].value ? 'Selecione um condutor' : 'Selecione um cliente primeiro' }}</option>
-                @for (condutor of condutoresFiltrados; track condutor.id) {
+                <option hlmNativeSelectOption value="">{{ clienteEscolhido() ? 'Selecione um condutor' : 'Selecione um cliente primeiro' }}</option>
+                @for (condutor of condutoresFiltrados(); track condutor.id) {
                   <option hlmNativeSelectOption [value]="condutor.id">{{ condutor.nome }} ({{ formatarCpf(condutor.cpf) }})</option>
                 }
               </hlm-native-select>
@@ -43,26 +43,26 @@
             <app-form-field class="col-span-12" label="Veículo" required>
               <hlm-native-select class="w-full" formControlName="automovelId">
                 <option hlmNativeSelectOption value="">Selecione um veículo</option>
-                @for (veiculo of veiculosDisponiveis; track veiculo.id) {
+                @for (veiculo of veiculosDisponiveis(); track veiculo.id) {
                   <option hlmNativeSelectOption [value]="veiculo.id">{{ veiculo.placa }} - {{ veiculo.marca }} {{ veiculo.modelo }}</option>
                 }
               </hlm-native-select>
             </app-form-field>
-            @if (avisoDisponibilidade) {
+            @if (avisoDisponibilidade()) {
               <p class="text-body-s text-warning col-span-12 flex items-center gap-1.5" role="status">
                 <ng-icon name="lucideTriangleAlert" aria-hidden="true" />
-                {{ avisoDisponibilidade }}
+                {{ avisoDisponibilidade() }}
               </p>
             }
           </app-form-section>
 
-          @if (taxasServicos.length) {
+          @if (taxasServicos().length) {
             <app-form-section titulo="Taxas e serviços" descricao="Itens extras somados ao valor do aluguel.">
-              @for (taxa of taxasServicos; track taxa.id) {
+              @for (taxa of taxasServicos(); track taxa.id) {
                 <div class="col-span-12 flex items-center gap-3 sm:col-span-6">
                   <hlm-checkbox
                     [inputId]="'taxa-' + taxa.id"
-                    [checked]="taxasSelecionadas.includes(taxa.id!)"
+                    [checked]="taxasSelecionadas().includes(taxa.id!)"
                     (checkedChange)="onTaxaChange($event, taxa)"
                   />
                   <label hlmLabel [for]="'taxa-' + taxa.id" class="text-body-m font-normal">
@@ -78,7 +78,7 @@
               <input hlmInput formControlName="cupomCodigo" class="uppercase" placeholder="Ex.: BEMVINDO10" autocomplete="off" aria-describedby="cupom-feedback" />
             </app-form-field>
             <div id="cupom-feedback" class="text-body-s col-span-12 flex min-h-5 items-center gap-1.5 sm:col-span-6 sm:pt-7" aria-live="polite">
-              @switch (cupomStatus) {
+              @switch (cupomStatus()) {
                 @case ('validando') {
                   <span class="text-muted-foreground flex items-center gap-1.5">
                     <ng-icon name="lucideLoader2" class="animate-spin motion-reduce:animate-none" aria-hidden="true" />
@@ -88,27 +88,27 @@
                 @case ('valido') {
                   <span class="text-success flex items-center gap-1.5">
                     <ng-icon name="lucideCircleCheck" aria-hidden="true" />
-                    {{ cupomMensagem }}
+                    {{ cupomMensagem() }}
                   </span>
                 }
                 @case ('invalido') {
                   <span class="text-destructive flex items-center gap-1.5">
                     <ng-icon name="lucideCircleX" aria-hidden="true" />
-                    {{ cupomMensagem }}
+                    {{ cupomMensagem() }}
                   </span>
                 }
                 @case ('aguardando') {
-                  <span class="text-muted-foreground">{{ cupomMensagem }}</span>
+                  <span class="text-muted-foreground">{{ cupomMensagem() }}</span>
                 }
               }
             </div>
 
             <!-- Desafios do cliente: metas ativas, progresso e o cupom liberado ao cumprir -->
-            @if (progressoDesafios.length > 0) {
+            @if (progressoDesafios().length > 0) {
               <div class="col-span-12" aria-label="Desafios do cliente">
                 <h3 class="text-title-s mb-2">Desafios do cliente</h3>
                 <ul class="flex flex-col gap-3">
-                  @for (d of progressoDesafios; track d.desafioId) {
+                  @for (d of progressoDesafios(); track d.desafioId) {
                     <li class="flex flex-col gap-1.5">
                       <div class="text-body-m flex flex-wrap items-center justify-between gap-2">
                         <span>{{ d.nome }}</span>
@@ -145,42 +145,43 @@
         </div>
 
         <!-- Resumo do valor: calculado pelo servidor (mesmo cálculo que é gravado ao salvar) -->
-        <aside class="lg:sticky lg:top-0" aria-live="polite" [attr.aria-busy]="simulando">
+        <aside class="lg:sticky lg:top-0" aria-live="polite" [attr.aria-busy]="simulando()">
           <section class="border-border bg-card flex flex-col gap-3 rounded-xl border p-5">
             <h2 class="text-title-m">Resumo do valor</h2>
 
-            @if (!simulacao && !simulando && !erroSimulacao) {
+            @if (!simulacao() && !simulando() && !erroSimulacao()) {
               <p class="text-body-m text-muted-foreground">Escolha o veículo e as datas para ver o valor do aluguel.</p>
             }
-            @if (simulando) {
+            @if (simulando()) {
               <p class="text-body-m text-muted-foreground flex items-center gap-2">
                 <ng-icon name="lucideLoader2" class="animate-spin motion-reduce:animate-none" aria-hidden="true" />
                 Calculando…
               </p>
             }
-            @if (erroSimulacao) {
+            @if (erroSimulacao()) {
               <p class="text-body-m text-destructive flex items-start gap-2" role="alert">
                 <ng-icon name="lucideCircleAlert" class="mt-0.5 shrink-0" aria-hidden="true" />
-                {{ erroSimulacao }}
+                {{ erroSimulacao() }}
               </p>
             }
 
-            @if (simulacao && !erroSimulacao) {
+            @if (simulacao(); as s) {
+              @if (!erroSimulacao()) {
               <dl class="text-body-m flex flex-col gap-2">
                 <div class="flex justify-between gap-4">
-                  <dt class="text-muted-foreground">Diárias ({{ simulacao.dias }} × {{ formatarMoeda(simulacao.precoDiaria) }})</dt>
-                  <dd class="tabular">{{ formatarMoeda(simulacao.valorDiarias) }}</dd>
+                  <dt class="text-muted-foreground">Diárias ({{ s.dias }} × {{ formatarMoeda(s.precoDiaria) }})</dt>
+                  <dd class="tabular">{{ formatarMoeda(s.valorDiarias) }}</dd>
                 </div>
-                @if (simulacao.valorTaxas > 0) {
+                @if (s.valorTaxas > 0) {
                   <div class="flex justify-between gap-4">
                     <dt class="text-muted-foreground">Taxas e serviços</dt>
-                    <dd class="tabular">{{ formatarMoeda(simulacao.valorTaxas) }}</dd>
+                    <dd class="tabular">{{ formatarMoeda(s.valorTaxas) }}</dd>
                   </div>
                 }
-                @if (descontoCupom > 0) {
+                @if (descontoCupom() > 0) {
                   <div class="text-success flex justify-between gap-4">
                     <dt>Desconto do cupom</dt>
-                    <dd class="tabular">− {{ formatarMoeda(descontoCupom) }}</dd>
+                    <dd class="tabular">− {{ formatarMoeda(descontoCupom()) }}</dd>
                   </div>
                 }
                 <div class="flex justify-between gap-4">
@@ -192,12 +193,13 @@
                   <dd class="tabular">{{ formatarMoeda(totalAPagar()) }}</dd>
                 </div>
               </dl>
+              }
             }
           </section>
         </aside>
       </div>
     }
 
-    <app-form-actions [salvando]="loading" [alterado]="form.dirty" [rotuloSalvar]="editMode ? 'Salvar alterações' : 'Criar aluguel'" (cancelar)="cancelar()" />
+    <app-form-actions [salvando]="loading()" [alterado]="form.dirty" [rotuloSalvar]="editMode() ? 'Salvar alterações' : 'Criar aluguel'" (cancelar)="cancelar()" />
   </app-page>
 </form>
