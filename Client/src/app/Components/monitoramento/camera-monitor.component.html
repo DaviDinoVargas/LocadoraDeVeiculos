@@ -226,6 +226,9 @@
             </div>
 
             @if (temAluguelEmAberto(placa.plate)) {
+              @if (placaCadastradaDiferente(placa.plate); as cadastrada) {
+                <p class="text-body-s text-muted-foreground">Leitura aproximada: a placa cadastrada é <strong class="text-foreground tabular">{{ cadastrada }}</strong>.</p>
+              }
               <dl class="text-body-m flex flex-col gap-1">
                 <div class="flex justify-between gap-3"><dt class="text-muted-foreground">Cliente</dt><dd class="truncate">{{ getAluguelInfo(placa.plate)?.clienteNome || '—' }}</dd></div>
                 <div class="flex justify-between gap-3"><dt class="text-muted-foreground">Condutor</dt><dd class="truncate">{{ getAluguelInfo(placa.plate)?.condutorNome || '—' }}</dd></div>

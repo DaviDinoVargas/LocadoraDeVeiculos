@@ -20,6 +20,7 @@ import { StatusBadgeComponent } from '../../shared/layout/status-badge.component
 import { SelecionarAlugueisDto } from '../alugueis/aluguel.model';
 import { AlugueisService } from '../alugueis/alugueis.service';
 import { CameraService, DeteccaoPlaca } from './camera.service';
+import { casarPlaca } from './placa-match';
 
 export type EstadoTile = 'parada' | 'iniciando' | 'ao-vivo' | 'reconectando' | 'parando' | 'erro' | 'sem-permissao';
 
@@ -74,7 +75,7 @@ export class CameraMonitorComponent implements OnInit {
   readonly placasComAluguel = signal<ReadonlyMap<string, SelecionarAlugueisDto>>(new Map());
   readonly filtroPlaca = signal('');
   readonly filtroCamera = signal('');
-  readonly apenasSemDevolucao = signal(true);
+  readonly apenasSemDevolucao = signal(false);
 
   private readonly placasJaProcessadas = new Set<string>();
   private readonly temporizadoresReconexao = new Map<number, ReturnType<typeof setTimeout>>();
@@ -83,15 +84,14 @@ export class CameraMonitorComponent implements OnInit {
   readonly placasFiltradas = computed(() => {
     const termo = this.filtroPlaca().trim().toLowerCase();
     const camera = this.filtroCamera();
-    const comAluguel = this.placasComAluguel();
     return this.placasDetectadas().filter(
       p =>
         (!termo || p.plate.toLowerCase().includes(termo)) &&
         (camera === '' || p.camera === Number(camera)) &&
-        (!this.apenasSemDevolucao() || !comAluguel.has(p.plate))
+        (!this.apenasSemDevolucao() || !this.temAluguelEmAberto(p.plate))
     );
   });
-  readonly placasNovas = computed(() => this.placasDetectadas().filter(p => !this.placasComAluguel().has(p.plate)).length);
+  readonly placasNovas = computed(() => this.placasDetectadas().filter(p => !this.temAluguelEmAberto(p.plate)).length);
   readonly placasComAluguelTotal = computed(() => this.placasDetectadas().length - this.placasNovas());
   readonly tilesVisiveis = computed(() => {
     if (this.modoExibicao() === 'multiplas') return this.cameras();
@@ -333,34 +333,43 @@ export class CameraMonitorComponent implements OnInit {
     });
   }
 
-  buscarAluguelPorPlaca(placa: string): void {
-    this.aluguelService.selecionarEmAberto().subscribe({
-      next: (alugueis: SelecionarAlugueisDto[]) => {
-        const aluguel = alugueis.find(a => a.automovelPlaca && a.automovelPlaca.toUpperCase() === placa.toUpperCase());
-        if (aluguel) {
-          this.placasComAluguel.update(m => new Map(m).set(placa, aluguel));
-        }
-      }
-    });
+  buscarAluguelPorPlaca(_placa: string): void {
+    // O casamento placa lida × aluguel é feito em aluguelDaPlaca(); aqui só garantimos a lista em dia.
+    this.atualizarInformacoesAlugueis();
+  }
+
+  /** Aluguel em aberto da placa lida: igual ou diferindo em 1 caractere que o OCR costuma confundir (R/K, B/8, O/0...). */
+  aluguelDaPlaca(placa: string): SelecionarAlugueisDto | undefined {
+    const mapa = this.placasComAluguel();
+    const cadastrada = casarPlaca(placa, mapa.keys());
+    return cadastrada ? mapa.get(cadastrada) : undefined;
+  }
+
+  /** Placa cadastrada quando a leitura da câmera difere dela (para avisar "lida X, cadastrada Y"). */
+  placaCadastradaDiferente(placa: string): string | null {
+    const aluguel = this.aluguelDaPlaca(placa);
+    const cadastrada = aluguel?.automovelPlaca;
+    return cadastrada && cadastrada.toUpperCase() !== placa.toUpperCase() ? cadastrada : null;
   }
 
   temAluguelEmAberto(placa: string): boolean {
-    return this.placasComAluguel().has(placa);
+    return this.aluguelDaPlaca(placa) !== undefined;
   }
 
   getAluguelInfo(placa: string): SelecionarAlugueisDto | undefined {
-    return this.placasComAluguel().get(placa);
+    return this.aluguelDaPlaca(placa);
   }
 
   navegarParaDevolucao(placa: string): void {
-    const aluguel = this.placasComAluguel().get(placa);
+    const aluguel = this.aluguelDaPlaca(placa);
     if (aluguel?.id) {
       void this.router.navigate(['/alugueis', aluguel.id, 'devolver']);
       return;
     }
     this.aluguelService.selecionarEmAberto().subscribe({
       next: (alugueis: SelecionarAlugueisDto[]) => {
-        const doVeiculo = alugueis.find(a => a.automovelPlaca && a.automovelPlaca.toUpperCase() === placa.toUpperCase());
+        const cadastrada = casarPlaca(placa, alugueis.map(a => a.automovelPlaca ?? ''));
+        const doVeiculo = cadastrada ? alugueis.find(a => a.automovelPlaca?.toUpperCase().replace(/[^A-Z0-9]/g, '') === cadastrada) : undefined;
         if (doVeiculo?.id) {
           void this.router.navigate(['/alugueis', doVeiculo.id, 'devolver']);
         } else {
