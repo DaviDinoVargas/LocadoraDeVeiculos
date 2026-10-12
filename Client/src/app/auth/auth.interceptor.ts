@@ -1,101 +1,56 @@
-import { HttpInterceptorFn, HttpRequest, HttpHandlerFn, HttpEvent, HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { AuthService } from './auth.service';
 import { Router } from '@angular/router';
-import { Observable, BehaviorSubject, throwError, from } from 'rxjs';
-import { catchError, filter, switchMap, take, mergeMap } from 'rxjs/operators';
+import { Observable, throwError } from 'rxjs';
+import { catchError, finalize, shareReplay, switchMap } from 'rxjs/operators';
+import { AccessToken, AuthService } from './auth.service';
 
-let isRefreshing = false;
-const refreshTokenSubject = new BehaviorSubject<string | null>(null);
+// Renovação de sessão compartilhada: várias requisições que tomam 401 ao mesmo tempo usam a MESMA
+// chamada a /auth/rotacionar. O refresh token é rotativo; duas chamadas com o mesmo cookie fariam a
+// segunda falhar e derrubar a sessão.
+let renovacao$: Observable<AccessToken> | null = null;
+
+function renovarSessao(auth: AuthService): Observable<AccessToken> {
+  if (!renovacao$) {
+    renovacao$ = auth.rotacionarToken().pipe(
+      finalize(() => (renovacao$ = null)),
+      shareReplay({ bufferSize: 1, refCount: false })
+    );
+  }
+  return renovacao$;
+}
 
 export const AuthInterceptor: HttpInterceptorFn = (req, next) => {
-
   const auth = inject(AuthService);
   const router = inject(Router);
 
   const accessToken = auth.getAccessToken();
+  const temSessao = !!accessToken;
+  const ehRotaDeAuth = req.url.includes('/auth/');
 
-  let authReq = req;
+  const comToken = accessToken && !auth.isTokenExpirado()
+    ? req.clone({ setHeaders: { Authorization: `Bearer ${accessToken}` } })
+    : req;
 
-  if (accessToken && !auth.isTokenExpirado()) {
-    authReq = req.clone({
-      setHeaders: {
-        Authorization: `Bearer ${accessToken}`
-      }
-    });
-  }
-
-  return next(authReq).pipe(
+  return next(comToken).pipe(
     catchError((error: HttpErrorResponse) => {
-
-      // Se for 401 E já temos um token (usuário estava logado) E não é uma requisição de auth
-      if (error.status === 401 &&
-          accessToken &&
-          !req.url.includes('/auth/') &&
-          auth.isTokenExpirado()) {
-
-        return handle401Error(req, next, auth, router);
+      // 401 numa chamada comum de quem tinha sessão: o access token venceu OU foi revogado no servidor
+      // (outra aba/login rotacionou o refresh token e invalidou o anterior). Antes só o caso "venceu
+      // pelo relógio" renovava e o "revogado" virava um 401 solto na tela. Renova uma vez e repete.
+      if (error.status === 401 && temSessao && !ehRotaDeAuth) {
+        return renovarSessao(auth).pipe(
+          // Só a falha da RENOVAÇÃO (refresh inválido/expirado) encerra a sessão e volta ao login...
+          catchError(falha => {
+            auth.limparStorage();
+            void router.navigate(['/login']);
+            return throwError(() => falha);
+          }),
+          // ...e um erro da requisição repetida (400, 409...) segue para a tela normalmente.
+          switchMap(token => next(req.clone({ setHeaders: { Authorization: `Bearer ${token.accessToken}` } })))
+        );
       }
 
-      // Se for 401 em uma rota de auth, simplesmente propagamos o erro
-      if (error.status === 401 && req.url.includes('/auth/')) {
-        return throwError(() => error);
-      }
-
-      // Outros erros
       return throwError(() => error);
     })
   );
-}
-
-function handle401Error(
-  request: HttpRequest<unknown>,
-  next: HttpHandlerFn,
-  auth: AuthService,
-  router: Router
-): Observable<HttpEvent<unknown>> {
-
-  if (!isRefreshing) {
-    isRefreshing = true;
-    refreshTokenSubject.next(null);
-
-    return auth.rotacionarToken().pipe(
-      switchMap(token => {
-        isRefreshing = false;
-        refreshTokenSubject.next(token.accessToken);
-
-        // Reexecuta a requisição original com o novo token
-        const newRequest = request.clone({
-          setHeaders: {
-            Authorization: `Bearer ${token.accessToken}`
-          }
-        });
-
-        return next(newRequest);
-      }),
-      catchError(err => {
-        isRefreshing = false;
-
-        // Se falhar no refresh, faz logout
-        auth.limparStorage();
-        router.navigate(['/login']);
-        return throwError(() => err);
-      })
-    );
-
-  } else {
-    // Se já está fazendo refresh, espera o token ser atualizado
-    return refreshTokenSubject.pipe(
-      filter(token => token != null),
-      take(1),
-      switchMap(token => {
-        const newRequest = request.clone({
-          setHeaders: {
-            Authorization: `Bearer ${token!}`
-          }
-        });
-        return next(newRequest);
-      })
-    );
-  }
-}
+};

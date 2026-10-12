@@ -13,9 +13,11 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     { provide: TitleStrategy, useClass: TituloDaPaginaStrategy },
     provideHttpClient(
+      // A ordem importa: o HttpErrorInterceptor fica por FORA para só avisar o erro FINAL; assim um 401
+      // que o AuthInterceptor consegue renovar e repetir não abre um toast "Não autorizado" à toa.
       withInterceptors([
-        AuthInterceptor,
-        HttpErrorInterceptor
+        HttpErrorInterceptor,
+        AuthInterceptor
       ])
     ),
     provideIcons(ICONES),

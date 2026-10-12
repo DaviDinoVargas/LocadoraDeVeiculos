@@ -1,8 +1,9 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
 import { map, catchError, finalize, shareReplay } from 'rxjs/operators';
 import { API_BASE_URL } from '../core/api.config';
+import { SILENCIAR_ERRO } from '../core/http-context';
 
 // Corpo das respostas de /auth/autenticar, /registrar, /entrar-facial e /rotacionar
 export interface RespostaToken {
@@ -93,7 +94,10 @@ export class AuthService {
     const token = this.getAccessToken();
     return this.http.post<RespostaToken>(`${this.baseUrl}/rotacionar`, {}, {
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      withCredentials: true
+      withCredentials: true,
+      // Quem chama (restaurar sessão ao abrir o site, renovar no interceptor) trata a falha: sem toast
+      // de "Não autorizado" para quem simplesmente ainda não fez login.
+      context: new HttpContext().set(SILENCIAR_ERRO, true)
     }).pipe(
       map(response => this.mapTokenResponse(response)),
       catchError(err => throwError(() => err))
