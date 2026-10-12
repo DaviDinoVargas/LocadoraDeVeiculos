@@ -1,9 +1,11 @@
 import { Injectable } from '@angular/core';
-import { toast } from 'ngx-sonner';
+import { toast } from '@spartan-ng/brain/sonner';
 
 /**
- * Toasts do app (ngx-sonner, o padrão do Spartan). Substitui o MatSnackBar: confirmações efêmeras
+ * Toasts do app (sonner do Spartan). Substitui o MatSnackBar: confirmações efêmeras
  * de 4–6 s; erros ficam um pouco mais. O host `<hlm-toaster />` vive no app-shell/app.
+ * O `toast` TEM de vir de `@spartan-ng/brain/sonner`: o do pacote `ngx-sonner` tem estado próprio e
+ * não aparece no `<hlm-toaster />` (os avisos ficavam invisíveis).
  */
 @Injectable({ providedIn: 'root' })
 export class NotificacaoService {
