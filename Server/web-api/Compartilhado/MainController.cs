@@ -42,6 +42,7 @@ public abstract class MainController : ControllerBase
             return tipoErro switch
             {
                 "RequisicaoInvalida" => BadRequest(detalhes),           // 400
+                "NaoAutorizado" => Unauthorized(detalhes),              // 401
                 "RegistroNaoEncontrado" => NotFound(detalhes),          // 404
                 "RegistroDuplicado" => Conflict(detalhes),              // 409
                 "ExclusaoBloqueada" => UnprocessableEntity(detalhes),   // 422

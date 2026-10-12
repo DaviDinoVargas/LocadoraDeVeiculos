@@ -60,6 +60,13 @@ public abstract class ResultadosErro
     }
 
 
+    public static Error NaoAutorizadoErro(string mensagemErro)
+    {
+        return new Error("Não autorizado")
+            .CausedBy(mensagemErro)
+            .WithMetadata("TipoErro", "NaoAutorizado");
+    }
+
     public static Error ExcecaoInternaErro(Exception ex)
     {
         // Importante: NÃO usar .CausedBy(ex) aqui. FluentResults guarda ex.Message como um
