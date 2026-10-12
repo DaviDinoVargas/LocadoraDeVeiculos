@@ -101,6 +101,9 @@ export class CameraMonitorComponent implements OnInit {
 
   ngOnInit(): void {
     this.carregarCameras();
+    // Sem isto a lista de aluguéis só chegava no primeiro ciclo de 30 s (ou ao ligar uma câmera) e uma placa
+    // lida logo ao abrir a tela aparecia como "Nova" mesmo tendo aluguel em aberto.
+    this.atualizarInformacoesAlugueis();
     // A deduplicação por timestamp é feita no CameraService; aqui não há debounce porque ele
     // descartava placas de câmeras diferentes que chegavam juntas.
     this.cameraService.placasDetectadas$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(d => this.adicionarPlacaDetectada(d));
@@ -329,7 +332,8 @@ export class CameraMonitorComponent implements OnInit {
         const mapa = new Map<string, SelecionarAlugueisDto>();
         alugueis.forEach(a => a.automovelPlaca && mapa.set(a.automovelPlaca, a));
         this.placasComAluguel.set(mapa);
-      }
+      },
+      error: () => undefined   // o interceptor já avisa; a lista só é tentada de novo no próximo ciclo
     });
   }
 
@@ -375,7 +379,8 @@ export class CameraMonitorComponent implements OnInit {
         } else {
           this.notificacao.aviso(`Nenhum aluguel em aberto encontrado para a placa ${placa}`);
         }
-      }
+      },
+      error: () => undefined   // o interceptor já avisou o motivo
     });
   }
 
