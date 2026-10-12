@@ -142,4 +142,83 @@ public sealed class AutomoveisDisponiveisTests
 
         Assert.IsTrue(resultado.IsFailed);
     }
+
+    // ---- veículo com aluguel EM ANDAMENTO atrasado (o carro ainda não voltou) ----
+
+    private static async Task<Aluguel> AluguelEmAndamentoAsync(CenarioAluguel c, Guid automovelId, int diasDeSaida, int diasDeRetornoPrevisto)
+    {
+        var agora = DateTimeOffset.UtcNow;
+        var aluguel = new Aluguel(c.Condutor.Id, automovelId, c.Cliente.Id, agora.AddDays(diasDeSaida), agora.AddDays(diasDeRetornoPrevisto), 300m)
+        {
+            EmpresaId = c.EmpresaId,
+            Status = StatusAluguel.EmAndamento
+        };
+        c.Contexto.Set<Aluguel>().Add(aluguel);
+        await c.Contexto.SaveChangesAsync();
+        return aluguel;
+    }
+
+    [TestMethod]
+    public async Task AluguelEmAndamentoAtrasado_BloqueiaOVeiculoNoPeriodoSeguinte()
+    {
+        await using var c = await CenarioAluguel.CriarAsync();
+        var outro = await c.NovoAutomovelAsync("XYZ9Z99");
+        await AluguelEmAndamentoAsync(c, c.Automovel.Id, diasDeSaida: -10, diasDeRetornoPrevisto: -5);   // devia ter voltado há 5 dias
+
+        var agora = DateTimeOffset.UtcNow;
+        var placas = await PlacasDisponiveisAsync(c, agora, agora.AddDays(2));
+
+        CollectionAssert.AreEqual(new[] { outro.Placa }, placas);   // o carro que não voltou NÃO está disponível
+    }
+
+    [TestMethod]
+    public async Task AluguelEmAndamentoNoPrazo_ComPeriodoDepoisDoRetorno_ContinuaLiberandoOVeiculo()
+    {
+        await using var c = await CenarioAluguel.CriarAsync();
+        await AluguelEmAndamentoAsync(c, c.Automovel.Id, diasDeSaida: -1, diasDeRetornoPrevisto: 2);     // dentro do prazo
+
+        var depois = DateTimeOffset.UtcNow.AddDays(5);
+        var placas = await PlacasDisponiveisAsync(c, depois, depois.AddDays(2));
+
+        CollectionAssert.AreEqual(new[] { "ABC1D23" }, placas);   // reserva futura é possível: ele volta antes
+    }
+
+    [TestMethod]
+    public async Task AposARegistrarDevolucao_OVeiculoAtrasadoVoltaADisponivel()
+    {
+        await using var c = await CenarioAluguel.CriarAsync();
+        var aluguel = await AluguelEmAndamentoAsync(c, c.Automovel.Id, diasDeSaida: -10, diasDeRetornoPrevisto: -5);
+        var agora = DateTimeOffset.UtcNow;
+
+        aluguel.Status = StatusAluguel.Concluido;
+        await c.Contexto.SaveChangesAsync();
+
+        CollectionAssert.AreEqual(new[] { "ABC1D23" }, await PlacasDisponiveisAsync(c, agora, agora.AddDays(2)));
+    }
+
+    [TestMethod]
+    public async Task AluguelReservadoComPeriodoVencido_NaoBloqueiaOVeiculo()
+    {
+        await using var c = await CenarioAluguel.CriarAsync();
+        var aluguel = await AluguelEmAndamentoAsync(c, c.Automovel.Id, diasDeSaida: -10, diasDeRetornoPrevisto: -5);
+        aluguel.Status = StatusAluguel.Reservado;   // nunca foi retirado: não há carro fora
+        await c.Contexto.SaveChangesAsync();
+        var agora = DateTimeOffset.UtcNow;
+
+        CollectionAssert.AreEqual(new[] { "ABC1D23" }, await PlacasDisponiveisAsync(c, agora, agora.AddDays(2)));
+    }
+
+    [TestMethod]
+    public async Task VeiculoAtrasado_NaoPodeSerAlugadoDeNovo_CadastroTomaConflito()
+    {
+        await using var c = await CenarioAluguel.CriarAsync();
+        await AluguelEmAndamentoAsync(c, c.Automovel.Id, diasDeSaida: -10, diasDeRetornoPrevisto: -5);
+        var agora = DateTimeOffset.UtcNow;
+
+        var tentativa = await c.CriarHandlerCadastro().Handle(
+            new CadastrarAluguelCommand(c.Condutor.Id, c.Automovel.Id, c.Cliente.Id, agora.AddHours(1), agora.AddDays(2), 0m, new()),
+            CancellationToken.None);
+
+        Assert.IsTrue(tentativa.IsFailed);   // a lista e o cadastro concordam
+    }
 }

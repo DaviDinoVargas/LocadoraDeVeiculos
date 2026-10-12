@@ -11,10 +11,12 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloAluguel
     public class RepositorioAluguelEmOrm : RepositorioBaseEmOrm<Aluguel>, IRepositorioAluguel
     {
         private readonly LocadoraDeVeiculosDbContext dbContext;
+        private readonly TimeProvider relogio;
 
-        public RepositorioAluguelEmOrm(LocadoraDeVeiculosDbContext dbContext) : base(dbContext)
+        public RepositorioAluguelEmOrm(LocadoraDeVeiculosDbContext dbContext, TimeProvider? relogio = null) : base(dbContext)
         {
             this.dbContext = dbContext;
+            this.relogio = relogio ?? TimeProvider.System;
         }
 
         public override async Task<Aluguel?> SelecionarPorIdAsync(Guid id)
@@ -70,16 +72,22 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloAluguel
         // Única definição de "aluguel que bloqueia o automóvel": não cancelado, não concluído e com
         // período que cruza [dataSaida, dataRetornoPrevisto] (extremos incluídos). Cadastro/edição
         // (409) e a listagem de disponíveis usam a mesma regra, então nunca discordam.
+        // Aluguel EM ANDAMENTO com o retorno previsto já vencido (atrasado) continua bloqueando o
+        // veículo até a devolução ser registrada: o carro não voltou, então não dá para alugá-lo de
+        // novo. Antes só o cruzamento de datas contava e o veículo atrasado aparecia como livre.
         private IQueryable<Aluguel> AlugueisAtivosNoPeriodo(
             DateTimeOffset dataSaida,
             DateTimeOffset dataRetornoPrevisto,
             Guid? aluguelIdExcluir)
         {
+            var agora = relogio.GetUtcNow();
+
             var query = dbContext.Alugueis
                 .Where(a => a.Status != StatusAluguel.Cancelado &&
                             a.Status != StatusAluguel.Concluido &&
                             a.DataSaida <= dataRetornoPrevisto &&
-                            a.DataRetornoPrevisto >= dataSaida);
+                            (a.DataRetornoPrevisto >= dataSaida ||
+                             (a.Status == StatusAluguel.EmAndamento && a.DataRetornoPrevisto < agora)));
 
             if (aluguelIdExcluir.HasValue)
             {
