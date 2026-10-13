@@ -156,4 +156,70 @@ public sealed class AutenticarComRostoCommandHandlerTests
 
         Assert.IsTrue(resultado.IsFailed);
     }
+
+    // S3: o rosto passa pelo mesmo bloqueio do login por senha.
+    private static Mock<IFacialAuthClient> FacialQueResponde(FacialVerifyResult resultado)
+    {
+        var mock = new Mock<IFacialAuthClient>();
+        mock.Setup(f => f.VerificarAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(resultado);
+        return mock;
+    }
+
+    [TestMethod]
+    public async Task Handle_RostosErradosEmSequencia_BloqueiamAContaMesmoQuandoDepoisORostoBate()
+    {
+        var usuario = await CriarUsuarioEmpresaAsync("bloqueio@teste.com");
+        var comando = new AutenticarComRostoCommand("bloqueio@teste.com", "foto");
+
+        var errado = CriarHandler(FacialQueResponde(new FacialVerifyResult(true, false, 0.1)).Object);
+        for (var i = 0; i < 5; i++)
+            Assert.IsTrue((await errado.Handle(comando, CancellationToken.None)).IsFailed);
+
+        Assert.IsTrue(await _userManager.IsLockedOutAsync(usuario));
+
+        // Com a conta bloqueada nem o rosto certo entra, e o serviço de ML nem é consultado.
+        var mockCerto = FacialQueResponde(new FacialVerifyResult(true, true, 0.99));
+        var resultado = await CriarHandler(mockCerto.Object).Handle(comando, CancellationToken.None);
+
+        Assert.IsTrue(resultado.IsFailed);
+        mockCerto.Verify(f => f.VerificarAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [TestMethod]
+    public async Task Handle_SemRostoCadastrado_ContaComoFalhaNoBloqueio()
+    {
+        var usuario = await CriarUsuarioEmpresaAsync("semrosto@teste.com");
+
+        var handler = CriarHandler(FacialQueResponde(new FacialVerifyResult(false, false, 0)).Object);
+        await handler.Handle(new AutenticarComRostoCommand("semrosto@teste.com", "foto"), CancellationToken.None);
+
+        Assert.AreEqual(1, await _userManager.GetAccessFailedCountAsync(usuario));
+    }
+
+    [TestMethod]
+    public async Task Handle_FotoSemRostoDetectavel_NaoContaComoTentativa()
+    {
+        var usuario = await CriarUsuarioEmpresaAsync("fotoruim@teste.com");
+
+        var handler = CriarHandler(FacialQueResponde(new FacialVerifyResult(true, false, 0, NenhumRostoNaImagem: true)).Object);
+        await handler.Handle(new AutenticarComRostoCommand("fotoruim@teste.com", "foto"), CancellationToken.None);
+
+        Assert.AreEqual(0, await _userManager.GetAccessFailedCountAsync(usuario));
+    }
+
+    [TestMethod]
+    public async Task Handle_RostoQueBate_ZeraOContadorDeFalhas()
+    {
+        var usuario = await CriarUsuarioEmpresaAsync("zera@teste.com");
+        var comando = new AutenticarComRostoCommand("zera@teste.com", "foto");
+
+        await CriarHandler(FacialQueResponde(new FacialVerifyResult(true, false, 0.1)).Object).Handle(comando, CancellationToken.None);
+        Assert.AreEqual(1, await _userManager.GetAccessFailedCountAsync(usuario));
+
+        var resultado = await CriarHandler(FacialQueResponde(new FacialVerifyResult(true, true, 0.99)).Object).Handle(comando, CancellationToken.None);
+
+        Assert.IsTrue(resultado.IsSuccess);
+        Assert.AreEqual(0, await _userManager.GetAccessFailedCountAsync(usuario));
+    }
 }
