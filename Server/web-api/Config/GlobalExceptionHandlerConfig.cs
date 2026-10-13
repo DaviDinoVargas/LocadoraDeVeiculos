@@ -18,13 +18,23 @@ public static class GlobalExceptionHandlerConfig
 
                 if (gerenciadorExcecoes is null) return;
 
-                httpContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                // Erros do cliente que o Kestrel detecta antes do controller (corpo acima do limite, cabeçalho
+                // malformado...) chegam aqui como BadHttpRequestException: são 4xx (413, 400...), não falha do servidor.
+                var erroDoCliente = gerenciadorExcecoes.Error as BadHttpRequestException;
+                var status = erroDoCliente is not null ? erroDoCliente.StatusCode : (int)HttpStatusCode.InternalServerError;
+
+                httpContext.Response.StatusCode = status;
                 httpContext.Response.ContentType = "application/json";
 
                 var objeto = new
                 {
                     Sucesso = false,
-                    Erros = new string[] { "Erro interno do servidor" }
+                    Erros = new string[]
+                    {
+                        status == StatusCodes.Status413PayloadTooLarge ? "O corpo da requisição excede o tamanho permitido."
+                        : erroDoCliente is not null ? "Requisição inválida."
+                        : "Erro interno do servidor"
+                    }
                 };
 
                 var respostaJson = JsonSerializer.Serialize(objeto);

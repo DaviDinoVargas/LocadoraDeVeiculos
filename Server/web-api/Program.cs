@@ -2,7 +2,9 @@ using LocadoraDeVeiculos.WebApi.Config;
 using LocadoraDeVeiculos.WebApi.Config.Http;
 using LocadoraDeVeiculos.WebApi.Config.Identify;
 using LocadoraDeVeiculos.WebApi.Config.Orm;
+using System.Text.Encodings.Web;
 using System.Text.Json.Serialization;
+using System.Text.Unicode;
 using LocadoraDeVeiculos.WebApi.Config.Swagger;
 using LocadoraDeVeiculos.Core.Aplicacao;
 using LocadoraDeVeiculos.Infraestrutura.Orm.orm;
@@ -30,7 +32,14 @@ namespace LocadoraDeVeiculos.WebApi
 
             builder.Services
                 .AddControllers()
-                .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+                .AddJsonOptions(options =>
+                {
+                    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+
+                    // Defesa em profundidade contra XSS: "<", ">", "&" e aspas saem escapados (<...) mesmo que um
+                    // cliente interprete o JSON como HTML. Acentos continuam legíveis.
+                    options.JsonSerializerOptions.Encoder = JavaScriptEncoder.Create(new TextEncoderSettings(UnicodeRanges.All));
+                });
 
             // Borda da API: IP real atrás de proxy, limite de corpo, rate limit global e de autenticação
             // (a política "auth" é aplicada via [EnableRateLimiting] no AuthController).
