@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using LocadoraDeVeiculos.Core.Aplicacao.Compartilhado;
 using LocadoraDeVeiculos.Core.Aplicacao.ModuloCliente.Commands;
 using System;
 
@@ -16,7 +17,8 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloCliente.Validators
             RuleFor(p => p.Cpf)
                 .NotEmpty().WithMessage("O campo {PropertyName} é obrigatório.")
                 .Matches(@"^\d{3}\.\d{3}\.\d{3}-\d{2}$")
-                .WithMessage("O campo {PropertyName} deve seguir o formato '000.000.000-00'.");
+                .WithMessage("O campo {PropertyName} deve seguir o formato '000.000.000-00'.")
+                .DocumentoCpfValido();
 
             RuleFor(p => p.Rg)
                 .NotEmpty().WithMessage("O campo {PropertyName} é obrigatório.")

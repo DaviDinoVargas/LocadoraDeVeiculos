@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using LocadoraDeVeiculos.Core.Aplicacao.Compartilhado;
 using LocadoraDeVeiculos.Core.Aplicacao.ModuloCliente.Commands;
 using System;
 
@@ -16,7 +17,8 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloCliente.Validators
             RuleFor(p => p.Cnpj)
                 .NotEmpty().WithMessage("O campo {PropertyName} é obrigatório.")
                 .Matches(@"^\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}$")
-                .WithMessage("O campo {PropertyName} deve seguir o formato '00.000.000/0000-00'.");
+                .WithMessage("O campo {PropertyName} deve seguir o formato '00.000.000/0000-00'.")
+                .DocumentoCnpjValido();
 
             RuleFor(p => p.NomeFantasia)
                 .NotEmpty().WithMessage("O campo {PropertyName} é obrigatório.")

@@ -11,7 +11,7 @@ public sealed class ClientePessoaFisicaValidatorsTests
     private readonly CadastrarClientePessoaFisicaCommandValidator _validator = new();
 
     private static CadastrarClientePessoaFisicaCommand ComandoValido(
-        string cpf = "123.456.789-00",
+        string cpf = "529.982.247-25",
         string telefone = "(11) 91234-5678",
         string email = "cliente@teste.com",
         DateTime? validadeCnh = null) =>
@@ -30,6 +30,26 @@ public sealed class ClientePessoaFisicaValidatorsTests
     public void Cpf_SemFormatoEsperado_EhInvalido()
     {
         var command = ComandoValido(cpf: "12345678900");
+
+        var resultado = _validator.TestValidate(command);
+
+        resultado.ShouldHaveValidationErrorFor(c => c.Cpf);
+    }
+
+    [TestMethod]
+    public void Cpf_ComFormatoCertoMasDigitoVerificadorErrado_EhInvalido()
+    {
+        var command = ComandoValido(cpf: "529.982.247-26");
+
+        var resultado = _validator.TestValidate(command);
+
+        resultado.ShouldHaveValidationErrorFor(c => c.Cpf);
+    }
+
+    [TestMethod]
+    public void Cpf_ComSequenciaRepetida_EhInvalido()
+    {
+        var command = ComandoValido(cpf: "111.111.111-11");
 
         var resultado = _validator.TestValidate(command);
 

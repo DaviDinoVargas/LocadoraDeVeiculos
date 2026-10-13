@@ -23,7 +23,7 @@ public sealed class ParceiroValidatorsTests
     [TestMethod]
     public void Cnpj_ComFormatoEsperado_EhValido()
     {
-        var command = new CadastrarParceiroCommand("Posto Central", "12.345.678/0001-90", CategoriaParceiro.PostoDeCombustivel);
+        var command = new CadastrarParceiroCommand("Posto Central", "11.222.333/0001-81", CategoriaParceiro.PostoDeCombustivel);
 
         var resultado = _validator.TestValidate(command);
 
@@ -33,7 +33,7 @@ public sealed class ParceiroValidatorsTests
     [TestMethod]
     public void Nome_MenorQueDoisCaracteres_EhInvalido()
     {
-        var command = new CadastrarParceiroCommand("A", "12.345.678/0001-90", CategoriaParceiro.Hotel);
+        var command = new CadastrarParceiroCommand("A", "11.222.333/0001-81", CategoriaParceiro.Hotel);
 
         var resultado = _validator.TestValidate(command);
 
@@ -43,7 +43,7 @@ public sealed class ParceiroValidatorsTests
     [TestMethod]
     public void Categoria_ForaDoEnum_EhInvalida()
     {
-        var command = new CadastrarParceiroCommand("Posto Central", "12.345.678/0001-90", (CategoriaParceiro)999);
+        var command = new CadastrarParceiroCommand("Posto Central", "11.222.333/0001-81", (CategoriaParceiro)999);
 
         var resultado = _validator.TestValidate(command);
 
