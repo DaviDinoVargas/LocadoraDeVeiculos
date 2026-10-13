@@ -3,9 +3,38 @@
 import os
 from urllib.parse import urlparse
 
-# Segredo compartilhado com a Web API .NET (MlApi:InternalToken). Só o backend
-# conhece; é o que autoriza as chamadas servidor-a-servidor ao módulo facial.
-INTERNAL_TOKEN = os.environ.get('ML_INTERNAL_TOKEN', 'dev-only-shared-secret-troque-em-producao')
+TOKEN_INTERNO_DE_DESENVOLVIMENTO = 'dev-only-shared-secret-troque-em-producao'
+TAMANHO_MINIMO_TOKEN_INTERNO = 32
+
+
+def em_desenvolvimento(env=os.environ) -> bool:
+    """Qualquer valor de ML_ENV diferente de "development" (ou ausente) conta como ambiente real."""
+    return env.get('ML_ENV', 'development').strip().lower() == 'development'
+
+
+def resolver_token_interno(env=os.environ) -> str:
+    """Segredo compartilhado com a Web API .NET (MlApi:InternalToken). Só o backend o conhece; é o que
+    autoriza as chamadas servidor-a-servidor ao módulo facial.
+
+    Em desenvolvimento o valor padrão público é aceito por conveniência. Fora dele o serviço se recusa
+    a subir sem um segredo próprio e longo, porque quem conhece o padrão (está no repositório) poderia
+    cadastrar, usar como oráculo ou apagar rostos."""
+    valor = env.get('ML_INTERNAL_TOKEN', '').strip()
+
+    if em_desenvolvimento(env):
+        return valor or TOKEN_INTERNO_DE_DESENVOLVIMENTO
+
+    if not valor or valor == TOKEN_INTERNO_DE_DESENVOLVIMENTO:
+        raise RuntimeError('ML_INTERNAL_TOKEN precisa ser definido (e diferente do valor de desenvolvimento) fora do ambiente de desenvolvimento.')
+    if len(valor) < TAMANHO_MINIMO_TOKEN_INTERNO:
+        raise RuntimeError(f'ML_INTERNAL_TOKEN precisa ter pelo menos {TAMANHO_MINIMO_TOKEN_INTERNO} caracteres.')
+    return valor
+
+
+INTERNAL_TOKEN = resolver_token_interno()
+
+# /docs, /redoc e /openapi.json só existem em desenvolvimento: descrevem toda a superfície do serviço.
+DOCS_HABILITADOS = em_desenvolvimento()
 
 DOTNET_API_URL = os.environ.get('DOTNET_API_URL', 'https://localhost:7064')
 

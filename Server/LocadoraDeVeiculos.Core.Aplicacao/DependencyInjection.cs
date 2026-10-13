@@ -73,6 +73,9 @@ public static class DependencyInjection
         // Serviço Python de ML (reconhecimento facial, chatbot): roda localmente, sem HTTPS/certificado
         // válido em desenvolvimento. Timeout curto porque essas chamadas acontecem durante o login,
         // ninguém deveria ficar esperando o reconhecimento facial por mais que alguns segundos.
+        // Falha já na subida (e não na primeira chamada ao ML) se o segredo interno for inaceitável.
+        SegredoInternoDoMl.Resolver(configuration);
+
         var mlApiBaseUrl = configuration["MlApi:BaseUrl"] ?? "http://localhost:8000";
         services.AddHttpClient("MlApi", client =>
         {

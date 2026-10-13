@@ -41,6 +41,10 @@ app = FastAPI(
     description="API para detecção de placas e reconhecimento facial",
     version="1.0.0",
     lifespan=lifespan,
+    # Fora de desenvolvimento a documentação interativa não é publicada (S12).
+    docs_url="/docs" if settings.DOCS_HABILITADOS else None,
+    redoc_url=None,
+    openapi_url="/openapi.json" if settings.DOCS_HABILITADOS else None,
 )
 
 app.add_middleware(
@@ -73,12 +77,18 @@ except ImportError as e:
 
 @app.get("/")
 def read_root():
-    return {"message": "Locadora ML API", "version": "1.0.0", "docs": "/docs"}
+    resposta = {"message": "Locadora ML API", "version": "1.0.0"}
+    if settings.DOCS_HABILITADOS:
+        resposta["docs"] = "/docs"
+    return resposta
 
 
 @app.get("/health")
 def health_check():
     """Endpoint de saúde (público: só estado agregado, sem dados de ninguém)"""
+    if not settings.DOCS_HABILITADOS:
+        # Fora de desenvolvimento, quem não está autenticado só descobre que o serviço está de pé.
+        return {"status": "healthy"}
     ocr_ok, ocr_detalhe = ocr_disponivel()
     return {
         "status": "healthy",

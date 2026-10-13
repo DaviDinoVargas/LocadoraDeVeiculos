@@ -41,7 +41,7 @@ public sealed class FacialAuthClientTests
     private static FacialAuthClient CriarCliente(HandlerFalso handler)
     {
         var configuracao = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?> { ["MlApi:InternalToken"] = "segredo-de-teste" })
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["MlApi:InternalToken"] = "segredo-de-teste-com-mais-de-trinta-e-dois-caracteres" })
             .Build();
 
         return new FacialAuthClient(new FabricaFalsa(handler), configuracao);
@@ -50,7 +50,7 @@ public sealed class FacialAuthClientTests
     private static void AssertTokenInterno(HttpRequestMessage requisicao)
     {
         Assert.IsTrue(requisicao.Headers.TryGetValues("X-Internal-Token", out var valores));
-        Assert.AreEqual("segredo-de-teste", System.Linq.Enumerable.Single(valores));
+        Assert.AreEqual("segredo-de-teste-com-mais-de-trinta-e-dois-caracteres", System.Linq.Enumerable.Single(valores));
     }
 
     [TestMethod]

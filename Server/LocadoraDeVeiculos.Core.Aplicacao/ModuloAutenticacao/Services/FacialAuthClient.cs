@@ -30,7 +30,7 @@ public class FacialAuthClient(IHttpClientFactory httpClientFactory, IConfigurati
     // /face/* exige esse cabeçalho: só esta API fala com ele, o navegador nunca. Sem isso
     // qualquer um que alcançasse o proxy do Angular poderia plantar o próprio rosto no personId
     // de outra pessoa (enroll), apagar o rosto dela (delete) ou usar /verify como oráculo.
-    private string SegredoInterno => configuration["MlApi:InternalToken"] ?? "dev-only-shared-secret-troque-em-producao";
+    private string SegredoInterno => SegredoInternoDoMl.Resolver(configuration);
 
     private HttpRequestMessage Requisicao(HttpMethod metodo, string url, object? corpo = null)
     {

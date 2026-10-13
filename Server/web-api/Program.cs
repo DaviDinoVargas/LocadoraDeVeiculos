@@ -67,6 +67,10 @@ namespace LocadoraDeVeiculos.WebApi
 
             app.MapControllers();
 
+            // AllowedHosts "*" é o padrão de desenvolvimento; num ambiente real deve listar os domínios da API.
+            if (!app.Environment.IsDevelopment() && app.Configuration["AllowedHosts"] == "*")
+                app.Logger.LogWarning("AllowedHosts está como \"*\": defina os hosts permitidos (AllowedHosts) neste ambiente.");
+
             app.Run();
         }
     }
