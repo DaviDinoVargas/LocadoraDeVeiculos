@@ -6,9 +6,9 @@
 //                              configuracoes  (o [Authorize] da classe e o do método se
 //                              SOMAM no ASP.NET, por isso GET /parceiros também é só Empresa)
 //   Empresa + Funcionario .... automoveis (leitura), clientes, condutores, alugueis,
-//                              devolucoes, taxas-servicos (CRUD completo)
+//                              devolucoes, taxas-servicos (leitura)
 //   leitura p/ ambos, escrita
-//   só Empresa ............... automoveis, cupons, desafios-cupom
+//   só Empresa ............... automoveis, cupons, desafios-cupom, taxas-servicos (S32: preço é decisão da gerência)
 //
 // As telas de Cupons/Desafios são de GESTÃO (CRUD) e por isso ficam só para Empresa no
 // front, embora a API deixe o Funcionario ler (o formulário de aluguel usa cupons).

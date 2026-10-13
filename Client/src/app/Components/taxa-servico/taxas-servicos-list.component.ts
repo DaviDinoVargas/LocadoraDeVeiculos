@@ -3,6 +3,8 @@ import { Router, RouterLink } from '@angular/router';
 import { NgIcon } from '@ng-icons/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
+import { AuthService } from '../../auth/auth.service';
+import { SOMENTE_EMPRESA, cargoPodeAcessar } from '../../core/permissoes';
 import { crudLista } from '../../shared/data-table/crud-lista';
 import { DataTableComponent } from '../../shared/data-table/data-table.component';
 import { AcaoLinha, ColunaTabela } from '../../shared/data-table/data-table.types';
@@ -21,6 +23,10 @@ import { TaxasServicosService } from './taxas-servicos.service';
 export class TaxasServicosListComponent {
   private readonly svc = inject(TaxasServicosService);
   private readonly router = inject(Router);
+  private readonly auth = inject(AuthService);
+
+  // Só a Empresa cria, edita e exclui taxas (S32); o Funcionário só consulta.
+  readonly podeEditar = cargoPodeAcessar(this.auth.getUsuario()?.cargo, SOMENTE_EMPRESA);
 
   // Tipo escolhido no filtro ('' = todos). A consulta é feita no servidor (GET /taxas-servicos/tipo/{tipo}).
   private tipoFiltro = '';
@@ -51,10 +57,12 @@ export class TaxasServicosListComponent {
     }
   ];
 
-  readonly acoes: AcaoLinha<TaxaServicoDto>[] = [
-    { rotulo: 'Editar', icone: 'lucidePencil', executar: t => this.editar(t.id) },
-    { rotulo: 'Excluir', icone: 'lucideTrash2', destrutiva: true, executar: t => this.excluir(t.id) }
-  ];
+  readonly acoes: AcaoLinha<TaxaServicoDto>[] = this.podeEditar
+    ? [
+        { rotulo: 'Editar', icone: 'lucidePencil', executar: t => this.editar(t.id) },
+        { rotulo: 'Excluir', icone: 'lucideTrash2', destrutiva: true, executar: t => this.excluir(t.id) }
+      ]
+    : [];
 
   readonly tituloLinha = (t: TaxaServicoDto) => t.nome;
 

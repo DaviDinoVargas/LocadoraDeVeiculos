@@ -81,6 +81,7 @@ public sealed class AutorizacaoTests
     [DataRow("/api/cupons")]
     [DataRow("/api/desafios-cupom")]
     [DataRow("/api/parceiros")]
+    [DataRow("/api/taxas-servicos")]
     public async Task Funcionario_NaoCriaRecursosReservadosAEmpresa(string rota)
     {
         using var fabrica = new ApiFactory(new() { ["RATE_LIMIT_PER_MINUTE"] = "1000" });

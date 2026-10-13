@@ -48,8 +48,13 @@ def executar(ctx):
              [x for x in escritas if x[1] != 403], all(s == 403 for _, s in escritas), 'alta')
 
     taxa = requisitar('POST', f'{base}/api/taxas-servicos', token=func.token, ip=ip_unico(), json_corpo={})
-    # S32 é decisão de produto (o front documenta que o Funcionário gerencia taxas): registra o comportamento atual.
-    r.info('B04', CAT, 'Funcionário alcança a escrita de taxas de serviço (400 = autorizado, falhou só na validação; 403 = barrado)', taxa.status, 'S32')
+    r.checar('B04a', CAT, 'Funcionário não cria taxas de serviço (preço é decisão da gerência)', '403', taxa.status, taxa.status == 403, 'media', 'S32')
+    taxa_put = requisitar('PUT', f'{base}/api/taxas-servicos/00000000-0000-0000-0000-000000000001', token=func.token, ip=ip_unico(), json_corpo={})
+    taxa_del = requisitar('DELETE', f'{base}/api/taxas-servicos/00000000-0000-0000-0000-000000000001', token=func.token, ip=ip_unico())
+    r.checar('B04b', CAT, 'Funcionário não edita nem exclui taxas de serviço', '403 em PUT e DELETE', (taxa_put.status, taxa_del.status),
+             taxa_put.status == 403 and taxa_del.status == 403, 'media', 'S32')
+    leitura = requisitar('GET', f'{base}/api/taxas-servicos', token=func.token, ip=ip_unico())
+    r.checar('B04c', CAT, 'Funcionário continua LENDO as taxas (precisa delas para montar o aluguel)', '200', leitura.status, leitura.ok, 'media', 'S32')
 
     # --- B10-B16: isolamento entre empresas (IDOR) -------------------------------------------
     grupo = requisitar('POST', f'{base}/api/grupos-automovel', token=emp_a.token, ip=ip_unico(),

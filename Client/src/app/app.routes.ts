@@ -80,8 +80,8 @@ export const routes: Routes = [
 
   // Taxas e serviços
   protegida('taxas-servicos', () => import('./Components/taxa-servico/taxas-servicos-list.component').then(m => m.TaxasServicosListComponent), EMPRESA_E_FUNCIONARIO, { title: 'Taxas e serviços' }),
-  formulario('taxas-servicos/new', () => import('./Components/taxa-servico/taxa-servico-form.component').then(m => m.TaxaServicoFormComponent), EMPRESA_E_FUNCIONARIO, 'Nova taxa ou serviço'),
-  formulario('taxas-servicos/:id/edit', () => import('./Components/taxa-servico/taxa-servico-form.component').then(m => m.TaxaServicoFormComponent), EMPRESA_E_FUNCIONARIO, 'Editar taxa ou serviço'),
+  formulario('taxas-servicos/new', () => import('./Components/taxa-servico/taxa-servico-form.component').then(m => m.TaxaServicoFormComponent), SOMENTE_EMPRESA, 'Nova taxa ou serviço'),
+  formulario('taxas-servicos/:id/edit', () => import('./Components/taxa-servico/taxa-servico-form.component').then(m => m.TaxaServicoFormComponent), SOMENTE_EMPRESA, 'Editar taxa ou serviço'),
 
   protegida('camera-monitor', () => import('./Components/monitoramento/camera-monitor.component').then(m => m.CameraMonitorComponent), EMPRESA_E_FUNCIONARIO, {
     title: 'Monitoramento de câmeras',

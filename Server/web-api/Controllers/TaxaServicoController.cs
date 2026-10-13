@@ -16,6 +16,9 @@ namespace LocadoraDeVeiculos.WebApi.Controllers
     [Route("api/taxas-servicos")]
     public sealed class TaxaServicoController(IMediator mediator) : MainController
     {
+        // Preço é decisão da gerência (S32): o [Authorize] do método se SOMA ao da classe, então escrever exige Empresa.
+        // A leitura continua liberada ao Funcionário, que escolhe as taxas ao montar um aluguel.
+        [Authorize(Roles = "Empresa")]
         [HttpPost]
         public async Task<ActionResult<CadastrarTaxaServicoResponse>> Cadastrar(
             CadastrarTaxaServicoRequest request,
@@ -39,6 +42,7 @@ namespace LocadoraDeVeiculos.WebApi.Controllers
             });
         }
 
+        [Authorize(Roles = "Empresa")]
         [HttpPut("{id:guid}")]
         public async Task<ActionResult<EditarTaxaServicoResponse>> Editar(
            Guid id,
@@ -68,6 +72,7 @@ namespace LocadoraDeVeiculos.WebApi.Controllers
             });
         }
 
+        [Authorize(Roles = "Empresa")]
         [HttpDelete("{id:guid}")]
         public async Task<ActionResult<ExcluirTaxaServicoResponse>> Excluir(
             Guid id,

@@ -1,9 +1,11 @@
 <app-page>
   <app-page-header titulo="Taxas e serviços" descricao="Itens adicionais cobrados no aluguel, como seguro, limpeza ou cadeirinha.">
-    <a acoes hlmBtn routerLink="/taxas-servicos/new">
-      <ng-icon name="lucidePlus" aria-hidden="true" />
-      Nova taxa ou serviço
-    </a>
+    @if (podeEditar) {
+      <a acoes hlmBtn routerLink="/taxas-servicos/new">
+        <ng-icon name="lucidePlus" aria-hidden="true" />
+        Nova taxa ou serviço
+      </a>
+    }
   </app-page-header>
 
   <app-data-table
@@ -17,7 +19,7 @@
     [acoesLinha]="acoes"
     [tituloLinha]="tituloLinha"
     tituloVazio="Nenhuma taxa ou serviço cadastrado"
-    descricaoVazio="Cadastre os itens extras que podem ser somados ao valor do aluguel."
+    [descricaoVazio]="podeEditar ? 'Cadastre os itens extras que podem ser somados ao valor do aluguel.' : 'Peça a um administrador para cadastrar as taxas e serviços.'"
     (recarregar)="carregar()"
   >
     <label filtros class="flex items-center gap-2">
@@ -28,9 +30,11 @@
         <option hlmNativeSelectOption value="Diario">Diário</option>
       </hlm-native-select>
     </label>
-    <a acaoVazia hlmBtn routerLink="/taxas-servicos/new">
-      <ng-icon name="lucidePlus" aria-hidden="true" />
-      Nova taxa ou serviço
-    </a>
+    @if (podeEditar) {
+      <a acaoVazia hlmBtn routerLink="/taxas-servicos/new">
+        <ng-icon name="lucidePlus" aria-hidden="true" />
+        Nova taxa ou serviço
+      </a>
+    }
   </app-data-table>
 </app-page>
