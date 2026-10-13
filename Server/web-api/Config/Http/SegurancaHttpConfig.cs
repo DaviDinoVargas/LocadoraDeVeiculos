@@ -92,7 +92,7 @@ public static class SegurancaHttpConfig
         // Login, cadastro e rotação de token: força bruta e spam de contas. Sempre por IP, porque
         // nesses pontos ainda não há usuário autenticado.
         opcoes.AddPolicy(PoliticaAutenticacao, contexto => RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: contexto.Connection.RemoteIpAddress?.ToString() ?? "desconhecido",
+            partitionKey: ChaveDoIp(contexto.Connection.RemoteIpAddress),
             factory: _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = LimiteAutenticacaoPorMinuto,
@@ -102,7 +102,7 @@ public static class SegurancaHttpConfig
 
         // Criar conta cria uma empresa (tenant) inteira: spam de contas enche o banco e consome ML/câmeras.
         opcoes.AddPolicy(PoliticaRegistro, contexto => RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: contexto.Connection.RemoteIpAddress?.ToString() ?? "desconhecido",
+            partitionKey: ChaveDoIp(contexto.Connection.RemoteIpAddress),
             factory: _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = limiteRegistroPorHora,
@@ -118,7 +118,28 @@ public static class SegurancaHttpConfig
 
         return usuario is not null
             ? $"usuario:{usuario}"
-            : $"ip:{contexto.Connection.RemoteIpAddress?.ToString() ?? "desconhecido"}";
+            : $"ip:{ChaveDoIp(contexto.Connection.RemoteIpAddress)}";
+    }
+
+    /// <summary>
+    /// Chave do balde de rate limit para um IP. Em IPv6 uma pessoa costuma receber um /64 inteiro (2^64 endereços): limitar por
+    /// endereço permitiria trocar de IP a cada pedido e nunca atingir o limite. Por isso IPv6 vale pelo prefixo /64.
+    /// </summary>
+    public static string ChaveDoIp(IPAddress? endereco)
+    {
+        if (endereco is null)
+            return "desconhecido";
+
+        if (endereco.IsIPv4MappedToIPv6)
+            endereco = endereco.MapToIPv4();
+
+        if (endereco.AddressFamily != System.Net.Sockets.AddressFamily.InterNetworkV6)
+            return endereco.ToString();
+
+        var bytes = endereco.GetAddressBytes();
+        Array.Clear(bytes, 8, 8);
+
+        return new IPAddress(bytes) + "/64";
     }
 
     /// <summary>
