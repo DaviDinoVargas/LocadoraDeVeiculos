@@ -137,7 +137,16 @@ public class AutenticacaoController(IMediator mediator) : MainController
     [HttpGet("sessao")]
     [Authorize]
     [DisableRateLimiting]
-    public IActionResult ObterSessao() => NoContent();
+    public IActionResult ObterSessao()
+    {
+        // O ML precisa saber DE QUEM é a sessão (empresa e papel), não só se o token vale (S24).
+        return Ok(new
+        {
+            usuarioId = User.FindFirstValue(ClaimTypes.NameIdentifier),
+            empresaId = User.FindFirstValue("EmpresaId"),
+            cargo = User.FindFirstValue(ClaimTypes.Role)
+        });
+    }
 
     [HttpPost("rotacionar")]
     [ExigirCabecalhoCliente]

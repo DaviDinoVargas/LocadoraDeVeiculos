@@ -109,15 +109,16 @@ if __name__ == "__main__":
     print("🤖 Iniciando Locadora ML API")
     print("=" * 50)
     print(f"📦 YOLO disponível: {cameras.HAS_YOLO}")
-    print(f"🌐 URL: http://localhost:8000")
+    print(f"🌐 URL: http://{settings.HOST}:8000")
     print(f"📚 Docs: http://localhost:8000/docs")
     print("=" * 50)
 
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",
+        host=settings.HOST,
         port=8000,
-        reload=True,
+        # Recarga automática só em desenvolvimento: em produção um arquivo alterado não pode reiniciar o serviço.
+        reload=settings.em_desenvolvimento(),
         log_level="info",
         # O stream MJPEG mantém a conexão aberta indefinidamente; sem um limite o uvicorn
         # esperava ela fechar para recarregar/desligar e o serviço ficava fora do ar.

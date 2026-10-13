@@ -7,18 +7,29 @@ import pytest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from shared import settings
+from shared import auth, settings
 
 TOKEN_FORTE = 'x' * 40
 
 
+DEV = {'ML_ENV': 'development'}
+
+
 def test_em_desenvolvimento_aceita_o_valor_padrao():
-    assert settings.resolver_token_interno({}) == settings.TOKEN_INTERNO_DE_DESENVOLVIMENTO
-    assert settings.em_desenvolvimento({}) is True
+    assert settings.resolver_token_interno(DEV) == settings.TOKEN_INTERNO_DE_DESENVOLVIMENTO
+    assert settings.em_desenvolvimento(DEV) is True
+
+
+def test_ambiente_ausente_conta_como_producao_falha_fechada():
+    # S25: esquecer ML_ENV não pode ligar o modo de desenvolvimento (token público, /docs, escuta aberta).
+    assert settings.em_desenvolvimento({}) is False
+    assert settings.em_desenvolvimento({'ML_ENV': ''}) is False
+    with pytest.raises(RuntimeError):
+        settings.resolver_token_interno({})
 
 
 def test_em_desenvolvimento_usa_o_valor_informado():
-    assert settings.resolver_token_interno({'ML_INTERNAL_TOKEN': 'abc'}) == 'abc'
+    assert settings.resolver_token_interno({**DEV, 'ML_INTERNAL_TOKEN': 'abc'}) == 'abc'
 
 
 @pytest.mark.parametrize('env', [
@@ -112,6 +123,7 @@ def test_corpos_enormes_sao_recusados_no_facial_e_no_chat():
     app = FastAPI()
     app.include_router(face_router.router)
     app.include_router(chat_router)
+    app.dependency_overrides[auth.exigir_usuario] = lambda: auth.Usuario('u1', 'e1', 'Empresa')
     c = TestClient(app)
     h = {'X-Internal-Token': settings.INTERNAL_TOKEN}
 

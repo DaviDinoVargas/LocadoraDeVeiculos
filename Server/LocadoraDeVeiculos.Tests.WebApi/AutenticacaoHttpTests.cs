@@ -77,4 +77,43 @@ public sealed class AutenticacaoHttpTests
         Assert.AreEqual(HttpStatusCode.TooManyRequests, segundoCadastro.StatusCode);
         Assert.AreNotEqual(HttpStatusCode.TooManyRequests, login.StatusCode);
     }
+
+    [TestMethod]
+    public async Task Sessao_DevolveQuemEOUsuario_ParaOMlIsolarPorEmpresa()
+    {
+        using var fabrica = new ApiFactory();
+        var empresa = Guid.NewGuid();
+        using var cliente = fabrica.CriarClienteAutenticado(await fabrica.CriarTokenAsync("Funcionario", empresa));
+
+        var resposta = await cliente.GetAsync("/api/auth/sessao");
+
+        Assert.AreEqual(HttpStatusCode.OK, resposta.StatusCode);
+        using var json = System.Text.Json.JsonDocument.Parse(await resposta.Content.ReadAsStringAsync());
+        Assert.AreEqual(empresa.ToString(), json.RootElement.GetProperty("empresaId").GetString());
+        Assert.AreEqual("Funcionario", json.RootElement.GetProperty("cargo").GetString());
+        Assert.IsTrue(Guid.TryParse(json.RootElement.GetProperty("usuarioId").GetString(), out _));
+    }
+
+    [TestMethod]
+    public async Task Sessao_SemToken_Eh401()
+    {
+        using var fabrica = new ApiFactory();
+        using var cliente = fabrica.CreateClient();
+
+        Assert.AreEqual(HttpStatusCode.Unauthorized, (await cliente.GetAsync("/api/auth/sessao")).StatusCode);
+    }
+
+    [TestMethod]
+    public async Task AlterarSenha_ExigeLogin_ESemSenhaAtualEh400()
+    {
+        using var fabrica = new ApiFactory();
+        using var anonimo = fabrica.CreateClient();
+        Assert.AreEqual(HttpStatusCode.Unauthorized,
+            (await anonimo.PostAsJsonAsync("/api/auth/alterar-senha", new { senhaAtual = "x", novaSenha = "Y", confirmarNovaSenha = "Y" })).StatusCode);
+
+        using var logado = fabrica.CriarClienteAutenticado(await fabrica.CriarTokenAsync("Empresa"));
+        var invalida = await logado.PostAsJsonAsync("/api/auth/alterar-senha", new { senhaAtual = "", novaSenha = "fraca", confirmarNovaSenha = "outra" });
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, invalida.StatusCode);
+    }
 }

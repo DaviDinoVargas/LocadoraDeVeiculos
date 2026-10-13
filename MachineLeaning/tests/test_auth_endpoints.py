@@ -168,7 +168,7 @@ def test_web_api_fora_do_ar_e_503(api_dotnet):
 # ---------- ticket do stream ----------
 
 def test_ticket_vale_uma_vez():
-    ticket = auth.emitir_ticket_stream()['ticket']
+    ticket = auth.emitir_ticket_stream(auth.Usuario('u1', 'e1', 'Empresa'))['ticket']
     auth.consumir_ticket_stream(ticket)
     with pytest.raises(HTTPException) as e:
         auth.consumir_ticket_stream(ticket)
@@ -176,8 +176,8 @@ def test_ticket_vale_uma_vez():
 
 
 def test_ticket_expirado_ou_ausente_e_recusado():
-    ticket = auth.emitir_ticket_stream()['ticket']
-    auth._tickets_stream[ticket] = 0.0
+    ticket = auth.emitir_ticket_stream(auth.Usuario('u1', 'e1', 'Empresa'))['ticket']
+    auth._tickets_stream[ticket] = (0.0, auth.Usuario('u1', 'e1', 'Empresa'))
     for valor in (ticket, None, 'inventado'):
         with pytest.raises(HTTPException) as e:
             auth.consumir_ticket_stream(valor)
@@ -214,7 +214,7 @@ def test_stream_sem_ticket_valido_e_401(cameras_client):
 
 def test_last_filtra_por_since_e_camera_e_vem_do_mais_novo(cameras_client):
     client, cam = cameras_client
-    client.app.dependency_overrides[auth.exigir_usuario] = lambda: None
+    client.app.dependency_overrides[auth.exigir_dono_das_cameras] = lambda: auth.Usuario('u1', 'e1', 'Empresa')
     cam.registrar_deteccao({'camera': 0, 'plate': 'AAA1111', 'bbox': [0, 0, 1, 1]})
     time.sleep(0.03)  # relógio do Windows tem resolução de ~15 ms
     cam.registrar_deteccao({'camera': 1, 'plate': 'BBB2222', 'bbox': [0, 0, 1, 1]})
@@ -229,13 +229,13 @@ def test_last_filtra_por_since_e_camera_e_vem_do_mais_novo(cameras_client):
 
 def test_last_nunca_inventa_placas(cameras_client):
     client, _ = cameras_client
-    client.app.dependency_overrides[auth.exigir_usuario] = lambda: None
+    client.app.dependency_overrides[auth.exigir_dono_das_cameras] = lambda: auth.Usuario('u1', 'e1', 'Empresa')
     assert client.get('/last').json()['detections'] == []
 
 
 def test_lista_de_cameras_fica_em_cache_e_atualizar_forca_nova_busca(cameras_client, monkeypatch):
     client, cam = cameras_client
-    client.app.dependency_overrides[auth.exigir_usuario] = lambda: None
+    client.app.dependency_overrides[auth.exigir_dono_das_cameras] = lambda: auth.Usuario('u1', 'e1', 'Empresa')
     chamadas = []
     monkeypatch.setattr(cam, 'list_cameras', lambda n, ignorar=(): chamadas.append(n) or [0])
     monkeypatch.setattr(cam, '_lista_cache', None)

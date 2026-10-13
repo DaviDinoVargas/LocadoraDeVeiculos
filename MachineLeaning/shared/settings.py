@@ -8,8 +8,9 @@ TAMANHO_MINIMO_TOKEN_INTERNO = 32
 
 
 def em_desenvolvimento(env=os.environ) -> bool:
-    """Qualquer valor de ML_ENV diferente de "development" (ou ausente) conta como ambiente real."""
-    return env.get('ML_ENV', 'development').strip().lower() == 'development'
+    """Só ML_ENV=development liga o modo de desenvolvimento. Ausente ou qualquer outro valor conta como ambiente REAL
+    (falha fechada: esquecer a variável nunca expõe /docs, o token público nem a escuta aberta)."""
+    return env.get('ML_ENV', '').strip().lower() == 'development'
 
 
 def resolver_token_interno(env=os.environ) -> str:
@@ -32,6 +33,14 @@ def resolver_token_interno(env=os.environ) -> str:
 
 
 INTERNAL_TOKEN = resolver_token_interno()
+
+# Endereço de escuta: só a própria máquina por padrão. Quem põe o ML atrás de um proxy ou em outro host define HOST.
+HOST = os.environ.get('HOST', '127.0.0.1')
+
+# Empresa dona das câmeras físicas deste servidor (S24): o vídeo e as placas lidas são dela, e nenhuma outra conta,
+# mesmo autenticada, os enxerga. Em desenvolvimento, sem a variável, qualquer conta autenticada acessa (para trabalhar
+# localmente); fora dele, sem a variável ninguém acessa.
+CAMERA_EMPRESA_ID = (os.environ.get('CAMERA_EMPRESA_ID') or '').strip().lower() or None
 
 # /docs, /redoc e /openapi.json só existem em desenvolvimento: descrevem toda a superfície do serviço.
 DOCS_HABILITADOS = em_desenvolvimento()

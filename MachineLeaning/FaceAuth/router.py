@@ -5,6 +5,7 @@ import numpy as np
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from shared import limites
 from shared.auth import exigir_token_interno
 
 from .face_recognition import comparar_faces, extrair_landmarks_de_imagem, normalizar_landmarks
@@ -17,7 +18,9 @@ from .face_recognition import comparar_faces, extrair_landmarks_de_imagem, norma
 # O serviço NÃO GUARDA NADA: dado biométrico fica cifrado no banco da Web API (S1).
 # Aqui só se calcula: imagem -> landmarks (cadastro) e imagem x amostras -> match (verificação).
 # Nada disso é registrado em log.
-router = APIRouter(prefix="/face", tags=["face"], dependencies=[Depends(exigir_token_interno)])
+# O limite protege a CPU do ML (MediaPipe) mesmo de quem tem o token interno; chave = IP de origem (a Web API).
+router = APIRouter(prefix="/face", tags=["face"],
+                   dependencies=[Depends(exigir_token_interno), Depends(limites.limitar("face", maximo=120, janela_s=60))])
 
 # Uma única amostra combinando já é aceita (modo "ou": basta bater com qualquer uma das
 # cadastradas), então o valor abaixo é só o piso de similaridade por amostra.

@@ -34,7 +34,7 @@ except Exception as e:  # noqa: BLE001 - ultralytics/torch/modelo ausente
 
 HAS_YOLO = service is not None
 
-router = APIRouter(tags=["cameras"], dependencies=[Depends(auth.exigir_usuario)])
+router = APIRouter(tags=["cameras"], dependencies=[Depends(auth.exigir_dono_das_cameras)])
 stream_router = APIRouter(tags=["cameras"])
 
 _detections: list[dict] = []
@@ -161,10 +161,10 @@ def test_camera(camera_id: int):
 
 
 @router.post("/stream-ticket")
-def emitir_ticket():
+def emitir_ticket(usuario: auth.Usuario = Depends(auth.exigir_dono_das_cameras)):
     """O <img> do stream não envia Authorization; o Angular troca o JWT por um
     ticket de uso único (30 s) e o passa na URL do stream."""
-    return auth.emitir_ticket_stream()
+    return auth.emitir_ticket_stream(usuario)
 
 
 def _desenhar(frame, camera_id, itens):
