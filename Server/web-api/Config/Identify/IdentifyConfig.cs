@@ -36,6 +36,7 @@ public static class IdentityConfig
             options.Lockout.AllowedForNewUsers = true;
         })
         .AddEntityFrameworkStores<LocadoraDeVeiculosDbContext>()
+        .AddPasswordValidator<LimiteDeTamanhoDeSenha>()
         .AddDefaultTokenProviders();
 
         // PBKDF2 do Identity: o padrão do .NET 8 são 100.000 iterações; o OWASP recomenda 210.000

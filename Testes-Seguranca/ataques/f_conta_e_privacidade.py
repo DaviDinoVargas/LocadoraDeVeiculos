@@ -158,7 +158,7 @@ def executar(ctx):
                      400 <= f_depois.status < 500, 'alta', 'S1')
 
     # --- F30: a trilha mostra as mudanças de segurança, mas nunca segredos -------------------------------------------------------
-    login = _login(base, conta.email, conta.senha, totp(chave, 0))
+    login = _login(base, conta.email, conta.senha, totp(chave, 1))   # o código da janela atual já foi usado (anti-replay)
     token = (login.json() or {}).get('chave') if login.ok else None
     if token:
         trilha = requisitar('GET', f'{base}/api/auditoria?limite=200', token=token, ip=ip_unico()).texto

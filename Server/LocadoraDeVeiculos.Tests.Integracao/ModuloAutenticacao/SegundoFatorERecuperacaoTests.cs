@@ -188,7 +188,38 @@ public sealed class SegundoFatorERecuperacaoTests
 
         var codigo = CodigoDoAplicativo(chave);
         Assert.AreEqual(ResultadoDoSegundoFator.Liberado, await verificador.VerificarAsync(usuario, codigo));
-        Assert.AreEqual(ResultadoDoSegundoFator.Liberado, await verificador.VerificarAsync(usuario, $"{codigo[..3]} {codigo[3..]}"), "aceita o formato '123 456' do aplicativo");
+        var proximo = CodigoDoAplicativo(chave, 1);
+        Assert.AreEqual(ResultadoDoSegundoFator.Liberado, await verificador.VerificarAsync(usuario, $"{proximo[..3]} {proximo[3..]}"), "aceita o formato '123 456' do aplicativo");
+    }
+
+    [TestMethod]
+    public async Task Verificador_MesmoCodigoDoAplicativoDuasVezes_SegundaEhRecusadaEContaComoFalha()
+    {
+        var (usuario, chave) = await UsuarioComDoisFatoresAsync("replay@teste.com");
+        var verificador = new VerificadorDeSegundoFator(_usuarios);
+        var codigo = CodigoDoAplicativo(chave);
+
+        Assert.AreEqual(ResultadoDoSegundoFator.Liberado, await verificador.VerificarAsync(usuario, codigo));
+        Assert.AreEqual(ResultadoDoSegundoFator.CodigoInvalido, await verificador.VerificarAsync(usuario, codigo), "o mesmo código não vale duas vezes (RFC 6238, 5.2)");
+        Assert.AreEqual(ResultadoDoSegundoFator.CodigoInvalido, await verificador.VerificarAsync(usuario, $"{codigo[..3]} {codigo[3..]}"), "escrito com espaço continua sendo o mesmo código");
+        Assert.AreEqual(2, await _usuarios.GetAccessFailedCountAsync(usuario), "cada replay soma no bloqueio de conta");
+    }
+
+    [TestMethod]
+    public void ConsumoDoCodigo_EmVariasThreadsAoMesmoTempo_SoUmaGanha()
+    {
+        var usuario = Guid.NewGuid();
+        var ganhadores = 0;
+
+        Parallel.For(0, 64, new ParallelOptions { MaxDegreeOfParallelism = 16 }, _ =>
+        {
+            if (VerificadorDeSegundoFator.TentarConsumirCodigo(usuario, "123456"))
+                Interlocked.Increment(ref ganhadores);
+        });
+
+        Assert.AreEqual(1, ganhadores);
+        Assert.IsTrue(VerificadorDeSegundoFator.TentarConsumirCodigo(Guid.NewGuid(), "123456"), "outro usuário pode usar o mesmo número");
+        Assert.IsTrue(VerificadorDeSegundoFator.TentarConsumirCodigo(usuario, "654321"), "outro código do mesmo usuário também");
     }
 
     [TestMethod]

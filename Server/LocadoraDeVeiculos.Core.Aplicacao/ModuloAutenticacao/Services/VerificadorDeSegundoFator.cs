@@ -1,6 +1,7 @@
 using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
 using Microsoft.AspNetCore.Identity;
 using System;
+using System.Collections.Concurrent;
 using System.Threading.Tasks;
 
 namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Services;
@@ -22,6 +23,27 @@ public enum ResultadoDoSegundoFator
 /// </summary>
 public class VerificadorDeSegundoFator(UserManager<Usuario> userManager)
 {
+    // Códigos do aplicativo já usados (RFC 6238, seção 5.2: um código não pode valer duas vezes). Em memória e por processo:
+    // com mais de uma instância da API o replay só é barrado na mesma instância. A janela do Identity aceita ±2 passos de 30 s.
+    private static readonly ConcurrentDictionary<string, (DateTime Expira, Guid Dono)> CodigosUsados = new();
+    private static readonly TimeSpan RetencaoDosCodigosUsados = TimeSpan.FromMinutes(3);
+
+    /// <summary>Marca o código como usado. Devolve false se já tinha sido usado (inclusive por outra requisição ao mesmo tempo).</summary>
+    public static bool TentarConsumirCodigo(Guid usuarioId, string codigo)
+    {
+        var agora = DateTime.UtcNow;
+
+        if (CodigosUsados.Count > 2000)
+            foreach (var (chave, valor) in CodigosUsados)
+                if (valor.Expira <= agora)
+                    CodigosUsados.TryRemove(chave, out _);
+
+        var meu = (Expira: agora + RetencaoDosCodigosUsados, Dono: Guid.NewGuid());
+        var vigente = CodigosUsados.AddOrUpdate($"{usuarioId:N}:{codigo}", meu, (_, antigo) => antigo.Expira > agora ? antigo : meu);
+
+        return vigente.Dono == meu.Dono;
+    }
+
     public async Task<ResultadoDoSegundoFator> VerificarAsync(Usuario usuario, string? codigo)
     {
         if (!await userManager.GetTwoFactorEnabledAsync(usuario))
@@ -33,7 +55,15 @@ public class VerificadorDeSegundoFator(UserManager<Usuario> userManager)
             return ResultadoDoSegundoFator.CodigoObrigatorio;
 
         if (await userManager.VerifyTwoFactorTokenAsync(usuario, userManager.Options.Tokens.AuthenticatorTokenProvider, limpo))
-            return ResultadoDoSegundoFator.Liberado;
+        {
+            if (TentarConsumirCodigo(usuario.Id, limpo))
+                return ResultadoDoSegundoFator.Liberado;
+
+            // O mesmo código outra vez (replay de um código visto por cima do ombro ou interceptado): conta como falha.
+            await userManager.AccessFailedAsync(usuario);
+
+            return ResultadoDoSegundoFator.CodigoInvalido;
+        }
 
         // Código de recuperação (formato XXXXX-XXXXX do Identity): vale uma vez só.
         var recuperacao = (codigo ?? string.Empty).Trim();

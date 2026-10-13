@@ -18,7 +18,7 @@ from lib import ambiente  # noqa: E402
 from lib.contexto import Contexto  # noqa: E402
 from lib.registro import Registro  # noqa: E402
 
-MODULOS_ATAQUE = ['a_autenticacao', 'b_autorizacao', 'c_entradas', 'd_configuracao', 'e_ml', 'f_conta_e_privacidade']
+MODULOS_ATAQUE = ['a_autenticacao', 'b_autorizacao', 'c_entradas', 'd_configuracao', 'e_ml', 'f_conta_e_privacidade', 'g_robustez']
 
 
 def verificar_logs(ctx, pastas_logs):
@@ -98,6 +98,9 @@ def main():
         base = f'http://127.0.0.1:{ambiente.PORTA_API}'
         ctx = Contexto(base=base, reg=reg)
         ctx.lembrar(token_ml)
+        ctx.pasta = pasta
+        ctx.chave_jwt = ambiente._segredos().get('JWT_GENERATION_KEY')
+        ctx.lembrar(ctx.chave_jwt)   # se a chave aparecer nos logs, F01 reprova
 
         ml = None
         if args.modo in ('ataques', 'tudo') and not args.sem_ml:
