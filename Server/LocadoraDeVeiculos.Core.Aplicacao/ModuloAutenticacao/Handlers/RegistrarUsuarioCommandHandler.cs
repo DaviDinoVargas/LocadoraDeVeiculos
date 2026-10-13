@@ -22,6 +22,9 @@ public class RegistrarUsuarioCommandHandler(
     ILogger<RegistrarUsuarioCommandHandler> logger
 ) : IRequestHandler<RegistrarUsuarioCommand, Result<(AccessToken, RefreshToken, string)>>
 {
+    private const string MensagemCadastroNaoConcluido =
+        "Não foi possível concluir o cadastro com estes dados. Se você já tem conta, entre com seu e-mail e senha.";
+
     public async Task<Result<(AccessToken, RefreshToken, string)>> Handle(
         RegistrarUsuarioCommand command, CancellationToken cancellationToken)
     {
@@ -47,8 +50,8 @@ public class RegistrarUsuarioCommandHandler(
                 {
                     return err.Code switch
                     {
-                        "DuplicateUserName" => "Já existe um usuário com esse nome.",
-                        "DuplicateEmail" => "Já existe um usuário com esse e-mail.",
+                        // Mensagem neutra: dizer "já existe um usuário com esse e-mail" confirma a qualquer um quem tem conta (S20).
+                        "DuplicateUserName" or "DuplicateEmail" => MensagemCadastroNaoConcluido,
                         "PasswordTooShort" => "A senha é muito curta.",
                         "PasswordRequiresNonAlphanumeric" => "A senha deve conter pelo menos um caractere especial.",
                         "PasswordRequiresDigit" => "A senha deve conter pelo menos um número.",
