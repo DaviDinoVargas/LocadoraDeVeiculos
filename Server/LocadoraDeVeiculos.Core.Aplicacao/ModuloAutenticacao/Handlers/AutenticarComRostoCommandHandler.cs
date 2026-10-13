@@ -82,8 +82,8 @@ public class AutenticarComRostoCommandHandler(
                 await Auditar(EventosDeAutenticacao.LoginFacialFalhou, usuarioEncontrado, cancellationToken);
 
                 logger.LogWarning(
-                    "Login facial recusado para o usuário {UserId} (encontrado={Encontrado}, confiança={Confianca}).",
-                    usuarioEncontrado.Id, verificacao.Encontrado, verificacao.Confianca);
+                    "Login facial recusado para o usuário {UserId} (encontrado={Encontrado}, confiança={Confianca}, provaDeVidaReprovada={Vida}).",
+                    usuarioEncontrado.Id, verificacao.Encontrado, verificacao.Confianca, verificacao.ProvaDeVidaReprovada);
                 return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(MensagemGenericaDeFalha));
             }
 

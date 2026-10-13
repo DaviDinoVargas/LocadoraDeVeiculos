@@ -36,6 +36,15 @@ public class FacialAuthClient(
     // /face/* exige esse cabeçalho: só esta API fala com ele, o navegador nunca.
     private string SegredoInterno => SegredoInternoDoMl.Resolver(configuration);
 
+    // Prova de vida (S3). Fora de Development ela é OBRIGATÓRIA: se o ML responder sem tê-la feito (versão antiga, desligada),
+    // a foto é recusada em vez de aceita. ANTISPOOF_REQUIRED=true/false força o comportamento.
+    private bool ExigirProvaDeVida =>
+        bool.TryParse(configuration["ANTISPOOF_REQUIRED"], out var forcado)
+            ? forcado
+            : !string.Equals(configuration["ASPNETCORE_ENVIRONMENT"], "Development", StringComparison.OrdinalIgnoreCase);
+
+    private bool ProvaDeVidaReprovada(bool ativa, bool vivo) => ExigirProvaDeVida ? !(ativa && vivo) : ativa && !vivo;
+
     private HttpRequestMessage Requisicao(HttpMethod metodo, string url, object? corpo = null)
     {
         var mensagem = new HttpRequestMessage(metodo, url);
@@ -71,13 +80,14 @@ public class FacialAuthClient(
 
         var corpo = await resposta.Content.ReadFromJsonAsync<FacialVerifyResponseDto>(cancellationToken: cancellationToken);
 
-        var bateu = corpo?.Match ?? false;
+        var reprovadaNaVida = corpo is not null && ProvaDeVidaReprovada(corpo.ProvaDeVidaAtiva, corpo.Vivo);
+        var bateu = (corpo?.Match ?? false) && !reprovadaNaVida;
 
         // Uso bem-sucedido zera a contagem de retenção de 12 meses (S1).
         if (bateu)
             await armazenamento.RegistrarUsoAsync(personId, cancellationToken);
 
-        return new FacialVerifyResult(Encontrado: true, Bateu: bateu, Confianca: corpo?.Confidence ?? 0);
+        return new FacialVerifyResult(Encontrado: true, Bateu: bateu, Confianca: corpo?.Confidence ?? 0, ProvaDeVidaReprovada: reprovadaNaVida);
     }
 
     public async Task<FacialEnrollResult> CadastrarAsync(string personId, string imagemBase64, CancellationToken cancellationToken)
@@ -95,6 +105,10 @@ public class FacialAuthClient(
         if (corpo?.Landmarks is not { Count: > 0 })
             return new FacialEnrollResult(Sucesso: false, Amostras: 0);
 
+        // Uma foto de foto/tela não pode virar o "rosto cadastrado".
+        if (ProvaDeVidaReprovada(corpo.ProvaDeVidaAtiva, corpo.Vivo))
+            return new FacialEnrollResult(Sucesso: false, Amostras: 0, ProvaDeVidaReprovada: true);
+
         var total = await armazenamento.SalvarAsync(personId, corpo.Landmarks, cancellationToken);
 
         return new FacialEnrollResult(Sucesso: true, Amostras: total);
@@ -111,9 +125,9 @@ public class FacialAuthClient(
         return true;
     }
 
-    private record FacialVerifyResponseDto(bool Match, double Confidence);
-    private record FacialLandmarksResponseDto(List<double> Landmarks);
+    private record FacialVerifyResponseDto(bool Match, double Confidence, bool ProvaDeVidaAtiva = false, bool Vivo = true);
+    private record FacialLandmarksResponseDto(List<double> Landmarks, bool ProvaDeVidaAtiva = false, bool Vivo = true);
 }
 
-public record FacialVerifyResult(bool Encontrado, bool Bateu, double Confianca, bool NenhumRostoNaImagem = false);
-public record FacialEnrollResult(bool Sucesso, int Amostras);
+public record FacialVerifyResult(bool Encontrado, bool Bateu, double Confianca, bool NenhumRostoNaImagem = false, bool ProvaDeVidaReprovada = false);
+public record FacialEnrollResult(bool Sucesso, int Amostras, bool ProvaDeVidaReprovada = false);

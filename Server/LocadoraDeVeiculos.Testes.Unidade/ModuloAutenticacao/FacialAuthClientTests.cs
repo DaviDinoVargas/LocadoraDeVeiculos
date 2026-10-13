@@ -86,10 +86,14 @@ public sealed class FacialAuthClientTests
         }
     }
 
-    private static FacialAuthClient CriarCliente(HandlerFalso handler, ArmazenamentoEmMemoria? armazenamento = null)
+    private static FacialAuthClient CriarCliente(HandlerFalso handler, ArmazenamentoEmMemoria? armazenamento = null, bool exigirProvaDeVida = false)
     {
         var configuracao = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?> { ["MlApi:InternalToken"] = Token })
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["MlApi:InternalToken"] = Token,
+                ["ANTISPOOF_REQUIRED"] = exigirProvaDeVida ? "true" : "false"
+            })
             .Build();
 
         return new FacialAuthClient(new FabricaFalsa(handler), configuracao, armazenamento ?? new ArmazenamentoEmMemoria());
@@ -238,6 +242,103 @@ public sealed class FacialAuthClientTests
     {
         Assert.IsTrue(await CriarCliente(new HandlerFalso(HttpStatusCode.OK))
             .RemoverAsync("usuario:a@b.com", CancellationToken.None));
+    }
+
+    // ---------- prova de vida (S3) ----------
+
+    private const string RespostaViva = "{\"match\":true,\"confidence\":0.95,\"provaDeVidaAtiva\":true,\"vivo\":true,\"pontuacaoDeVida\":0.97}";
+    private const string RespostaFalsa = "{\"match\":true,\"confidence\":0.95,\"provaDeVidaAtiva\":true,\"vivo\":false,\"pontuacaoDeVida\":0.05}";
+    private const string RespostaSemVida = "{\"match\":true,\"confidence\":0.95}";
+
+    [TestMethod]
+    public async Task Verificar_FotoQueNaoParecePessoaReal_NaoBate_MesmoComAGeometriaIgual_ENaoRenovaARetencao()
+    {
+        var armazenamento = ComRostoDe("usuario:a@b.com", 0.1, 0.2);
+
+        var resultado = await CriarCliente(new HandlerFalso(HttpStatusCode.OK, RespostaFalsa), armazenamento, exigirProvaDeVida: true)
+            .VerificarAsync("usuario:a@b.com", "img", CancellationToken.None);
+
+        Assert.IsFalse(resultado.Bateu);
+        Assert.IsTrue(resultado.ProvaDeVidaReprovada);
+        Assert.IsFalse(resultado.NenhumRostoNaImagem, "é tentativa de acesso, conta como falha (bloqueio de conta)");
+        Assert.AreEqual(0, armazenamento.Usos.Count);
+    }
+
+    [TestMethod]
+    public async Task Verificar_PessoaReal_Bate()
+    {
+        var resultado = await CriarCliente(new HandlerFalso(HttpStatusCode.OK, RespostaViva), ComRostoDe("usuario:a@b.com", 0.1), exigirProvaDeVida: true)
+            .VerificarAsync("usuario:a@b.com", "img", CancellationToken.None);
+
+        Assert.IsTrue(resultado.Bateu);
+        Assert.IsFalse(resultado.ProvaDeVidaReprovada);
+    }
+
+    [TestMethod]
+    public async Task Verificar_ProvaDeVidaObrigatoria_MlQueNaoFezAChecagem_Recusa_FalhaFechada()
+    {
+        var resultado = await CriarCliente(new HandlerFalso(HttpStatusCode.OK, RespostaSemVida), ComRostoDe("usuario:a@b.com", 0.1), exigirProvaDeVida: true)
+            .VerificarAsync("usuario:a@b.com", "img", CancellationToken.None);
+
+        Assert.IsFalse(resultado.Bateu, "um ML antigo ou com a checagem desligada não pode liberar o acesso fora de desenvolvimento");
+        Assert.IsTrue(resultado.ProvaDeVidaReprovada);
+    }
+
+    [TestMethod]
+    public async Task Verificar_ProvaDeVidaNaoObrigatoria_MlSemChecagem_Bate()
+    {
+        var resultado = await CriarCliente(new HandlerFalso(HttpStatusCode.OK, RespostaSemVida), ComRostoDe("usuario:a@b.com", 0.1), exigirProvaDeVida: false)
+            .VerificarAsync("usuario:a@b.com", "img", CancellationToken.None);
+
+        Assert.IsTrue(resultado.Bateu);
+    }
+
+    [TestMethod]
+    public async Task Verificar_SemConfiguracaoExplicita_ForaDeDevelopmentExige_EmDevelopmentNao()
+    {
+        static FacialAuthClient Cliente(string? ambiente, HandlerFalso h, ArmazenamentoEmMemoria a) => new(
+            new FabricaFalsa(h),
+            new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["MlApi:InternalToken"] = Token,
+                ["ASPNETCORE_ENVIRONMENT"] = ambiente
+            }).Build(), a);
+
+        var producao = await Cliente("Production", new HandlerFalso(HttpStatusCode.OK, RespostaSemVida), ComRostoDe("usuario:a@b.com", 0.1))
+            .VerificarAsync("usuario:a@b.com", "img", CancellationToken.None);
+        var desenvolvimento = await Cliente("Development", new HandlerFalso(HttpStatusCode.OK, RespostaSemVida), ComRostoDe("usuario:a@b.com", 0.1))
+            .VerificarAsync("usuario:a@b.com", "img", CancellationToken.None);
+        var semAmbiente = await Cliente(null, new HandlerFalso(HttpStatusCode.OK, RespostaSemVida), ComRostoDe("usuario:a@b.com", 0.1))
+            .VerificarAsync("usuario:a@b.com", "img", CancellationToken.None);
+
+        Assert.IsFalse(producao.Bateu);
+        Assert.IsTrue(desenvolvimento.Bateu);
+        Assert.IsFalse(semAmbiente.Bateu, "ambiente desconhecido conta como produção");
+    }
+
+    [TestMethod]
+    public async Task Cadastrar_FotoQueNaoParecePessoaReal_NaoGuardaNada_EAvisaOMotivo()
+    {
+        var armazenamento = new ArmazenamentoEmMemoria();
+        var handler = new HandlerFalso(HttpStatusCode.OK, "{\"landmarks\":[0.5,0.25],\"provaDeVidaAtiva\":true,\"vivo\":false,\"pontuacaoDeVida\":0.1}");
+
+        var resultado = await CriarCliente(handler, armazenamento, exigirProvaDeVida: true).CadastrarAsync("usuario:a@b.com", "img", CancellationToken.None);
+
+        Assert.IsFalse(resultado.Sucesso);
+        Assert.IsTrue(resultado.ProvaDeVidaReprovada);
+        Assert.AreEqual(0, armazenamento.Dados.Count, "o rosto de uma foto não pode virar o cadastro");
+    }
+
+    [TestMethod]
+    public async Task Cadastrar_PessoaReal_Guarda()
+    {
+        var armazenamento = new ArmazenamentoEmMemoria();
+        var handler = new HandlerFalso(HttpStatusCode.OK, "{\"landmarks\":[0.5,0.25],\"provaDeVidaAtiva\":true,\"vivo\":true,\"pontuacaoDeVida\":0.9}");
+
+        var resultado = await CriarCliente(handler, armazenamento, exigirProvaDeVida: true).CadastrarAsync("usuario:a@b.com", "img", CancellationToken.None);
+
+        Assert.IsTrue(resultado.Sucesso);
+        Assert.AreEqual(1, armazenamento.Dados.Count);
     }
 
     [TestMethod]

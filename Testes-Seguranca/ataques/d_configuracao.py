@@ -81,6 +81,19 @@ def executar(ctx):
     mortos = [pacote for pacote, marca in (('Hangfire', 'Hangfire'), ('NewRelic', 'NewRelic')) if pacote in csproj and marca not in codigo]
     r.checar('D13', CAT, 'Sem pacotes referenciados e nunca usados (Hangfire, NewRelic)', 'nenhum', mortos or 'nenhum', not mortos, 'baixa', 'S30')
 
+    # --- D16-D17: prova de vida (S3): carregamento seguro e padrão ligado ----------------------------------------
+    vida = _ler('MachineLeaning', 'FaceAuth', 'antispoof', 'liveness.py')
+    baixar = _ler('MachineLeaning', 'FaceAuth', 'antispoof', 'baixar_modelo.py')
+    seguro = 'weights_only=True' in vida and 'sha256_do_arquivo(caminho) != hash_esperado' in vida
+    fixo = re.search(r"COMMIT = '[0-9a-f]{40}'", baixar) is not None and "https://raw.githubusercontent.com/" in baixar and len(re.findall(r"[0-9a-f]{64}", vida)) >= 2
+    r.checar('D16', CAT, 'Prova de vida: pesos conferidos por SHA-256 e carregados com weights_only=True', 'hash + weights_only no código',
+             'ok' if seguro else 'faltando', seguro, 'alta', 'S3')
+    r.checar('D16b', CAT, 'Prova de vida: download só de commit fixo, por HTTPS, com hash esperado no código', 'commit de 40 hex + 2 hashes',
+             'ok' if fixo else 'faltando', fixo, 'media', 'S3')
+    padrao_ligado = "ANTISPOOF_ENABLED', 'true'" in settings
+    r.checar('D17', CAT, 'ML: a prova de vida vem LIGADA por padrão (falha fechada)', "padrão 'true'", 'ligada' if padrao_ligado else 'desligada',
+             padrao_ligado, 'alta', 'S3')
+
     seeder = RAIZ / 'Server' / 'LocadoraDeVeiculos.Infraestrutura.Orm' / 'Identify' / 'RoleSeeder.cs'
     r.checar('D14', CAT, 'Sem código morto que usa IgnoreQueryFilters (RoleSeeder)', 'arquivo removido', 'existe' if seeder.exists() else 'removido',
              not seeder.exists(), 'baixa', 'S30')

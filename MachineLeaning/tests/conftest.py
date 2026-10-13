@@ -3,3 +3,5 @@ o token interno público é recusado e as câmeras ficam fechadas. Precisa ser d
 import os
 
 os.environ.setdefault('ML_ENV', 'development')
+# Os pesos da prova de vida não ficam no git: os testes desligam a checagem real e, onde importa, usam um modelo falso.
+os.environ.setdefault('ANTISPOOF_ENABLED', 'false')

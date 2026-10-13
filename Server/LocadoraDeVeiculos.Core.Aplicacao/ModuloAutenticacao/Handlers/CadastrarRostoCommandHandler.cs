@@ -38,6 +38,10 @@ public class CadastrarRostoCommandHandler(
 
             var resultado = await facialAuthClient.CadastrarAsync(personId, command.ImagemBase64, cancellationToken);
 
+            if (resultado.ProvaDeVidaReprovada)
+                return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(
+                    "A imagem não parece ser de uma pessoa de verdade (foto ou tela). Fique de frente para a câmera, com boa luz, e tente de novo."));
+
             if (!resultado.Sucesso)
                 return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(
                     "Não foi possível cadastrar o rosto. Verifique se a imagem mostra um rosto claramente."));

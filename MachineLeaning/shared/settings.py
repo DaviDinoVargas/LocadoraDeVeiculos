@@ -66,3 +66,9 @@ CORS_ORIGINS = [
     .replace(',', ';').split(';')
     if o.strip()
 ]
+
+# Prova de vida (S3): modelo anti-spoofing que recusa foto impressa/tela. Ligada por padrão: sem os pesos baixados o módulo
+# facial recusa (503) em vez de liberar. ANTISPOOF_ENABLED=false desliga só para desenvolvimento/testes sem o modelo.
+ANTISPOOF_ATIVO = os.environ.get('ANTISPOOF_ENABLED', 'true').strip().lower() not in ('0', 'false', 'no', 'off')
+ANTISPOOF_DIR = os.environ.get('ANTISPOOF_DIR') or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'FaceAuth', 'modelos')
+ANTISPOOF_LIMIAR = float(os.environ.get('ANTISPOOF_THRESHOLD', '0.5'))
