@@ -35,6 +35,7 @@ Portas usadas: 5180 (API de ataque), 5181 (API de carga, com limite global alto)
 | `ataques/c_entradas.py` | SQL injection (inclusive por tempo), XSS armazenado, corpo gigante/malformado, CPF inválido, foto do veículo |
 | `ataques/d_configuracao.py` | cabeçalhos de segurança, CORS, anti-CSRF, vazamento em erros, verificações estáticas do código (ML, pacotes mortos) |
 | `ataques/e_ml.py` | token interno, JWT nas câmeras, isolamento por empresa no ML, `/docs`/`/health` em produção, limites |
+| `ataques/f_conta_e_privacidade.py` | consentimento do rosto, 2FA de ponta a ponta (TOTP e códigos de recuperação), recuperação de senha sem enumeração, encerrar conta, trilha sem segredos |
 | `carga/cenarios.py` | leituras em 10/50/100 usuários, login (hash caro), login com senha errada; p50/p95/p99, req/s, 4xx/429/5xx |
 
 ## Como ler o resultado

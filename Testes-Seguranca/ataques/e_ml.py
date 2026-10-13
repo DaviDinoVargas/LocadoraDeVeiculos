@@ -51,6 +51,14 @@ def executar(ctx):
     r.checar('E03d', CAT, 'Uma empresa que NÃO é dona das câmeras não obtém ticket de vídeo', '403', ticket.status,
              ticket.status in (401, 403), 'alta', 'S24')
 
+    # --- E05: abuso das rotas de câmera (S10) -----------------------------------------------------------------------------------
+    # /stream-ticket não toca em hardware, então serve para medir o limite das AÇÕES (30 por minuto por usuário).
+    codigos = [requisitar('POST', f'{ml}/stream-ticket', token=emp.token).status for _ in range(34)]
+    r.checar('E05', CAT, 'Rajada de ações nas câmeras (ticket, liga, desliga) é limitada por usuário', '200 até 30, 429 depois',
+             [codigos.count(200), codigos.count(429)], codigos[:30].count(200) >= 29 and codigos.count(429) >= 3, 'media', 'S10')
+    ainda_le = requisitar('GET', f'{ml}/last', token=emp.token)
+    r.checar('E05b', CAT, 'O limite das ações não bloqueia a leitura (o polling do navegador continua)', '200', ainda_le.status, ainda_le.status == 200, 'media', 'S10')
+
     # --- E04: superfície pública e abuso ------------------------------------------------------------------------------
     docs = [requisitar('GET', f'{ml}{p}').status for p in ('/docs', '/openapi.json', '/redoc')]
     r.checar('E04a', CAT, 'Em produção /docs, /openapi.json e /redoc não existem', '404', docs, all(s == 404 for s in docs), 'media', 'S12')

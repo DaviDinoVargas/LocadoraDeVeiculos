@@ -65,13 +65,13 @@ def executar(ctx):
     alvo = ambiente.nova_empresa(base, 'bf')
     ctx.lembrar(alvo.senha, alvo.token)
     statuses, mensagens = [], set()
-    for _ in range(5):
+    for _ in range(10):   # de IPs diferentes: o limite por (conta, IP) não entra; vale o bloqueio da conta (10 erros)
         resp = ambiente.login(base, alvo.email, 'Errada@123456')
         statuses.append(resp.status)
         mensagens.add(resp.texto.strip())
     r.checar('A08a', CAT, 'Senha errada devolve 400/401 (nunca 500)', '4xx', statuses, all(400 <= s < 500 for s in statuses), 'alta')
     depois_bloqueio = ambiente.login(base, alvo.email, alvo.senha)
-    r.checar('A08b', CAT, '5 falhas bloqueiam a conta: a senha CERTA é recusada em seguida', '4xx',
+    r.checar('A08b', CAT, '10 falhas (de vários IPs) bloqueiam a conta: a senha CERTA é recusada em seguida', '4xx',
              depois_bloqueio.status, 400 <= depois_bloqueio.status < 500, 'alta')
     desconhecido = ambiente.login(base, f'nao-existe-{ip_unico()}@teste.local', 'Qualquer@12345')
     errada = ambiente.login(base, ambiente.nova_empresa(base, 'msg').email, 'Errada@123456')
