@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from .chatbot_service import responder
 
@@ -7,7 +7,7 @@ router = APIRouter(tags=["chat"])
 
 
 class MensagemRequest(BaseModel):
-    message: str
+    message: str = Field(max_length=2000)
 
 
 class MensagemResponse(BaseModel):

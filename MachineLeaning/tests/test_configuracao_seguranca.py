@@ -47,3 +47,75 @@ def test_docs_somem_fora_de_desenvolvimento(monkeypatch):
     finally:
         monkeypatch.undo()
         importlib.reload(settings)
+
+
+# ---------- S23: integridade do peso do modelo e retenção dos recortes ----------
+
+def test_peso_com_hash_correto_passa_e_com_hash_errado_falha(tmp_path):
+    from shared import integridade
+    peso = tmp_path / 'm.pt'
+    peso.write_bytes(b'pesos')
+    certo = integridade.sha256_do_arquivo(str(peso))
+
+    integridade.verificar_peso(str(peso), certo, em_desenvolvimento=False)
+    integridade.verificar_peso(str(peso), certo.upper(), em_desenvolvimento=False)
+    with pytest.raises(RuntimeError, match='não confere'):
+        integridade.verificar_peso(str(peso), '0' * 64, em_desenvolvimento=False)
+
+
+def test_peso_sem_hash_so_e_aceito_em_desenvolvimento(tmp_path):
+    from shared import integridade
+    peso = tmp_path / 'm.pt'
+    peso.write_bytes(b'pesos')
+
+    integridade.verificar_peso(str(peso), None, em_desenvolvimento=True)
+    with pytest.raises(RuntimeError, match='YOLO_MODEL_SHA256'):
+        integridade.verificar_peso(str(peso), None, em_desenvolvimento=False)
+
+
+def test_limpeza_apaga_so_o_que_passou_do_prazo(tmp_path):
+    import time
+    from shared import integridade
+    antigo, novo = tmp_path / 'antigo.jpg', tmp_path / 'novo.jpg'
+    antigo.write_bytes(b'x')
+    novo.write_bytes(b'x')
+    agora = time.time()
+    os.utime(antigo, (agora - 48 * 3600, agora - 48 * 3600))
+
+    assert integridade.limpar_arquivos_antigos(str(tmp_path), horas=24, agora=agora) == 1
+    assert not antigo.exists() and novo.exists()
+    assert integridade.limpar_arquivos_antigos(str(tmp_path), horas=0) == 0
+
+
+def test_save_crop_dispara_a_limpeza_de_antigos(tmp_path):
+    import time
+    import numpy as np
+    from shared import integridade
+    from yolo_tesseract import plate_localizer
+    integridade._ULTIMA_LIMPEZA.clear()
+    velho = tmp_path / 'velho.jpg'
+    velho.write_bytes(b'x')
+    agora = time.time()
+    os.utime(velho, (agora - 72 * 3600, agora - 72 * 3600))
+
+    plate_localizer.save_crop(np.zeros((4, 4, 3), dtype=np.uint8), str(tmp_path), prefix='t')
+
+    assert not velho.exists()
+    assert any(p.name.startswith('t_') for p in tmp_path.iterdir())
+
+
+def test_corpos_enormes_sao_recusados_no_facial_e_no_chat():
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from FaceAuth import router as face_router
+    from ChatBot.router import router as chat_router
+    app = FastAPI()
+    app.include_router(face_router.router)
+    app.include_router(chat_router)
+    c = TestClient(app)
+    h = {'X-Internal-Token': settings.INTERNAL_TOKEN}
+
+    grande = 'A' * (face_router.MAXIMO_BASE64_CHARS + 1)
+    assert c.post('/face/landmarks', json={'imageBase64': grande}, headers=h).status_code == 422
+    assert c.post('/face/compare', json={'imageBase64': grande, 'samples': [[0.0]]}, headers=h).status_code == 422
+    assert c.post('/chat', json={'message': 'x' * 2001}).status_code == 422

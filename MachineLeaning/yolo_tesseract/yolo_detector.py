@@ -1,10 +1,17 @@
 # yolo_detector.py
 from ultralytics import YOLO
+
+from shared import settings
+from shared.integridade import verificar_peso
+
+from .config import YOLO_MODEL_SHA256
 import numpy as np
 
 
 class YoloDetector:
     def __init__(self, model_path):
+        # S23: pesos .pt são pickles; confere o hash antes de carregar.
+        verificar_peso(model_path, YOLO_MODEL_SHA256, settings.em_desenvolvimento())
         self.model = YOLO(model_path)
 
 

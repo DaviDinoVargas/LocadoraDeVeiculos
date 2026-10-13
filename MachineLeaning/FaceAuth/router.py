@@ -28,12 +28,17 @@ SIMILARIDADE_MINIMA = 0.9
 MAXIMO_DE_AMOSTRAS = 10
 
 
+# Uma foto de webcam (640x480, JPEG) tem ~100 KB; 4 milhões de caracteres de base64 (~3 MB) já é folga
+# de sobra e impede que o corpo da requisição vire um jeito de esgotar a memória (S9).
+MAXIMO_BASE64_CHARS = 4_000_000
+
+
 class ImagemFacialRequest(BaseModel):
-    imageBase64: str
+    imageBase64: str = Field(max_length=MAXIMO_BASE64_CHARS)
 
 
 class CompararRequest(BaseModel):
-    imageBase64: str
+    imageBase64: str = Field(max_length=MAXIMO_BASE64_CHARS)
     samples: list[list[float]] = Field(max_length=MAXIMO_DE_AMOSTRAS)
 
 

@@ -1,6 +1,9 @@
 import cv2
 import numpy as np
 import os
+from shared.integridade import limpar_se_for_hora
+
+from .config import CROPS_RETENTION_HOURS
 from .utils import ensure_dir
 
 # Classes do modelo YOLO genérico (pré-treinado em COCO) que indicam um
@@ -71,6 +74,8 @@ def find_plate_candidates(detections):
 
 def save_crop(crop, out_dir, prefix='crop'):
     ensure_dir(out_dir)
+    # Retenção (S23): recortes antigos são apagados de tempos em tempos.
+    limpar_se_for_hora(out_dir, CROPS_RETENTION_HOURS)
     idx = len(os.listdir(out_dir))
     fname = os.path.join(out_dir, f"{prefix}_{idx}.jpg")
     cv2.imwrite(fname, crop)
