@@ -100,13 +100,13 @@ def executar(ctx):
         ctx.lembrar(fuzz.senha, fuzz.token)
         for estranho in IDS_ESTRANHOS:
             for metodo in ('GET', 'DELETE'):
-                resp = requisitar(metodo, f'{base}/api/{rota}/{estranho}', token=fuzz.token, ip=ip_unico(), timeout=15)
+                resp = requisitar(metodo, f'{base}/api/{rota}/{estranho}', token=fuzz.token, ip=ip_unico(), timeout=15, reutilizar=True)
                 if resp.status >= 500 or resp.erro:
                     cinco_xx.append((metodo, rota, estranho[:12], resp.status or resp.erro))
     consultas = ['limite=abc', 'limite=-1', 'limite=99999999999999999999', 'pagina=-1&tamanho=2147483647', 'filtro=%00', 'q=' + 'a' * 5000]
     for q in consultas:
         for rota in ('clientes', 'automoveis', 'auditoria'):
-            resp = requisitar('GET', f'{base}/api/{rota}?{q}', token=emp.token, ip=ip_unico(), timeout=15)
+            resp = requisitar('GET', f'{base}/api/{rota}?{q}', token=emp.token, ip=ip_unico(), timeout=15, reutilizar=True)
             if resp.status >= 500 or resp.erro:
                 cinco_xx.append(('GET', f'{rota}?{q[:14]}', '', resp.status or resp.erro))
     viva = requisitar('GET', f'{base}/api/auth/sessao', token=emp.token, ip=ip_unico())
