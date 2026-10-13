@@ -1,5 +1,6 @@
 ﻿
 using LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Commands;
+using LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Services;
 using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
 using LocadoraDeVeiculos.WebApi.Compartilhado;
 using LocadoraDeVeiculos.WebApi.Config.Http;
@@ -39,7 +40,7 @@ public class AutenticacaoController(IMediator mediator) : MainController
     [HttpPost("autenticar")]
     public async Task<ActionResult<AccessToken>> Autenticar(AutenticarUsuarioRequest request)
     {
-        var command = new AutenticarUsuarioCommand(request.Email, request.Senha);
+        var command = new AutenticarUsuarioCommand(request.Email, request.Senha, request.CodigoAutenticador);
 
         var result = await mediator.Send(command);
 
@@ -49,7 +50,7 @@ public class AutenticacaoController(IMediator mediator) : MainController
     [HttpPost("entrar-facial")]
     public async Task<ActionResult<AccessToken>> EntrarFacial(AutenticarComRostoRequest request)
     {
-        var command = new AutenticarComRostoCommand(request.Email, request.ImagemBase64);
+        var command = new AutenticarComRostoCommand(request.Email, request.ImagemBase64, request.CodigoAutenticador);
 
         var result = await mediator.Send(command);
 
@@ -63,12 +64,20 @@ public class AutenticacaoController(IMediator mediator) : MainController
         if (!TentarObterUsuarioId(out var usuarioId))
             return Unauthorized();
 
-        var command = new CadastrarRostoCommand(usuarioId, request.ImagemBase64);
+        var command = new CadastrarRostoCommand(usuarioId, request.ImagemBase64, request.Consentimento, request.VersaoDoTexto);
 
         var result = await mediator.Send(command);
 
         return ProcessarResultado(result, amostras => Ok(new CadastrarRostoResponse(amostras)));
     }
+
+    // Termo que o usuário precisa aceitar antes de cadastrar o rosto: o texto vem do servidor, a versão aceita volta no cadastro.
+    [HttpGet("rosto/consentimento")]
+    [Authorize]
+    [DisableRateLimiting]
+    public ActionResult<TermoDeConsentimentoResponse> ObterTermoDeConsentimento() =>
+        Ok(new TermoDeConsentimentoResponse(
+            ConsentimentoBiometrico.VersaoAtual, ConsentimentoBiometrico.Texto, ConsentimentoBiometrico.RetencaoEmMeses));
 
     // Consulta e remoção exigem login e só enxergam o próprio rosto: não são alvo de força bruta,
     // então ficam fora do limite de 10 req/min do "auth" (a tela consulta a cada visita).
@@ -122,6 +131,92 @@ public class AutenticacaoController(IMediator mediator) : MainController
 
         var result = await mediator.Send(
             new AlterarSenhaCommand(usuarioId, request.SenhaAtual, request.NovaSenha, request.ConfirmarNovaSenha), cancellationToken);
+
+        return ProcessarResultado(result, () =>
+        {
+            RefreshTokenCookieService.LimparCookie(Response);
+
+            return NoContent();
+        });
+    }
+
+    // "Esqueci minha senha" (S18): resposta idêntica e imediata para qualquer e-mail; o envio acontece em segundo plano.
+    [HttpPost("esqueci-senha")]
+    public async Task<IActionResult> EsqueciSenha(SolicitarRecuperacaoRequest request, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new SolicitarRecuperacaoDeSenhaCommand(request.Email), cancellationToken);
+
+        return Accepted(new { mensagem = "Se existir uma conta com este e-mail, enviaremos as instruções para redefinir a senha." });
+    }
+
+    [HttpPost("redefinir-senha")]
+    public async Task<IActionResult> RedefinirSenha(RedefinirSenhaRequest request, CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(
+            new RedefinirSenhaCommand(request.Email, request.Token, request.NovaSenha, request.ConfirmarNovaSenha), cancellationToken);
+
+        return ProcessarResultado(result);
+    }
+
+    // Segundo fator por aplicativo autenticador (S18). Tudo exige login e só mexe no PRÓPRIO 2FA.
+    [HttpGet("2fa")]
+    [Authorize]
+    [DisableRateLimiting]
+    public async Task<ActionResult<StatusDoisFatoresResponse>> StatusDoisFatores(CancellationToken cancellationToken)
+    {
+        if (!TentarObterUsuarioId(out var usuarioId))
+            return Unauthorized();
+
+        var result = await mediator.Send(new ObterStatusDoisFatoresQuery(usuarioId), cancellationToken);
+
+        return ProcessarResultado(result, v => Ok(new StatusDoisFatoresResponse(v.Habilitado, v.CodigosDeRecuperacaoRestantes)));
+    }
+
+    [HttpPost("2fa/iniciar")]
+    [Authorize]
+    public async Task<ActionResult<ConfiguracaoDoisFatoresResponse>> IniciarDoisFatores(CancellationToken cancellationToken)
+    {
+        if (!TentarObterUsuarioId(out var usuarioId))
+            return Unauthorized();
+
+        var result = await mediator.Send(new IniciarDoisFatoresCommand(usuarioId), cancellationToken);
+
+        return ProcessarResultado(result, v => Ok(new ConfiguracaoDoisFatoresResponse(v.Chave, v.Uri)));
+    }
+
+    [HttpPost("2fa/ativar")]
+    [Authorize]
+    public async Task<ActionResult<CodigosDeRecuperacaoResponse>> AtivarDoisFatores(AtivarDoisFatoresRequest request, CancellationToken cancellationToken)
+    {
+        if (!TentarObterUsuarioId(out var usuarioId))
+            return Unauthorized();
+
+        var result = await mediator.Send(new AtivarDoisFatoresCommand(usuarioId, request.Codigo), cancellationToken);
+
+        return ProcessarResultado(result, v => Ok(new CodigosDeRecuperacaoResponse(v)));
+    }
+
+    [HttpPost("2fa/desativar")]
+    [Authorize]
+    public async Task<IActionResult> DesativarDoisFatores(DesativarDoisFatoresRequest request, CancellationToken cancellationToken)
+    {
+        if (!TentarObterUsuarioId(out var usuarioId))
+            return Unauthorized();
+
+        var result = await mediator.Send(new DesativarDoisFatoresCommand(usuarioId, request.Senha, request.Codigo), cancellationToken);
+
+        return ProcessarResultado(result);
+    }
+
+    // Encerra a conta da empresa e as dos funcionários e apaga a biometria de todos (S1). Só a Empresa, e com a senha de novo.
+    [HttpPost("encerrar-conta")]
+    [Authorize(Roles = "Empresa")]
+    public async Task<IActionResult> EncerrarConta(EncerrarContaRequest request, CancellationToken cancellationToken)
+    {
+        if (!TentarObterUsuarioId(out var usuarioId))
+            return Unauthorized();
+
+        var result = await mediator.Send(new EncerrarContaCommand(usuarioId, request.Senha), cancellationToken);
 
         return ProcessarResultado(result, () =>
         {

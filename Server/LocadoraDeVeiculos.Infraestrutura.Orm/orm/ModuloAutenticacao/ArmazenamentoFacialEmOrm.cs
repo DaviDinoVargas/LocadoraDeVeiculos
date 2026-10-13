@@ -71,14 +71,62 @@ public class ArmazenamentoFacialEmOrm(LocadoraDeVeiculosDbContext dbContext, Cif
         var pessoa = Normalizar(pessoaId);
 
         var amostras = await dbContext.Set<AmostraFacial>().Where(a => a.PessoaId == pessoa).ToListAsync(cancellationToken);
+        var consentimentos = await dbContext.Set<ConsentimentoFacial>().Where(c => c.PessoaId == pessoa).ToListAsync(cancellationToken);
 
-        if (amostras.Count == 0)
+        if (amostras.Count == 0 && consentimentos.Count == 0)
             return false;
 
+        // Apagar o rosto é revogar o consentimento: os dois somem juntos.
         dbContext.Set<AmostraFacial>().RemoveRange(amostras);
+        dbContext.Set<ConsentimentoFacial>().RemoveRange(consentimentos);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return true;
+    }
+
+    public async Task RegistrarConsentimentoAsync(string pessoaId, string versaoDoTexto, CancellationToken cancellationToken)
+    {
+        var pessoa = Normalizar(pessoaId);
+
+        var existente = await dbContext.Set<ConsentimentoFacial>().FirstOrDefaultAsync(c => c.PessoaId == pessoa, cancellationToken);
+
+        if (existente is null)
+            dbContext.Set<ConsentimentoFacial>().Add(new ConsentimentoFacial { PessoaId = pessoa, VersaoDoTexto = versaoDoTexto });
+        else
+        {
+            existente.VersaoDoTexto = versaoDoTexto;
+            existente.ConsentidoEmUtc = DateTime.UtcNow;
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<string?> ObterVersaoDoConsentimentoAsync(string pessoaId, CancellationToken cancellationToken)
+    {
+        var pessoa = Normalizar(pessoaId);
+
+        return await dbContext.Set<ConsentimentoFacial>()
+            .AsNoTracking()
+            .Where(c => c.PessoaId == pessoa)
+            .Select(c => c.VersaoDoTexto)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task RegistrarUsoAsync(string pessoaId, CancellationToken cancellationToken)
+    {
+        var pessoa = Normalizar(pessoaId);
+
+        var amostras = await dbContext.Set<AmostraFacial>().Where(a => a.PessoaId == pessoa).ToListAsync(cancellationToken);
+
+        if (amostras.Count == 0)
+            return;
+
+        var agora = DateTime.UtcNow;
+
+        foreach (var amostra in amostras)
+            amostra.UltimoUsoEmUtc = agora;
+
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private static string Normalizar(string pessoaId)

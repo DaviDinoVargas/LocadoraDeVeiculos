@@ -40,6 +40,7 @@ public class LocadoraDeVeiculosDbContext(
 
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<AmostraFacial> AmostrasFaciais { get; set; }
+    public DbSet<ConsentimentoFacial> ConsentimentosFaciais { get; set; }
     public DbSet<RegistroDeAuditoria> Auditoria { get; set; }
     public DbSet<Funcionario> Funcionarios { get; set; }
     public DbSet<GrupoAutomovel> GruposAutomovel { get; set; }

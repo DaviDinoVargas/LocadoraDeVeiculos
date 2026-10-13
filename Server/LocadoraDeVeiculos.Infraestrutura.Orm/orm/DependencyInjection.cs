@@ -35,6 +35,7 @@ public static class DependencyInjection
         services.AddSingleton(CifradorFacial.DaConfiguracao(configuration));
         services.AddScoped<IArmazenamentoFacial, ArmazenamentoFacialEmOrm>();
         services.AddScoped<IRepositorioAuditoria, RepositorioAuditoriaEmOrm>();
+        services.AddScoped<LimpezaDeDadosPessoais>();
 
         services.AddScoped<RepositorioFuncionarioEmOrm>();
         services.AddScoped<RepositorioGrupoAutomovelEmOrm>();

@@ -95,7 +95,8 @@ public sealed class SegurancaDaSessaoTests
         facial.Setup(f => f.RemoverAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
 
         var handler = new ExcluirFuncionarioCommandHandler(
-            _db, new RepositorioFuncionarioEmOrm(_db), _refresh, _usuarios, facial.Object, NullLogger<ExcluirFuncionarioCommandHandler>.Instance);
+            _db, new RepositorioFuncionarioEmOrm(_db), _usuarios, new EncerradorDeAcesso(_refresh, _usuarios, facial.Object),
+            NullLogger<ExcluirFuncionarioCommandHandler>.Instance);
 
         var resultado = await handler.Handle(new ExcluirFuncionarioCommand(funcionario.Id), CancellationToken.None);
 

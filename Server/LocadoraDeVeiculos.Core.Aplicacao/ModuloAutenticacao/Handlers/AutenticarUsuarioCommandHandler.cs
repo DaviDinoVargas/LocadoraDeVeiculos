@@ -21,7 +21,8 @@ public class AutenticarUsuarioCommandHandler(
     AccessTokenProvider tokenProvider,
     RefreshTokenProvider refreshTokenProvider,
     ILogger<AutenticarUsuarioCommandHandler> logger,
-    IAuditoriaDeAutenticacao? auditoria = null
+    IAuditoriaDeAutenticacao? auditoria = null,
+    VerificadorDeSegundoFator? segundoFator = null
 ) : IRequestHandler<AutenticarUsuarioCommand, Result<(AccessToken, RefreshToken, string)>>
 {
     private const string MensagemGenericaDeFalha = "Usuário ou senha inválidos.";
@@ -71,6 +72,23 @@ public class AutenticarUsuarioCommandHandler(
                 logger.LogWarning("Tentativa de login com senha incorreta para o usuário {UserId}.", usuarioEncontrado.Id);
                 await Auditar(EventosDeAutenticacao.LoginFalhou, usuarioEncontrado, cancellationToken);
                 return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(MensagemGenericaDeFalha));
+            }
+
+            // A senha estava certa. Se a conta usa 2FA, falta o código do aplicativo autenticador (ou um código de recuperação).
+            if (segundoFator is not null)
+            {
+                var segundo = await segundoFator.VerificarAsync(usuarioEncontrado, command.CodigoAutenticador);
+
+                if (segundo == ResultadoDoSegundoFator.CodigoObrigatorio)
+                    return Result.Fail(ResultadosErro.SegundoFatorObrigatorioErro());
+
+                if (segundo == ResultadoDoSegundoFator.CodigoInvalido)
+                {
+                    logger.LogWarning("Segundo fator recusado para o usuário {UserId}.", usuarioEncontrado.Id);
+                    await Auditar(EventosDeAutenticacao.LoginFalhou, usuarioEncontrado, cancellationToken);
+
+                    return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(MensagemGenericaDeFalha));
+                }
             }
 
             var accessToken = await tokenProvider.GerarAccessTokenAsync(usuarioEncontrado);

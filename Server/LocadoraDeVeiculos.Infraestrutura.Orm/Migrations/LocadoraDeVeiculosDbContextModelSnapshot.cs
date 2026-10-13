@@ -160,6 +160,9 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(320)");
 
+                    b.Property<DateTime>("UltimoUsoEmUtc")
+                        .HasColumnType("datetime2");
+
                     b.HasKey("Id");
 
                     b.HasIndex("PessoaId");
@@ -193,6 +196,31 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.Migrations
                         .HasFilter("[NormalizedName] IS NOT NULL");
 
                     b.ToTable("AspNetRoles", (string)null);
+                });
+
+            modelBuilder.Entity("LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao.ConsentimentoFacial", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("ConsentidoEmUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PessoaId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(320)");
+
+                    b.Property<string>("VersaoDoTexto")
+                        .IsRequired()
+                        .HasColumnType("varchar(40)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PessoaId")
+                        .IsUnique();
+
+                    b.ToTable("ConsentimentosFaciais", (string)null);
                 });
 
             modelBuilder.Entity("LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao.RefreshToken", b =>

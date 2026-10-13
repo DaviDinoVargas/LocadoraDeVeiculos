@@ -19,7 +19,8 @@ public class AutenticarComRostoCommandHandler(
     AccessTokenProvider tokenProvider,
     RefreshTokenProvider refreshTokenProvider,
     ILogger<AutenticarComRostoCommandHandler> logger,
-    IAuditoriaDeAutenticacao? auditoria = null
+    IAuditoriaDeAutenticacao? auditoria = null,
+    VerificadorDeSegundoFator? segundoFator = null
 ) : IRequestHandler<AutenticarComRostoCommand, Result<(AccessToken, RefreshToken, string)>>
 {
     // Mensagem genérica igual à do login por senha: evita enumeração de e-mails e,
@@ -70,6 +71,22 @@ public class AutenticarComRostoCommandHandler(
                     "Login facial recusado para o usuário {UserId} (encontrado={Encontrado}, confiança={Confianca}).",
                     usuarioEncontrado.Id, verificacao.Encontrado, verificacao.Confianca);
                 return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(MensagemGenericaDeFalha));
+            }
+
+            // Quem ativou o 2FA não entra só com o rosto: o código do aplicativo também é exigido.
+            if (segundoFator is not null)
+            {
+                var segundo = await segundoFator.VerificarAsync(usuarioEncontrado, command.CodigoAutenticador);
+
+                if (segundo == ResultadoDoSegundoFator.CodigoObrigatorio)
+                    return Result.Fail(ResultadosErro.SegundoFatorObrigatorioErro());
+
+                if (segundo == ResultadoDoSegundoFator.CodigoInvalido)
+                {
+                    await Auditar(EventosDeAutenticacao.LoginFacialFalhou, usuarioEncontrado, cancellationToken);
+
+                    return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(MensagemGenericaDeFalha));
+                }
             }
 
             await userManager.ResetAccessFailedCountAsync(usuarioEncontrado);

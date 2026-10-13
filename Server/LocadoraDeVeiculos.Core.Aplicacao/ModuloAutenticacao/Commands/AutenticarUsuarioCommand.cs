@@ -9,5 +9,5 @@ using System.Threading.Tasks;
 
 namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Commands;
 
-public record AutenticarUsuarioCommand(string Email, string Senha)
+public record AutenticarUsuarioCommand(string Email, string Senha, string? CodigoAutenticador = null)
     : IRequest<Result<(AccessToken AccessToken, RefreshToken RefreshToken, string RefreshTokenBruto)>>;

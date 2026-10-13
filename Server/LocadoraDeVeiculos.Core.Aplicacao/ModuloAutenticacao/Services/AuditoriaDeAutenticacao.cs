@@ -23,6 +23,10 @@ public static class EventosDeAutenticacao
     public const string LoginFacialFalhou = "LoginFacialFalhou";
     public const string LoginFacialBloqueado = "LoginFacialBloqueado";
     public const string SenhaAlterada = "SenhaAlterada";
+    public const string ContaEncerrada = "ContaEncerrada";
+    public const string SenhaRedefinida = "SenhaRedefinida";
+    public const string DoisFatoresAtivado = "DoisFatoresAtivado";
+    public const string DoisFatoresDesativado = "DoisFatoresDesativado";
 }
 
 public interface IAuditoriaDeAutenticacao

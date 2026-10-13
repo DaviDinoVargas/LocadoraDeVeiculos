@@ -71,7 +71,13 @@ public class FacialAuthClient(
 
         var corpo = await resposta.Content.ReadFromJsonAsync<FacialVerifyResponseDto>(cancellationToken: cancellationToken);
 
-        return new FacialVerifyResult(Encontrado: true, Bateu: corpo?.Match ?? false, Confianca: corpo?.Confidence ?? 0);
+        var bateu = corpo?.Match ?? false;
+
+        // Uso bem-sucedido zera a contagem de retenção de 12 meses (S1).
+        if (bateu)
+            await armazenamento.RegistrarUsoAsync(personId, cancellationToken);
+
+        return new FacialVerifyResult(Encontrado: true, Bateu: bateu, Confianca: corpo?.Confidence ?? 0);
     }
 
     public async Task<FacialEnrollResult> CadastrarAsync(string personId, string imagemBase64, CancellationToken cancellationToken)

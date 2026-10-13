@@ -17,6 +17,15 @@ public interface IArmazenamentoFacial
 
     Task<bool> ExisteAsync(string pessoaId, CancellationToken cancellationToken);
 
-    /// <summary>Apaga de verdade (não é exclusão lógica). Devolve false se não havia nada.</summary>
+    /// <summary>Apaga de verdade (não é exclusão lógica), junto com o consentimento. Devolve false se não havia nada.</summary>
     Task<bool> RemoverAsync(string pessoaId, CancellationToken cancellationToken);
+
+    /// <summary>Guarda (ou renova) a prova de que a pessoa consentiu, com a versão do texto aceito.</summary>
+    Task RegistrarConsentimentoAsync(string pessoaId, string versaoDoTexto, CancellationToken cancellationToken);
+
+    /// <summary>Versão do texto aceito, ou null se a pessoa não consentiu.</summary>
+    Task<string?> ObterVersaoDoConsentimentoAsync(string pessoaId, CancellationToken cancellationToken);
+
+    /// <summary>Marca que o rosto foi usado agora (login ou verificação bem-sucedidos): zera a contagem de retenção.</summary>
+    Task RegistrarUsoAsync(string pessoaId, CancellationToken cancellationToken);
 }

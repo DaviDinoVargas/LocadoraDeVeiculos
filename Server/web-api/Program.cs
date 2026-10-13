@@ -45,6 +45,12 @@ namespace LocadoraDeVeiculos.WebApi
             // (a política "auth" é aplicada via [EnableRateLimiting] no AuthController).
             builder.Services.AddSegurancaHttp(builder.Configuration);
 
+            // Retenção de dados pessoais: rosto sem uso há 12 meses, IP antigo da auditoria, refresh tokens vencidos.
+            builder.Services.AddHostedService<LimpezaPeriodicaService>();
+
+            // Envio dos e-mails de recuperação de senha, fora da requisição (resposta igual para qualquer e-mail).
+            builder.Services.AddHostedService<ProcessadorDeRecuperacaoDeSenha>();
+
             var app = builder.Build();
 
             // Comando de manutenção (S1): importa o antigo faces.json para o banco e sai, sem subir o servidor.

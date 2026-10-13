@@ -15,6 +15,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Handlers;
 public class CadastrarRostoCommandHandler(
     UserManager<Usuario> userManager,
     IFacialAuthClient facialAuthClient,
+    IArmazenamentoFacial armazenamento,
     ILogger<CadastrarRostoCommandHandler> logger
 ) : IRequestHandler<CadastrarRostoCommand, Result<int>>
 {
@@ -22,6 +23,11 @@ public class CadastrarRostoCommandHandler(
     {
         try
         {
+            // Consentimento específico e destacado (LGPD): sem aceitar a versão atual do termo, nem chega ao ML.
+            if (!command.Consentimento || command.VersaoDoTexto != ConsentimentoBiometrico.VersaoAtual)
+                return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(
+                    "Para cadastrar o rosto é preciso ler e aceitar o termo de consentimento atual."));
+
             var usuario = await userManager.FindByIdAsync(command.UsuarioId.ToString());
 
             if (usuario?.Email is null)
@@ -34,6 +40,8 @@ public class CadastrarRostoCommandHandler(
             if (!resultado.Sucesso)
                 return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(
                     "Não foi possível cadastrar o rosto. Verifique se a imagem mostra um rosto claramente."));
+
+            await armazenamento.RegistrarConsentimentoAsync(personId, ConsentimentoBiometrico.VersaoAtual, cancellationToken);
 
             return Result.Ok(resultado.Amostras);
         }

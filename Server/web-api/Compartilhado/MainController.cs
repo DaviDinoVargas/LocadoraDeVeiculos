@@ -47,6 +47,7 @@ public abstract class MainController : ControllerBase
                 "RegistroDuplicado" => Conflict(detalhes),              // 409
                 "ExclusaoBloqueada" => UnprocessableEntity(detalhes),   // 422
                 "EstadoInvalido" => Conflict(detalhes),                 // 409
+                "SegundoFatorObrigatorio" => StatusCode(428, detalhes), // 428 Precondition Required: falta o código do 2FA
                 "ExcecaoInterna" => StatusCode(500, detalhes),          // 500
                 _ => BadRequest(detalhes)
             };

@@ -17,4 +17,10 @@ public class AmostraFacial
     public byte[] Conteudo { get; set; } = null!;
 
     public DateTime CriadoEmUtc { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Último uso bem-sucedido (login ou verificação). A retenção é de 12 meses SEM USO: passado esse prazo
+    /// a rotina de limpeza apaga a amostra.
+    /// </summary>
+    public DateTime UltimoUsoEmUtc { get; set; } = DateTime.UtcNow;
 }

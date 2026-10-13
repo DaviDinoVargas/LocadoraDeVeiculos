@@ -67,6 +67,14 @@ public abstract class ResultadosErro
             .WithMetadata("TipoErro", "NaoAutorizado");
     }
 
+    /// <summary>A senha estava certa, mas a conta tem 2FA e o código não veio. O cliente responde com o código (HTTP 428).</summary>
+    public static Error SegundoFatorObrigatorioErro()
+    {
+        return new Error("Segundo fator obrigatório")
+            .CausedBy("Informe o código do aplicativo autenticador.")
+            .WithMetadata("TipoErro", "SegundoFatorObrigatorio");
+    }
+
     public static Error ExcecaoInternaErro(Exception ex)
     {
         // Importante: NÃO usar .CausedBy(ex) aqui. FluentResults guarda ex.Message como um

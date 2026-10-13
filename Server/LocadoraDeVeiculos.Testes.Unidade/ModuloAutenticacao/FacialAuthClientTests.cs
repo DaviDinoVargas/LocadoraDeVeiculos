@@ -66,6 +66,24 @@ public sealed class FacialAuthClientTests
 
         public Task<bool> RemoverAsync(string pessoaId, CancellationToken cancellationToken) =>
             Task.FromResult(Dados.Remove(pessoaId));
+
+        public Dictionary<string, string> Consentimentos { get; } = [];
+        public List<string> Usos { get; } = [];
+
+        public Task RegistrarConsentimentoAsync(string pessoaId, string versaoDoTexto, CancellationToken cancellationToken)
+        {
+            Consentimentos[pessoaId] = versaoDoTexto;
+            return Task.CompletedTask;
+        }
+
+        public Task<string?> ObterVersaoDoConsentimentoAsync(string pessoaId, CancellationToken cancellationToken) =>
+            Task.FromResult(Consentimentos.TryGetValue(pessoaId, out var v) ? v : null);
+
+        public Task RegistrarUsoAsync(string pessoaId, CancellationToken cancellationToken)
+        {
+            Usos.Add(pessoaId);
+            return Task.CompletedTask;
+        }
     }
 
     private static FacialAuthClient CriarCliente(HandlerFalso handler, ArmazenamentoEmMemoria? armazenamento = null)
@@ -106,6 +124,20 @@ public sealed class FacialAuthClientTests
         StringAssert.Contains(handler.Corpos[0], "0.1");
         Assert.IsFalse(handler.Corpos[0].Contains("9.9"), "amostras de outra pessoa não podem seguir para o ML");
         Assert.IsFalse(handler.Corpos[0].Contains("personId"), "o ML não precisa saber quem é a pessoa");
+    }
+
+    [TestMethod]
+    public async Task Verificar_QuandoOMlConfirma_RegistraOUsoDoRosto_EQuandoNaoConfirma_NaoRegistra()
+    {
+        var armazenamento = ComRostoDe("usuario:a@b.com", 0.1, 0.2);
+
+        await CriarCliente(new HandlerFalso(HttpStatusCode.OK, "{\"match\":false,\"confidence\":0.1}"), armazenamento)
+            .VerificarAsync("usuario:a@b.com", "img", CancellationToken.None);
+        Assert.AreEqual(0, armazenamento.Usos.Count, "rosto que não confere não renova a retenção");
+
+        await CriarCliente(new HandlerFalso(HttpStatusCode.OK, "{\"match\":true,\"confidence\":0.95}"), armazenamento)
+            .VerificarAsync("usuario:a@b.com", "img", CancellationToken.None);
+        CollectionAssert.AreEqual(new[] { "usuario:a@b.com" }, armazenamento.Usos, "uso bem-sucedido zera a contagem de 12 meses");
     }
 
     [TestMethod]

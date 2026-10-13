@@ -116,4 +116,50 @@ public sealed class AutenticacaoHttpTests
 
         Assert.AreEqual(HttpStatusCode.BadRequest, invalida.StatusCode);
     }
+
+    [TestMethod]
+    public async Task TermoDeConsentimento_ExigeLogin_EDevolveVersaoTextoERetencao()
+    {
+        using var fabrica = new ApiFactory();
+        using var anonimo = fabrica.CreateClient();
+        Assert.AreEqual(HttpStatusCode.Unauthorized, (await anonimo.GetAsync("/api/auth/rosto/consentimento")).StatusCode);
+
+        using var logado = fabrica.CriarClienteAutenticado(await fabrica.CriarTokenAsync("Funcionario"));
+        var resposta = await logado.GetAsync("/api/auth/rosto/consentimento");
+
+        Assert.AreEqual(HttpStatusCode.OK, resposta.StatusCode);
+        using var json = System.Text.Json.JsonDocument.Parse(await resposta.Content.ReadAsStringAsync());
+        Assert.AreEqual(LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Services.ConsentimentoBiometrico.VersaoAtual, json.RootElement.GetProperty("versao").GetString());
+        Assert.AreEqual(12, json.RootElement.GetProperty("retencaoEmMeses").GetInt32());
+        var texto = json.RootElement.GetProperty("texto").GetString()!;
+        StringAssert.Contains(texto, "12 meses");
+        StringAssert.Contains(texto, "Trabalho de Conclusão de Curso");
+    }
+
+    [TestMethod]
+    public async Task CadastrarRosto_SemAceitarOTermo_Eh400()
+    {
+        using var fabrica = new ApiFactory();
+        using var logado = fabrica.CriarClienteAutenticado(await fabrica.CriarTokenAsync("Empresa"));
+
+        var semAceite = await logado.PostAsJsonAsync("/api/auth/rosto", new { imagemBase64 = "x" });
+        var versaoErrada = await logado.PostAsJsonAsync("/api/auth/rosto", new { imagemBase64 = "x", consentimento = true, versaoDoTexto = "antiga" });
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, semAceite.StatusCode);
+        Assert.AreEqual(HttpStatusCode.BadRequest, versaoErrada.StatusCode);
+    }
+
+    [TestMethod]
+    public async Task EncerrarConta_SoEmpresaComSenha()
+    {
+        using var fabrica = new ApiFactory();
+        using var anonimo = fabrica.CreateClient();
+        Assert.AreEqual(HttpStatusCode.Unauthorized, (await anonimo.PostAsJsonAsync("/api/auth/encerrar-conta", new { senha = "x" })).StatusCode);
+
+        using var funcionario = fabrica.CriarClienteAutenticado(await fabrica.CriarTokenAsync("Funcionario"));
+        Assert.AreEqual(HttpStatusCode.Forbidden, (await funcionario.PostAsJsonAsync("/api/auth/encerrar-conta", new { senha = "Senha@12345" })).StatusCode);
+
+        using var empresa = fabrica.CriarClienteAutenticado(await fabrica.CriarTokenAsync("Empresa"));
+        Assert.AreEqual(HttpStatusCode.BadRequest, (await empresa.PostAsJsonAsync("/api/auth/encerrar-conta", new { senha = "Errada@99999" })).StatusCode);
+    }
 }

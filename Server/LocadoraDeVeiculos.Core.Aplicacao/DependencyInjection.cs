@@ -84,6 +84,23 @@ public static class DependencyInjection
         });
         services.AddScoped<IFacialAuthClient, FacialAuthClient>();
         services.AddScoped<IAuditoriaDeAutenticacao, AuditoriaDeAutenticacao>();
+        services.AddScoped<IEncerradorDeAcesso, EncerradorDeAcesso>();
+        services.AddScoped<VerificadorDeSegundoFator>();
+
+        // Recuperação de senha por e-mail (S18): a fila é única; o envio usa SMTP se configurado, o log só em Development.
+        services.AddSingleton<FilaDeRecuperacaoDeSenha>();
+        services.AddScoped<RecuperacaoDeSenha>();
+        services.AddScoped<IEnviadorDeEmail>(sp =>
+        {
+            var config = sp.GetRequiredService<IConfiguration>();
+
+            if (!string.IsNullOrWhiteSpace(config["SMTP_HOST"]))
+                return ActivatorUtilities.CreateInstance<EnviadorDeEmailSmtp>(sp);
+
+            return string.Equals(config["ASPNETCORE_ENVIRONMENT"], "Development", StringComparison.OrdinalIgnoreCase)
+                ? ActivatorUtilities.CreateInstance<EnviadorDeEmailDeDesenvolvimento>(sp)
+                : ActivatorUtilities.CreateInstance<EnviadorDeEmailIndisponivel>(sp);
+        });
 
         return services;
     }
