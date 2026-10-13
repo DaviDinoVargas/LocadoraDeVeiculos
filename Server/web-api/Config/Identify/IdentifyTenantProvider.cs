@@ -19,6 +19,21 @@ public class IdentityTenantProvider(IHttpContextAccessor contextAccessor) : ITen
         }
     }
 
+    public Guid? UsuarioId
+    {
+        get
+        {
+            var user = contextAccessor.HttpContext?.User;
+
+            var id = user?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                     ?? user?.FindFirst("sub")?.Value;
+
+            return Guid.TryParse(id, out var usuarioId) ? usuarioId : null;
+        }
+    }
+
+    public string? EnderecoIp => contextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString();
+
     public bool EstaNoCargo(string cargo)
     {
         return contextAccessor.HttpContext?.User?.IsInRole(cargo) ?? false;

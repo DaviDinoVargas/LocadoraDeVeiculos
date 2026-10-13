@@ -104,6 +104,45 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.Migrations
                     b.ToTable("Alugueis");
                 });
 
+            modelBuilder.Entity("LocadoraDeVeiculos.Core.Dominio.ModuloAuditoria.RegistroDeAuditoria", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Acao")
+                        .IsRequired()
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("CamposAlterados")
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime>("EmUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("EmpresaId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("EnderecoIp")
+                        .HasColumnType("varchar(45)");
+
+                    b.Property<string>("Entidade")
+                        .IsRequired()
+                        .HasColumnType("varchar(80)");
+
+                    b.Property<Guid?>("EntidadeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("UsuarioId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmpresaId", "EmUtc");
+
+                    b.ToTable("Auditoria", (string)null);
+                });
+
             modelBuilder.Entity("LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao.AmostraFacial", b =>
                 {
                     b.Property<Guid>("Id")
