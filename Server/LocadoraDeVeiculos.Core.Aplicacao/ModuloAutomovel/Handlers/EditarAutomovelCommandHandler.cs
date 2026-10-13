@@ -93,7 +93,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAutomovel.Handlers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Ocorreu um erro durante a edição de {@Command}.", command);
+                _logger.LogError(ex, "Ocorreu um erro durante a edição de {Comando}.", command.GetType().Name);
                 return Result.Fail(ResultadosErro.ExcecaoInternaErro(ex));
             }
         }

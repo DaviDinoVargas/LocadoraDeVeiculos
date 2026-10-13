@@ -105,9 +105,8 @@ public class RegistrarUsuarioCommandHandler(
 
             logger.LogError(
                 ex,
-                "Ocorreu um erro durante o registro de {@Command}.",
-                command
-            );
+                "Ocorreu um erro durante o registro de {Comando}.",
+                command.GetType().Name);
 
             return Result.Fail(ResultadosErro.ExcecaoInternaErro(ex));
         }

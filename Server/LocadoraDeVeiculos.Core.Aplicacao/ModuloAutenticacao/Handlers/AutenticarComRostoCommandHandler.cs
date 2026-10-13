@@ -34,7 +34,7 @@ public class AutenticarComRostoCommandHandler(
 
             if (usuarioEncontrado is null)
             {
-                logger.LogWarning("Tentativa de login facial com e-mail não cadastrado: {Email}.", command.Email);
+                logger.LogWarning("Tentativa de login facial com e-mail não cadastrado: {Email}.", MascaramentoDeDados.MascararEmail(command.Email));
                 return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(MensagemGenericaDeFalha));
             }
 
@@ -58,7 +58,7 @@ public class AutenticarComRostoCommandHandler(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Ocorreu um erro durante a autenticação facial de {@Command}.", command with { ImagemBase64 = "(omitido)" });
+            logger.LogError(ex, "Ocorreu um erro durante a autenticação facial de {Comando}.", command.GetType().Name);
 
             return Result.Fail(ResultadosErro.ExcecaoInternaErro(ex));
         }

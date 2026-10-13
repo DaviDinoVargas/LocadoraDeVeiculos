@@ -116,9 +116,8 @@ public class CadastrarFuncionarioCommandHandler(
 
             logger.LogError(
                 ex,
-                "Ocorreu um erro durante o cadastro de {@Command}.",
-                command
-            );
+                "Ocorreu um erro durante o cadastro de {Comando}.",
+                command.GetType().Name);
 
             return Result.Fail(ResultadosErro.ExcecaoInternaErro(ex));
         }

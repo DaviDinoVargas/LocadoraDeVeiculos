@@ -123,7 +123,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloDevolucao.Handlers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Ocorreu um erro durante o registro de devolução: {@Command}.", command);
+                _logger.LogError(ex, "Ocorreu um erro durante o registro de devolução: {Comando}.", command.GetType().Name);
                 return Result.Fail(ResultadosErro.ExcecaoInternaErro(ex));
             }
         }

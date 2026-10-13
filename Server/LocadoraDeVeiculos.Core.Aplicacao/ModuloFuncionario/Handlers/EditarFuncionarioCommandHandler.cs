@@ -76,9 +76,8 @@ public class EditarFuncionarioCommandHandler(
         {
             logger.LogError(
                 ex,
-                "Ocorreu um erro durante a edição de {@Command}.",
-                command
-            );
+                "Ocorreu um erro durante a edição de {Comando}.",
+                command.GetType().Name);
 
             return Result.Fail(ResultadosErro.ExcecaoInternaErro(ex));
         }

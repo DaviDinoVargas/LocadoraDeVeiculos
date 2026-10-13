@@ -47,7 +47,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloTaxaServico.Handlers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Ocorreu um erro durante a exclusão de taxa/serviço: {@Command}.", command);
+                _logger.LogError(ex, "Ocorreu um erro durante a exclusão de taxa/serviço: {Comando}.", command.GetType().Name);
                 return Result.Fail(ResultadosErro.ExcecaoInternaErro(ex));
             }
         }

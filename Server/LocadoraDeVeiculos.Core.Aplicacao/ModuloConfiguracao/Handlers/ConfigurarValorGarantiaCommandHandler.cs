@@ -80,7 +80,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloConfiguracao.Handlers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Ocorreu um erro durante a configuração do valor da garantia: {@Command}.", command);
+                _logger.LogError(ex, "Ocorreu um erro durante a configuração do valor da garantia: {Comando}.", command.GetType().Name);
                 return Result.Fail(ResultadosErro.ExcecaoInternaErro(ex));
             }
         }

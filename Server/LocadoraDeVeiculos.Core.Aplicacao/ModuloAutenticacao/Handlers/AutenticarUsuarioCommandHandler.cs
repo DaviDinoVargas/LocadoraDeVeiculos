@@ -34,7 +34,7 @@ public class AutenticarUsuarioCommandHandler(
             // Mensagem idêntica para "usuário não existe" e "senha incorreta": evita enumeração de e-mails.
             if (usuarioEncontrado is null)
             {
-                logger.LogWarning("Tentativa de login com e-mail não cadastrado: {Email}.", command.Email);
+                logger.LogWarning("Tentativa de login com e-mail não cadastrado: {Email}.", MascaramentoDeDados.MascararEmail(command.Email));
                 return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(MensagemGenericaDeFalha));
             }
 
@@ -70,9 +70,8 @@ public class AutenticarUsuarioCommandHandler(
         {
             logger.LogError(
                 ex,
-                "Ocorreu um erro durante a autenticação de {@Command}.",
-                command
-            );
+                "Ocorreu um erro durante a autenticação de {Comando}.",
+                command.GetType().Name);
 
             return Result.Fail(ResultadosErro.ExcecaoInternaErro(ex));
         }

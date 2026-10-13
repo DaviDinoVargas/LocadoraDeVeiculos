@@ -48,7 +48,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloParceiro.Handlers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Ocorreu um erro durante a exclusão de parceiro: {@Command}.", command);
+                _logger.LogError(ex, "Ocorreu um erro durante a exclusão de parceiro: {Comando}.", command.GetType().Name);
                 return Result.Fail(ResultadosErro.ExcecaoInternaErro(ex));
             }
         }

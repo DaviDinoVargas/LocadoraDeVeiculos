@@ -47,7 +47,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloCondutor.Handlers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Ocorreu um erro durante a exclusão de condutor: {@Command}.", command);
+                _logger.LogError(ex, "Ocorreu um erro durante a exclusão de condutor: {Comando}.", command.GetType().Name);
                 return Result.Fail(ResultadosErro.ExcecaoInternaErro(ex));
             }
         }

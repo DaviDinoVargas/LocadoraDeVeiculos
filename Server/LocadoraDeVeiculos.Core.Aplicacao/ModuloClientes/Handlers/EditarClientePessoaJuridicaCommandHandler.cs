@@ -84,7 +84,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloCliente.Handlers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Ocorreu um erro durante a edição de cliente pessoa jurídica: {@Command}.", command);
+                _logger.LogError(ex, "Ocorreu um erro durante a edição de cliente pessoa jurídica: {Comando}.", command.GetType().Name);
                 return Result.Fail(ResultadosErro.ExcecaoInternaErro(ex));
             }
         }

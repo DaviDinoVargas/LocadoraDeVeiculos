@@ -50,9 +50,8 @@ public class SairCommandHandler(
         {
             logger.LogError(
                 ex,
-                "Ocorreu um erro durante o logout {@Command}.",
-                command
-            );
+                "Ocorreu um erro durante o logout {Comando}.",
+                command.GetType().Name);
 
             return Result.Fail(ResultadosErro.ExcecaoInternaErro(ex));
         }

@@ -50,9 +50,8 @@ public class ExcluirFuncionarioCommandHandler(
         {
             logger.LogError(
                 ex,
-                "Ocorreu um erro durante a exclusão de de {@Command}.",
-                command
-            );
+                "Ocorreu um erro durante a exclusão de de {Comando}.",
+                command.GetType().Name);
 
             return Result.Fail(ResultadosErro.ExcecaoInternaErro(ex));
         }

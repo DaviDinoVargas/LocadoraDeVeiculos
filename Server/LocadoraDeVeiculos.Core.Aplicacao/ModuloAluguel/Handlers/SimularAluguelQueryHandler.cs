@@ -90,7 +90,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Ocorreu um erro durante a simulação do aluguel: {@Query}.", query);
+                _logger.LogError(ex, "Ocorreu um erro durante a simulação do aluguel: {Comando}.", query.GetType().Name);
                 return Result.Fail(ResultadosErro.ExcecaoInternaErro(ex));
             }
         }

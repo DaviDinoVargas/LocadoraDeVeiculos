@@ -64,7 +64,7 @@ public class CadastrarGrupoAutomovelCommandHandler
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Ocorreu um erro durante o cadastro de {@Command}.", command);
+            _logger.LogError(ex, "Ocorreu um erro durante o cadastro de {Comando}.", command.GetType().Name);
             return Result.Fail(ResultadosErro.ExcecaoInternaErro(ex));
         }
     }

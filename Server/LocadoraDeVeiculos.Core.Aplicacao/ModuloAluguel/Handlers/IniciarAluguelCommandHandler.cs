@@ -59,7 +59,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Ocorreu um erro ao iniciar o aluguel: {@Command}.", command);
+                _logger.LogError(ex, "Ocorreu um erro ao iniciar o aluguel: {Comando}.", command.GetType().Name);
                 return Result.Fail(ResultadosErro.ExcecaoInternaErro(ex));
             }
         }

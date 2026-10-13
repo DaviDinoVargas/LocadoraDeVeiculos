@@ -48,7 +48,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloCliente.Handlers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Ocorreu um erro durante a exclusão de cliente: {@Command}.", command);
+                _logger.LogError(ex, "Ocorreu um erro durante a exclusão de cliente: {Comando}.", command.GetType().Name);
                 return Result.Fail(ResultadosErro.ExcecaoInternaErro(ex));
             }
         }

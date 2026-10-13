@@ -48,7 +48,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloCupom.Handlers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Ocorreu um erro durante a exclusão de cupom: {@Command}.", command);
+                _logger.LogError(ex, "Ocorreu um erro durante a exclusão de cupom: {Comando}.", command.GetType().Name);
                 return Result.Fail(ResultadosErro.ExcecaoInternaErro(ex));
             }
         }
