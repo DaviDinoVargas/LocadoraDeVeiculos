@@ -18,13 +18,17 @@ public class AutenticarComRostoCommandHandler(
     IFacialAuthClient facialAuthClient,
     AccessTokenProvider tokenProvider,
     RefreshTokenProvider refreshTokenProvider,
-    ILogger<AutenticarComRostoCommandHandler> logger
+    ILogger<AutenticarComRostoCommandHandler> logger,
+    IAuditoriaDeAutenticacao? auditoria = null
 ) : IRequestHandler<AutenticarComRostoCommand, Result<(AccessToken, RefreshToken, string)>>
 {
     // Mensagem genérica igual à do login por senha: evita enumeração de e-mails e,
     // aqui também, evita revelar se o e-mail tem ou não rosto cadastrado.
     private const string MensagemGenericaDeFalha = "Não foi possível autenticar com reconhecimento facial.";
 
+
+    private Task Auditar(string evento, Usuario usuario, CancellationToken cancellationToken) =>
+        auditoria?.RegistrarAsync(evento, usuario, cancellationToken) ?? Task.CompletedTask;
 
     public async Task<Result<(AccessToken, RefreshToken, string)>> Handle(
         AutenticarComRostoCommand command, CancellationToken cancellationToken)
@@ -44,6 +48,7 @@ public class AutenticarComRostoCommandHandler(
             if (await userManager.IsLockedOutAsync(usuarioEncontrado))
             {
                 logger.LogWarning("Login facial bloqueado por excesso de tentativas para o usuário {UserId}.", usuarioEncontrado.Id);
+                await Auditar(EventosDeAutenticacao.LoginFacialBloqueado, usuarioEncontrado, cancellationToken);
                 return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(MensagemGenericaDeFalha));
             }
 
@@ -59,6 +64,8 @@ public class AutenticarComRostoCommandHandler(
                 if (!verificacao.NenhumRostoNaImagem)
                     await userManager.AccessFailedAsync(usuarioEncontrado);
 
+                await Auditar(EventosDeAutenticacao.LoginFacialFalhou, usuarioEncontrado, cancellationToken);
+
                 logger.LogWarning(
                     "Login facial recusado para o usuário {UserId} (encontrado={Encontrado}, confiança={Confianca}).",
                     usuarioEncontrado.Id, verificacao.Encontrado, verificacao.Confianca);
@@ -70,6 +77,8 @@ public class AutenticarComRostoCommandHandler(
             var accessToken = await tokenProvider.GerarAccessTokenAsync(usuarioEncontrado);
 
             var (refreshToken, refreshTokenBruto) = await refreshTokenProvider.GerarRefreshTokenAsync(usuarioEncontrado);
+
+            await Auditar(EventosDeAutenticacao.LoginFacialOk, usuarioEncontrado, cancellationToken);
 
             return Result.Ok((accessToken, refreshToken, refreshTokenBruto));
         }

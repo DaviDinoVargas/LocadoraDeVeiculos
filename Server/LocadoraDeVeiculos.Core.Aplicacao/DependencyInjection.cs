@@ -83,6 +83,7 @@ public static class DependencyInjection
             client.Timeout = TimeSpan.FromSeconds(10);
         });
         services.AddScoped<IFacialAuthClient, FacialAuthClient>();
+        services.AddScoped<IAuditoriaDeAutenticacao, AuditoriaDeAutenticacao>();
 
         return services;
     }

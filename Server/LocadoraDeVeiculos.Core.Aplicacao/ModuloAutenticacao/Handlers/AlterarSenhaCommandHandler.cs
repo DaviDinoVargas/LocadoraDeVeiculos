@@ -2,6 +2,7 @@ using FluentResults;
 using FluentValidation;
 using LocadoraDeVeiculos.Core.Aplicacao.Compartilhado;
 using LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Commands;
+using LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Services;
 using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
 using LocadoraDeVeiculos.Infraestrutura.Orm.jwt.Services;
 using MediatR;
@@ -23,7 +24,8 @@ public class AlterarSenhaCommandHandler(
     UserManager<Usuario> userManager,
     RefreshTokenProvider refreshTokenProvider,
     IValidator<AlterarSenhaCommand> validator,
-    ILogger<AlterarSenhaCommandHandler> logger
+    ILogger<AlterarSenhaCommandHandler> logger,
+    IAuditoriaDeAutenticacao? auditoria = null
 ) : IRequestHandler<AlterarSenhaCommand, Result>
 {
     private const string SenhaAtualIncorreta = "A senha atual está incorreta.";
@@ -63,6 +65,9 @@ public class AlterarSenhaCommandHandler(
             await EncerrarSessoesAsync(usuario);
 
             logger.LogInformation("Senha alterada pelo usuário {UserId}; sessões encerradas.", usuario.Id);
+
+            if (auditoria is not null)
+                await auditoria.RegistrarAsync(EventosDeAutenticacao.SenhaAlterada, usuario, cancellationToken);
 
             return Result.Ok();
         }

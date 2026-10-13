@@ -20,10 +20,14 @@ public class AutenticarUsuarioCommandHandler(
     SignInManager<Usuario> signInManager,
     AccessTokenProvider tokenProvider,
     RefreshTokenProvider refreshTokenProvider,
-    ILogger<AutenticarUsuarioCommandHandler> logger
+    ILogger<AutenticarUsuarioCommandHandler> logger,
+    IAuditoriaDeAutenticacao? auditoria = null
 ) : IRequestHandler<AutenticarUsuarioCommand, Result<(AccessToken, RefreshToken, string)>>
 {
     private const string MensagemGenericaDeFalha = "Usuário ou senha inválidos.";
+
+    private Task Auditar(string evento, Usuario usuario, CancellationToken cancellationToken) =>
+        auditoria?.RegistrarAsync(evento, usuario, cancellationToken) ?? Task.CompletedTask;
 
     public async Task<Result<(AccessToken, RefreshToken, string)>> Handle(
         AutenticarUsuarioCommand command, CancellationToken cancellationToken)
@@ -56,6 +60,7 @@ public class AutenticarUsuarioCommandHandler(
             if (resultadoLogin.IsLockedOut)
             {
                 logger.LogWarning("Login bloqueado por excesso de tentativas para o usuário {UserId}.", usuarioEncontrado.Id);
+                await Auditar(EventosDeAutenticacao.LoginBloqueado, usuarioEncontrado, cancellationToken);
                 // Mesma mensagem de "senha incorreta" e de "e-mail inexistente": uma mensagem própria para
                 // bloqueio revelaria que o e-mail tem conta e permitiria confirmar que o ataque funcionou.
                 return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(MensagemGenericaDeFalha));
@@ -64,12 +69,15 @@ public class AutenticarUsuarioCommandHandler(
             if (!resultadoLogin.Succeeded)
             {
                 logger.LogWarning("Tentativa de login com senha incorreta para o usuário {UserId}.", usuarioEncontrado.Id);
+                await Auditar(EventosDeAutenticacao.LoginFalhou, usuarioEncontrado, cancellationToken);
                 return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(MensagemGenericaDeFalha));
             }
 
             var accessToken = await tokenProvider.GerarAccessTokenAsync(usuarioEncontrado);
 
             var (refreshToken, refreshTokenBruto) = await refreshTokenProvider.GerarRefreshTokenAsync(usuarioEncontrado);
+
+            await Auditar(EventosDeAutenticacao.LoginOk, usuarioEncontrado, cancellationToken);
 
             return Result.Ok((accessToken, refreshToken, refreshTokenBruto));
         }
