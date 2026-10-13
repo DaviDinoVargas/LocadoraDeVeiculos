@@ -6,6 +6,7 @@ using System.Text;
 using System;
 using System.Text.Json;
 using System.IdentityModel.Tokens.Jwt;
+using LocadoraDeVeiculos.Infraestrutura.Orm.jwt;
 using LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
 using System.Security.Claims;
 
@@ -36,15 +37,17 @@ public static class IdentityConfig
         .AddEntityFrameworkStores<LocadoraDeVeiculosDbContext>()
         .AddDefaultTokenProviders();
 
+        // PBKDF2 do Identity: o padrão do .NET 8 são 100.000 iterações; o OWASP recomenda 210.000
+        // para HMAC-SHA512. Hashes antigos continuam válidos (a contagem fica gravada no hash) e
+        // são regravados com o novo custo no próximo login bem-sucedido.
+        services.Configure<PasswordHasherOptions>(options => options.IterationCount = 210_000);
+
         services.AddJwtAuthentication(configuration);
     }
 
     private static void AddJwtAuthentication(this IServiceCollection services, IConfiguration configuration)
     {
-        var chaveAssinaturaJwt = configuration["JWT_GENERATION_KEY"];
-
-        if (chaveAssinaturaJwt is null)
-            throw new ArgumentException("Não foi possível obter a chave de assinatura de tokens.");
+        var chaveAssinaturaJwt = ChaveJwt.Validar(configuration["JWT_GENERATION_KEY"]);
 
         var chaveEmBytes = Encoding.ASCII.GetBytes(chaveAssinaturaJwt);
 
@@ -61,7 +64,9 @@ public static class IdentityConfig
         .AddJwtBearer(options =>
         {
             options.RequireHttpsMetadata = true;
-            options.SaveToken = true;
+            // O token não é lido depois da validação (as claims bastam); guardá-lo no
+            // AuthenticationProperties só o deixaria circulando em memória sem necessidade.
+            options.SaveToken = false;
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidIssuer = "LocadoraDeVeiculos",
@@ -70,7 +75,10 @@ public static class IdentityConfig
                 ValidAudience = audienciaValida,
                 ValidateAudience = true,
                 ValidateIssuer = true,
-                ValidateLifetime = true
+                ValidateLifetime = true,
+                // O padrão (5 min) é um terço da vida de um token de 15 min: um token vencido
+                // continuaria valendo. 30 s cobrem a diferença entre relógios.
+                ClockSkew = TimeSpan.FromSeconds(30)
             };
 
             options.Events = new JwtBearerEvents
