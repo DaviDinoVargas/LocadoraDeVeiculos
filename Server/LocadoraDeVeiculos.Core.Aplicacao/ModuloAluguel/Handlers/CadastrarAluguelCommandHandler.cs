@@ -71,6 +71,10 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
                 return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(erros));
             }
 
+            // O cliente precisa ser da própria empresa (o filtro por empresa do banco esconde os das outras).
+            if (!await _appDbContext.Clientes.AnyAsync(c => c.Id == command.ClienteId, cancellationToken))
+                return Result.Fail(ResultadosErro.RegistroNaoEncontradoErro(command.ClienteId));
+
             // Verificar disponibilidade do automóvel
             if (await _repositorioAluguel.ExisteAluguelAtivoParaAutomovelAsync(command.AutomovelId, command.DataSaida, command.DataRetornoPrevisto))
             {
@@ -108,6 +112,10 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
                 var taxasServicos = command.TaxasServicosIds is { Count: > 0 }
                     ? await _repositorioTaxaServico.SelecionarPorIdsAsync(command.TaxasServicosIds)
                     : new System.Collections.Generic.List<TaxaServico>();
+
+                // Taxa que não existe (ou é de outra empresa) não é ignorada em silêncio: o preço sairia diferente do que o usuário vê.
+                if (command.TaxasServicosIds is { Count: > 0 } && taxasServicos.Count != command.TaxasServicosIds.Distinct().Count())
+                    return Result.Fail(ResultadosErro.RequisicaoInvalidaErro("Uma ou mais taxas de serviço informadas não existem."));
 
                 // O valor previsto é sempre calculado no servidor a partir do plano de cobrança
                 // e das taxas selecionadas — o valor enviado pelo cliente (command.ValorPrevisto)

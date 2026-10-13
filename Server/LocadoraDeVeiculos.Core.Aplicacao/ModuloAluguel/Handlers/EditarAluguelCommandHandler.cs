@@ -13,6 +13,7 @@ using LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
 using LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloTaxaServico;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;
 using System.Threading;
@@ -58,6 +59,10 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
 
             if (aluguelExistente is null)
                 return Result.Fail(ResultadosErro.RegistroNaoEncontradoErro(command.Id));
+
+            // O cliente precisa ser da própria empresa (o filtro por empresa do banco esconde os das outras).
+            if (!await _appDbContext.Clientes.AnyAsync(c => c.Id == command.ClienteId, cancellationToken))
+                return Result.Fail(ResultadosErro.RegistroNaoEncontradoErro(command.ClienteId));
 
             if (!aluguelExistente.PodeSerEditado())
                 return Result.Fail(ResultadosErro.EstadoInvalidoErro("Não é possível editar um aluguel concluído ou cancelado."));
@@ -108,6 +113,10 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
                     ? await _repositorioTaxaServico.SelecionarPorIdsAsync(command.TaxasServicosIds)
                     : new System.Collections.Generic.List<TaxaServico>();
 
+                // Taxa que não existe (ou é de outra empresa) não é ignorada em silêncio: o preço sairia diferente do que o usuário vê.
+                if (command.TaxasServicosIds is { Count: > 0 } && taxasServicos.Count != command.TaxasServicosIds.Distinct().Count())
+                    return Result.Fail(ResultadosErro.RequisicaoInvalidaErro("Uma ou mais taxas de serviço informadas não existem."));
+
                 // O valor previsto é sempre recalculado no servidor — o valor enviado pelo
                 // cliente (command.ValorPrevisto) é ignorado de propósito.
                 var valorBruto = CalculoAluguelService.CalcularValorPrevisto(
@@ -151,6 +160,11 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
                     aluguelEditado.ValorPrevisto,
                     aluguelEditado.ValorDesconto
                 ));
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Regra de domínio violada (ex.: iniciar um aluguel que já começou): conflito de estado, não erro do servidor.
+                return Result.Fail(ResultadosErro.EstadoInvalidoErro(ex.Message));
             }
             catch (Exception ex)
             {

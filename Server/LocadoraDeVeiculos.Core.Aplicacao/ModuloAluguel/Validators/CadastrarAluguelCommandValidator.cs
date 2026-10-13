@@ -25,7 +25,9 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Validators
             RuleFor(p => p.DataRetornoPrevisto)
                 .NotEmpty().WithMessage("O campo Data de Retorno Previsto é obrigatório.")
                 .GreaterThan(p => p.DataSaida)
-                .WithMessage("A data de retorno previsto deve ser após a data de saída.");
+                .WithMessage("A data de retorno previsto deve ser após a data de saída.")
+                .Must((p, retorno) => retorno - p.DataSaida <= TimeSpan.FromDays(365))
+                .WithMessage("O período do aluguel não pode passar de 365 dias.");
 
             // ValorPrevisto não é validado: o servidor sempre recalcula (CalculoAluguelService)
             // e descarta o que o cliente enviar.

@@ -55,6 +55,11 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloDevolucao.Handlers
 
                 return Result.Ok(new ExcluirDevolucaoResult());
             }
+            catch (InvalidOperationException ex)
+            {
+                // Regra de domínio violada (ex.: iniciar um aluguel que já começou): conflito de estado, não erro do servidor.
+                return Result.Fail(ResultadosErro.EstadoInvalidoErro(ex.Message));
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Ocorreu um erro durante a exclusão de devolução: {Comando}.", command.GetType().Name);

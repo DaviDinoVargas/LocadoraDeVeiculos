@@ -1,5 +1,6 @@
 ﻿using FluentResults;
 using LocadoraDeVeiculos.Core.Dominio.ModuloDevolucao;
+using LocadoraDeVeiculos.Core.Aplicacao.Compartilhado;
 using MediatR;
 using System;
 using System.Collections.Generic;
@@ -14,7 +15,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloDevolucao.Commands
         decimal QuilometragemFinal,
         decimal CombustivelNoTanque,
         NivelCombustivel NivelCombustivel
-    ) : IRequest<Result<RegistrarDevolucaoResult>>;
+    ) : IRequest<Result<RegistrarDevolucaoResult>>, ISerializadoPorEmpresa;
 
     public record RegistrarDevolucaoResult(
         Guid Id,
@@ -27,7 +28,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloDevolucao.Commands
         decimal ValorTotal
     );
 
-    public record ExcluirDevolucaoCommand(Guid Id) : IRequest<Result<ExcluirDevolucaoResult>>;
+    public record ExcluirDevolucaoCommand(Guid Id) : IRequest<Result<ExcluirDevolucaoResult>>, ISerializadoPorEmpresa;
 
     public record ExcluirDevolucaoResult();
 

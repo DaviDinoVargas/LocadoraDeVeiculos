@@ -63,6 +63,11 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
 
                 return Result.Ok(new CancelarAluguelResult(aluguel.Id, aluguel.Status));
             }
+            catch (InvalidOperationException ex)
+            {
+                // Regra de domínio violada (ex.: iniciar um aluguel que já começou): conflito de estado, não erro do servidor.
+                return Result.Fail(ResultadosErro.EstadoInvalidoErro(ex.Message));
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Ocorreu um erro ao cancelar o aluguel: {Comando}.", command.GetType().Name);

@@ -121,6 +121,11 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloDevolucao.Handlers
                     devolucao.ValorTotal
                 ));
             }
+            catch (InvalidOperationException ex)
+            {
+                // Regra de domínio violada (ex.: iniciar um aluguel que já começou): conflito de estado, não erro do servidor.
+                return Result.Fail(ResultadosErro.EstadoInvalidoErro(ex.Message));
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Ocorreu um erro durante o registro de devolução: {Comando}.", command.GetType().Name);

@@ -1,5 +1,6 @@
 ﻿using FluentResults;
 using LocadoraDeVeiculos.Core.Dominio.ModuloTaxaServico;
+using LocadoraDeVeiculos.Core.Aplicacao.Compartilhado;
 using MediatR;
 using System;
 using System.Collections.Generic;
@@ -18,7 +19,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Commands
         decimal ValorPrevisto,
         List<Guid> TaxasServicosIds,
         string? CupomCodigo = null
-    ) : IRequest<Result<CadastrarAluguelResult>>;
+    ) : IRequest<Result<CadastrarAluguelResult>>, ISerializadoPorEmpresa;
 
     public record CadastrarAluguelResult(Guid Id);
 
@@ -32,7 +33,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Commands
         decimal ValorPrevisto,
         List<Guid> TaxasServicosIds,
         string? CupomCodigo = null
-    ) : IRequest<Result<EditarAluguelResult>>;
+    ) : IRequest<Result<EditarAluguelResult>>, ISerializadoPorEmpresa;
 
     public record EditarAluguelResult(
         Guid Id,
@@ -45,15 +46,15 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Commands
         decimal ValorDesconto
     );
 
-    public record IniciarAluguelCommand(Guid Id) : IRequest<Result<IniciarAluguelResult>>;
+    public record IniciarAluguelCommand(Guid Id) : IRequest<Result<IniciarAluguelResult>>, ISerializadoPorEmpresa;
 
     public record IniciarAluguelResult(Guid Id, StatusAluguel Status);
 
-    public record CancelarAluguelCommand(Guid Id) : IRequest<Result<CancelarAluguelResult>>;
+    public record CancelarAluguelCommand(Guid Id) : IRequest<Result<CancelarAluguelResult>>, ISerializadoPorEmpresa;
 
     public record CancelarAluguelResult(Guid Id, StatusAluguel Status);
 
-    public record ExcluirAluguelCommand(Guid Id) : IRequest<Result<ExcluirAluguelResult>>;
+    public record ExcluirAluguelCommand(Guid Id) : IRequest<Result<ExcluirAluguelResult>>, ISerializadoPorEmpresa;
 
     public record ExcluirAluguelResult();
 

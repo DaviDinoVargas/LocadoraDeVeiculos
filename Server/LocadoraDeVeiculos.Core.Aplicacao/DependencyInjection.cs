@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using LocadoraDeVeiculos.Core.Aplicacao.Compartilhado;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using System;
@@ -54,6 +55,7 @@ public static class DependencyInjection
         {
             config.LicenseKey = licenseKey;
             config.RegisterServicesFromAssembly(assembly);
+            config.AddOpenBehavior(typeof(SerializarPorEmpresaBehavior<,>));
         });
 
         services.AddScoped<IRepositorioGrupoAutomovel, RepositorioGrupoAutomovelEmOrm>();
