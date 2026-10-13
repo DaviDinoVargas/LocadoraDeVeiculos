@@ -1,6 +1,7 @@
 ﻿using FluentResults;
 using LocadoraDeVeiculos.Core.Aplicacao.Compartilhado;
 using LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Commands;
+using LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Services;
 using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
 using LocadoraDeVeiculos.Infraestrutura.Orm.jwt.Services;
 using MediatR;
@@ -35,6 +36,11 @@ public class AutenticarUsuarioCommandHandler(
             if (usuarioEncontrado is null)
             {
                 logger.LogWarning("Tentativa de login com e-mail não cadastrado: {Email}.", MascaramentoDeDados.MascararEmail(command.Email));
+
+                // Sem isto o e-mail inexistente responde em ~4 ms e o existente em ~120 ms (custo do PBKDF2):
+                // dá para descobrir quem tem conta medindo o tempo. Gasta-se o mesmo custo de hash e descarta-se.
+                EqualizadorDeTempoDeLogin.GastarCustoDeHash(userManager.PasswordHasher, command.Senha);
+
                 return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(MensagemGenericaDeFalha));
             }
 
@@ -50,8 +56,9 @@ public class AutenticarUsuarioCommandHandler(
             if (resultadoLogin.IsLockedOut)
             {
                 logger.LogWarning("Login bloqueado por excesso de tentativas para o usuário {UserId}.", usuarioEncontrado.Id);
-                return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(
-                    "Conta temporariamente bloqueada por excesso de tentativas. Tente novamente mais tarde."));
+                // Mesma mensagem de "senha incorreta" e de "e-mail inexistente": uma mensagem própria para
+                // bloqueio revelaria que o e-mail tem conta e permitiria confirmar que o ataque funcionou.
+                return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(MensagemGenericaDeFalha));
             }
 
             if (!resultadoLogin.Succeeded)

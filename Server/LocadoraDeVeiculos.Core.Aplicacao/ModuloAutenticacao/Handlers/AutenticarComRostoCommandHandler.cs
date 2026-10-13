@@ -25,8 +25,6 @@ public class AutenticarComRostoCommandHandler(
     // aqui também, evita revelar se o e-mail tem ou não rosto cadastrado.
     private const string MensagemGenericaDeFalha = "Não foi possível autenticar com reconhecimento facial.";
 
-    private const string MensagemContaBloqueada =
-        "Conta temporariamente bloqueada por excesso de tentativas. Tente novamente mais tarde.";
 
     public async Task<Result<(AccessToken, RefreshToken, string)>> Handle(
         AutenticarComRostoCommand command, CancellationToken cancellationToken)
@@ -46,7 +44,7 @@ public class AutenticarComRostoCommandHandler(
             if (await userManager.IsLockedOutAsync(usuarioEncontrado))
             {
                 logger.LogWarning("Login facial bloqueado por excesso de tentativas para o usuário {UserId}.", usuarioEncontrado.Id);
-                return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(MensagemContaBloqueada));
+                return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(MensagemGenericaDeFalha));
             }
 
             var personId = FacialAuthClient.PersonIdParaEmail(command.Email);
