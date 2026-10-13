@@ -50,7 +50,8 @@ public sealed class FuncionarioController(IMediator mediator) : MainController
             request.NomeCompleto,
             request.Cpf,
             request.Salario,
-            request.AdmissaoEmUtc
+            request.AdmissaoEmUtc,
+            request.Senha
         );
 
         Result<EditarFuncionarioResult> result = await mediator.Send(command, cancellationToken);

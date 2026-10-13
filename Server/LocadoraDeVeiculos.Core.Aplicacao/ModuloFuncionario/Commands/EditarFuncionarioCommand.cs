@@ -13,7 +13,8 @@ public record EditarFuncionarioCommand(
     string NomeCompleto,
     string Cpf,
     decimal Salario,
-    DateTimeOffset AdmissaoEmUtc
+    DateTimeOffset AdmissaoEmUtc,
+    string? Senha = null
 ) : IRequest<Result<EditarFuncionarioResult>>;
 
 public record EditarFuncionarioResult(

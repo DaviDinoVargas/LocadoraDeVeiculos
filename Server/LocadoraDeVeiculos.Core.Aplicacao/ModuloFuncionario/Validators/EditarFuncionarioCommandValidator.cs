@@ -23,6 +23,9 @@ public class EditarFuncionarioCommandValidator : AbstractValidator<EditarFuncion
             .WithMessage("O campo {PropertyName} deve seguir o formato '000.000.000-00'.")
             .DocumentoCpfValido();
 
+        // Senha é opcional na edição: só quando a empresa quer redefinir a do funcionário.
+        When(p => !string.IsNullOrEmpty(p.Senha), () => RuleFor(p => p.Senha!).SenhaForte());
+
         RuleFor(p => p.Salario)
             .NotEmpty().WithMessage("O campo {PropertyName} é obrigatório.")
             .GreaterThan(0).WithMessage("O campo {PropertyName} precisa conter um valor maior que 0.");

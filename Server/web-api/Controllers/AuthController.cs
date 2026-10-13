@@ -112,6 +112,25 @@ public class AutenticacaoController(IMediator mediator) : MainController
         return ProcessarResultado(result);
     }
 
+    // Troca de senha do próprio usuário (S27). Derruba todas as sessões: o cliente entra de novo com a senha nova.
+    [HttpPost("alterar-senha")]
+    [Authorize]
+    public async Task<IActionResult> AlterarSenha(AlterarSenhaRequest request, CancellationToken cancellationToken)
+    {
+        if (!TentarObterUsuarioId(out var usuarioId))
+            return Unauthorized();
+
+        var result = await mediator.Send(
+            new AlterarSenhaCommand(usuarioId, request.SenhaAtual, request.NovaSenha, request.ConfirmarNovaSenha), cancellationToken);
+
+        return ProcessarResultado(result, () =>
+        {
+            RefreshTokenCookieService.LimparCookie(Response);
+
+            return NoContent();
+        });
+    }
+
     // Usado pelo serviço de ML para validar o JWT que o Angular envia às câmeras: ele não conhece
     // a chave de assinatura, então pergunta aqui. Fora do rate limit do "auth" porque o ML consulta
     // (com cache) a cada requisição do monitoramento.
