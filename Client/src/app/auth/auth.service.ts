@@ -89,11 +89,19 @@ export class AuthService {
     return this.http.delete<void>(`${this.baseUrl}/rosto`);
   }
 
+  /**
+   * Rotacionar e sair agem só com o cookie de refresh, então a API exige este cabeçalho
+   * personalizado (defesa contra CSRF: outro site não consegue enviá-lo entre origens).
+   */
+  private cabecalhos(token: string | null): Record<string, string> {
+    return { 'X-Locadora-Client': 'web', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+  }
+
   /** ROTACIONAR TOKEN */
   rotacionarToken(): Observable<AccessToken> {
     const token = this.getAccessToken();
     return this.http.post<RespostaToken>(`${this.baseUrl}/rotacionar`, {}, {
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      headers: this.cabecalhos(token),
       withCredentials: true,
       // Quem chama (restaurar sessão ao abrir o site, renovar no interceptor) trata a falha: sem toast
       // de "Não autorizado" para quem simplesmente ainda não fez login.
@@ -108,7 +116,7 @@ export class AuthService {
   sair(): Observable<void> {
     const token = this.getAccessToken();
     return this.http.post<void>(`${this.baseUrl}/sair`, {}, {
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      headers: this.cabecalhos(token),
       withCredentials: true
     }).pipe(
       map(() => this.limparStorage()),

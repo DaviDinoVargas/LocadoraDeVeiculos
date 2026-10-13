@@ -14,6 +14,7 @@ namespace LocadoraDeVeiculos.WebApi.Config.Http;
 public static class SegurancaHttpConfig
 {
     public const string PoliticaAutenticacao = "auth";
+    public const string PoliticaRegistro = "registro";
 
     // Corpo máximo aceito pela API. As maiores cargas reais são imagens de webcam (640x480,
     // ~100 KB em base64); o padrão do Kestrel (~30 MB) só serve para quem quer estourar memória.
@@ -21,6 +22,7 @@ public static class SegurancaHttpConfig
 
     public const int LimiteGlobalPorMinutoPadrao = 300;
     public const int LimiteAutenticacaoPorMinuto = 10;
+    public const int LimiteRegistroPorHoraPadrao = 5;
 
     public static IServiceCollection AddSegurancaHttp(this IServiceCollection services, IConfiguration configuration)
     {
@@ -30,7 +32,8 @@ public static class SegurancaHttpConfig
         services.Configure<KestrelServerOptions>(opcoes => opcoes.Limits.MaxRequestBodySize = limiteCorpo);
 
         var limiteGlobal = (int)LerInteiroPositivo(configuration, "RATE_LIMIT_PER_MINUTE", LimiteGlobalPorMinutoPadrao);
-        services.AddRateLimiter(opcoes => ConfigurarLimitesDeRequisicao(opcoes, limiteGlobal));
+        var limiteRegistro = (int)LerInteiroPositivo(configuration, "REGISTRATION_LIMIT_PER_HOUR", LimiteRegistroPorHoraPadrao);
+        services.AddRateLimiter(opcoes => ConfigurarLimitesDeRequisicao(opcoes, limiteGlobal, limiteRegistro));
 
         return services;
     }
@@ -70,7 +73,8 @@ public static class SegurancaHttpConfig
         }
     }
 
-    public static void ConfigurarLimitesDeRequisicao(RateLimiterOptions opcoes, int limiteGlobalPorMinuto)
+    public static void ConfigurarLimitesDeRequisicao(
+        RateLimiterOptions opcoes, int limiteGlobalPorMinuto, int limiteRegistroPorHora = LimiteRegistroPorHoraPadrao)
     {
         opcoes.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
@@ -93,6 +97,16 @@ public static class SegurancaHttpConfig
             {
                 PermitLimit = LimiteAutenticacaoPorMinuto,
                 Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+
+        // Criar conta cria uma empresa (tenant) inteira: spam de contas enche o banco e consome ML/câmeras.
+        opcoes.AddPolicy(PoliticaRegistro, contexto => RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: contexto.Connection.RemoteIpAddress?.ToString() ?? "desconhecido",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = limiteRegistroPorHora,
+                Window = TimeSpan.FromHours(1),
                 QueueLimit = 0
             }));
     }

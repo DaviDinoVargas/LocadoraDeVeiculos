@@ -83,6 +83,36 @@ describe('AuthService', () => {
     expect(service.isLoggedIn()).toBeTrue();
     expect(service.getAccessToken()).toBe('token-facial');
   });
+  describe('cabeçalho anti-CSRF', () => {
+    it('rotacionar e sair enviam X-Locadora-Client (a API recusa as chamadas sem ele)', () => {
+      service.rotacionarToken().subscribe({ error: () => undefined });
+      const rotacao = httpMock.expectOne('/api/auth/rotacionar');
+      expect(rotacao.request.headers.get('X-Locadora-Client')).toBe('web');
+      expect(rotacao.request.withCredentials).toBeTrue();
+      rotacao.flush([], { status: 401, statusText: 'Unauthorized' });
+
+      service.sair().subscribe({ error: () => undefined });
+      const saida = httpMock.expectOne('/api/auth/sair');
+      expect(saida.request.headers.get('X-Locadora-Client')).toBe('web');
+      saida.flush(null);
+    });
+
+    it('com sessão ativa, mantém o Authorization junto do cabeçalho', () => {
+      service.autenticar('a@b.com', 'Senha@123').subscribe();
+      httpMock.expectOne('/api/auth/autenticar').flush({
+        chave: 'token-fake',
+        expiracao: new Date(Date.now() + 60_000).toISOString(),
+        usuarioAutenticado: { id: '1', nomeCompleto: 'A', email: 'a@b.com', cargo: 'Empresa' }
+      });
+
+      service.rotacionarToken().subscribe({ error: () => undefined });
+      const req = httpMock.expectOne('/api/auth/rotacionar');
+      expect(req.request.headers.get('Authorization')).toBe('Bearer token-fake');
+      expect(req.request.headers.get('X-Locadora-Client')).toBe('web');
+      req.flush([], { status: 401, statusText: 'Unauthorized' });
+    });
+  });
+
   describe('garantirSessao', () => {
     const respostaRotacao = () => ({
       chave: 'token-restaurado',

@@ -2,7 +2,9 @@
 using LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Commands;
 using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
 using LocadoraDeVeiculos.WebApi.Compartilhado;
+using LocadoraDeVeiculos.WebApi.Config.Http;
 using LocadoraDeVeiculos.WebApi.Config.Identify;
+using LocadoraDeVeiculos.WebApi.Filters;
 using LocadoraDeVeiculos.WebApi.Models.ModuloAutenticacao;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -17,6 +19,8 @@ namespace LocadoraDeVeiculos.WebApi.Controllers;
 [EnableRateLimiting("auth")]
 public class AutenticacaoController(IMediator mediator) : MainController
 {
+    // Cadastro aberto (S6): limite próprio e bem mais apertado que o do login.
+    [EnableRateLimiting(SegurancaHttpConfig.PoliticaRegistro)]
     [HttpPost("registrar")]
     public async Task<ActionResult<AccessToken>> Registrar(RegistrarUsuarioRequest request)
     {
@@ -117,6 +121,7 @@ public class AutenticacaoController(IMediator mediator) : MainController
     public IActionResult ObterSessao() => NoContent();
 
     [HttpPost("rotacionar")]
+    [ExigirCabecalhoCliente]
     public async Task<ActionResult<AccessToken>> Rotacionar()
     {
         var refreshTokenBruto = RefreshTokenCookieService.Get(Request);
@@ -130,6 +135,7 @@ public class AutenticacaoController(IMediator mediator) : MainController
     }
 
     [HttpPost("sair")]
+    [ExigirCabecalhoCliente]
     public async Task<IActionResult> Sair()
     {
         var refreshTokenBruto = RefreshTokenCookieService.Get(Request);
