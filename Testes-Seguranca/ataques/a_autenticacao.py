@@ -95,8 +95,9 @@ def executar(ctx):
     dup = requisitar('POST', f'{base}/api/auth/registrar', ip=ip_unico(),
                      json_corpo={'nomeCompleto': 'X', 'email': existente.email, 'senha': senha2, 'confirmarSenha': senha2})
     ctx.lembrar(senha2)
-    r.checar('A11', CAT, 'Cadastro de e-mail já existente não revela que ele existe', 'resposta neutra (não 409)',
-             dup.status, dup.status != 409, 'baixa', 'S20/S6')
+    revela = dup.status == 409 or 'já existe' in dup.texto.lower() or 'j\u00e1 existe' in dup.texto.lower()
+    r.checar('A11', CAT, 'Cadastro de e-mail já existente não revela que ele existe (nem por status nem por mensagem)',
+             'resposta neutra', f'{dup.status} {dup.texto[:80]}', not revela, 'media', 'S20/S6')
 
     # --- A12-A14: rate limit ------------------------------------------------------------------
     ip = ip_unico()
@@ -116,3 +117,39 @@ def executar(ctx):
     codigos = [requisitar('GET', f'{base}/api/dashboard/resumo', token=ctr.token, ip=ip).status for _ in range(330)]
     r.checar('A14', CAT, 'Limite global: depois de ~300 pedidos/min do mesmo usuário vem 429 (rota de negócio)', '429 após ~300',
              f'{codigos.count(429)} respostas 429 de 330', codigos.count(429) > 0 and codigos[:250].count(429) == 0, 'media', 'S10')
+
+    # --- A15: o bloqueio de conta não pode ser usado como arma por quem não é o dono (S28) ---------------
+    vitima = ambiente.nova_empresa(base, 'vitima')
+    ctx.lembrar(vitima.senha)
+    for _ in range(6):
+        ambiente.login(base, vitima.email, 'Errada@123456', ip=ip_unico())          # atacante (IPs diferentes)
+    dono = ambiente.login(base, vitima.email, vitima.senha, ip=ip_unico())          # o dono, de outro lugar
+    r.pendente('A15', CAT, 'Bloqueio de conta permite DoS dirigido (risco aceito)',
+               f'após 6 erros vindos de IPs diferentes o dono {"conseguiu" if dono.ok else "NÃO conseguiu"} entrar (status {dono.status}); '
+               'é o preço da proteção contra força bruta distribuída, mitigado pela mensagem genérica e pelo limite por IP', 'S28')
+
+    # --- A16: cadastro exige confirmação de que o e-mail é de quem cadastrou (S6) -----------------------
+    novo = ambiente.nova_empresa(base, 'confirma')
+    ctx.lembrar(novo.senha)
+    entrou = ambiente.login(base, novo.email, novo.senha)
+    if 400 <= entrou.status < 500:
+        r.checar('A16', CAT, 'Conta recém-cadastrada só entra depois de confirmar o e-mail', '4xx antes da confirmação', entrou.status, True, 'media', 'S6')
+    else:
+        r.pendente('A16', CAT, 'Conta recém-cadastrada entra sem confirmar o e-mail (depende de e-mail transacional)', entrou.status, 'S6')
+
+    # --- A17: duas rotações simultâneas do mesmo refresh token: só uma vale (S29) -------------------------
+    from concurrent.futures import ThreadPoolExecutor
+    cx = ambiente.conta_do_login(base, empresa.email, empresa.senha, 'Empresa')
+    ctx.lembrar(cx.token)
+    h = {'X-Locadora-Client': 'web'}
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        resultados = list(pool.map(lambda _: requisitar('POST', f'{base}/api/auth/rotacionar', cookie=cx.cookie, ip=ip_unico(), cabecalhos=h).status, range(6)))
+    r.checar('A17', CAT, 'Rotação simultânea do mesmo refresh token: no máximo uma tem sucesso', '<= 1 resposta 200',
+             resultados, resultados.count(200) <= 1, 'media', 'S29')
+
+    # --- A18: o limite por IP vale pelo prefixo /64 em IPv6 (S10) ---------------------------------------------
+    prefixo = f"2001:db8:{ambiente.secrets.randbelow(65535):x}:{ambiente.secrets.randbelow(65535):x}"
+    codigos = [ambiente.login(base, vitima.email, 'Errada@123456', ip=f'{prefixo}::{i + 1:x}').status for i in range(12)]
+    r.checar('A18', CAT, 'Trocar o final do endereço IPv6 a cada pedido não escapa do limite de login', '429 a partir do 11º',
+             codigos, 429 in codigos[10:] and 429 not in codigos[:10], 'media', 'S10')
+

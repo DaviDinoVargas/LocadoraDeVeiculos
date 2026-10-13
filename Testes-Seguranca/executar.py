@@ -44,6 +44,12 @@ def resumo_md(info, reg, carga):
     linhas = [f"# Resultado dos testes de segurança — {info['data']}", '',
               f"- Commit: `{info['commit']}` · Máquina: {info['maquina']} · Modo: {info['modo']}",
               f"- **Aprovadas: {len(reg.aprovadas)} · Reprovadas (achados): {len(reg.reprovadas)}** · Erros de script: {len(reg.erros_de_script)}", '']
+    pendentes = [v for v in reg.itens if v.pendente]
+    if pendentes:
+        linhas += ['## Pendências conhecidas (não reprovam; dependem de produto ou de serviço externo)', '', '| ID | Ref. | Situação |', '|---|---|---|']
+        for v in pendentes:
+            linhas.append(f'| {v.id} | {v.ref} | {v.titulo}: {v.obtido[:140]} |')
+        linhas.append('')
     if reg.reprovadas:
         linhas += ['## Achados (verificações reprovadas)', '', '| ID | Sev. | Ref. | Teste | Esperado | Obtido |', '|---|---|---|---|---|---|']
         ordem = {'alta': 0, 'media': 1, 'baixa': 2}

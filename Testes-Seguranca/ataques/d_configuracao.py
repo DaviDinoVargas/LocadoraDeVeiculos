@@ -71,6 +71,10 @@ def executar(ctx):
     r.checar('D12', CAT, 'ML: reload automático só em desenvolvimento', 'reload condicional',
              'reload=True fixo' if 'reload=True' in main else 'ok', 'reload=True' not in main, 'baixa', 'S25')
 
+    faces = RAIZ / 'MachineLeaning' / 'FaceAuth' / 'data' / 'faces.json'
+    r.checar('D15', CAT, 'Não existe biometria em claro no disco (faces.json migrado para o banco cifrado e apagado)', 'arquivo ausente',
+             f'existe ({faces.stat().st_size} bytes)' if faces.exists() else 'ausente', not faces.exists(), 'media', 'S1')
+
     csproj = _ler('Server', 'web-api', 'LocadoraDeVeiculos.WebApi.csproj')
     codigo = ''.join(p.read_text(encoding='utf-8', errors='ignore') for p in (RAIZ / 'Server' / 'web-api').rglob('*.cs')
                      if '\\obj\\' not in str(p) and '\\bin\\' not in str(p))

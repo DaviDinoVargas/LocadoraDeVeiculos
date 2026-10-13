@@ -14,6 +14,7 @@ class Verificacao:
     severidade: str = 'media'  # se falhar: alta | media | baixa
     ref: str = ''  # item do relatório de segurança (S24...)
     informativo: bool = False  # observação: não conta como aprovada nem reprovada
+    pendente: bool = False  # lacuna conhecida e aceita por ora (depende de produto/serviço externo): aparece no resumo
 
 
 @dataclass
@@ -31,6 +32,12 @@ class Registro:
     def info(self, id, categoria, titulo, obtido, ref=''):
         self.itens.append(Verificacao(id, categoria, titulo, '-', str(obtido), True, 'baixa', ref, informativo=True))
         print(f'  [INFO] {id} {titulo}: {obtido}', flush=True)
+
+    def pendente(self, id, categoria, titulo, obtido, ref=''):
+        """Lacuna de segurança conhecida que hoje não tem como ser fechada só com código (e-mail transacional, decisão de
+        produto...). Não reprova a execução, mas fica listada em toda rodada para não ser esquecida."""
+        self.itens.append(Verificacao(id, categoria, titulo, '-', str(obtido), True, 'media', ref, informativo=True, pendente=True))
+        print(f'  [PENDENTE] {id} {titulo}: {obtido}', flush=True)
 
     def erro(self, modulo, ex):
         self.erros_de_script.append(f'{modulo}: {type(ex).__name__}: {ex}')

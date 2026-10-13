@@ -129,6 +129,16 @@ def executar(ctx):
              'valores presentes' if 'Grupo secreto' in dado or 'cliente.a@teste.local' in dado else 'ok',
              'Grupo secreto' not in dado and 'cliente.a@teste.local' not in dado, 'media', 'S14')
 
+    # --- B23: eventos de autenticação na trilha (S14) -------------------------------------------------------
+    ambiente.login(base, emp_a.email, 'Errada@123456')
+    ambiente.login(base, emp_a.email, emp_a.senha)
+    eventos = requisitar('GET', f'{base}/api/auditoria?limite=200', token=emp_a.token, ip=ip_unico()).texto
+    r.checar('B23', CAT, 'Login e falha de login aparecem na trilha de auditoria da empresa', 'LoginOk e LoginFalhou',
+             [e for e in ('LoginOk', 'LoginFalhou') if e in eventos], 'LoginOk' in eventos and 'LoginFalhou' in eventos, 'media', 'S14')
+    eventos_b = requisitar('GET', f'{base}/api/auditoria?limite=200', token=emp_b.token, ip=ip_unico()).texto
+    r.checar('B24', CAT, 'Os eventos de login da A não aparecem na trilha da B', 'sem eventos da A',
+             'vaza' if emp_a.id in eventos_b else 'ok', emp_a.id not in eventos_b, 'alta', 'S14')
+
     # --- B30-B33: funcionário desligado (S26) ------------------------------------------------
     fid = _id(resp_f)
     excluir = requisitar('DELETE', f'{base}/api/funcionarios/{fid}', token=emp_a.token, ip=ip_unico())
