@@ -235,7 +235,7 @@ public sealed class SegurancaDaSessaoTests
         var (_, novoToken, novoBruto) = await _refresh.RotacionarRefreshTokenAsync(original);
 
         // alguém reapresenta o token antigo (cookie copiado)
-        await Assert.ThrowsExceptionAsync<SecurityTokenException>(() => _refresh.RotacionarRefreshTokenAsync(original));
+        await Assert.ThrowsExceptionAsync<ReusoDeRefreshTokenException>(() => _refresh.RotacionarRefreshTokenAsync(original));
 
         var todos = await _db.RefreshTokens.Where(t => t.UsuarioId == usuario.Id).ToListAsync();
         Assert.IsTrue(todos.All(t => t.RevogadoEmUtc is not null), "o token NOVO também precisa ter sido revogado");

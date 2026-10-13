@@ -46,7 +46,8 @@ public class ObterStatusRostoQueryHandler(
 public class VerificarRostoCommandHandler(
     UserManager<Usuario> userManager,
     IFacialAuthClient facialAuthClient,
-    ILogger<VerificarRostoCommandHandler> logger
+    ILogger<VerificarRostoCommandHandler> logger,
+    IAuditoriaDeAutenticacao? auditoria = null
 ) : IRequestHandler<VerificarRostoCommand, Result<VerificacaoRostoResultado>>
 {
     public async Task<Result<VerificacaoRostoResultado>> Handle(VerificarRostoCommand command, CancellationToken cancellationToken)
@@ -70,6 +71,10 @@ public class VerificarRostoCommandHandler(
                 return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(
                     "Nenhum rosto detectado na imagem. Aproxime-se da câmera e tente novamente."));
 
+            if (auditoria is not null)
+                await auditoria.RegistrarAsync(
+                    verificacao.Bateu ? EventosDeAutenticacao.RostoVerificado : EventosDeAutenticacao.RostoNaoConfere, usuario, cancellationToken);
+
             return Result.Ok(new VerificacaoRostoResultado(verificacao.Bateu, verificacao.Confianca));
         }
         catch (Exception ex)
@@ -84,7 +89,8 @@ public class VerificarRostoCommandHandler(
 public class RemoverRostoCommandHandler(
     UserManager<Usuario> userManager,
     IFacialAuthClient facialAuthClient,
-    ILogger<RemoverRostoCommandHandler> logger
+    ILogger<RemoverRostoCommandHandler> logger,
+    IAuditoriaDeAutenticacao? auditoria = null
 ) : IRequestHandler<RemoverRostoCommand, Result>
 {
     public async Task<Result> Handle(RemoverRostoCommand command, CancellationToken cancellationToken)
@@ -105,6 +111,9 @@ public class RemoverRostoCommandHandler(
                     "Não foi possível apagar o rosto agora. Tente novamente em instantes."));
 
             logger.LogInformation("Rosto removido a pedido do usuário {UsuarioId}.", command.UsuarioId);
+
+            if (auditoria is not null)
+                await auditoria.RegistrarAsync(EventosDeAutenticacao.RostoRemovido, usuario, cancellationToken);
 
             return Result.Ok();
         }

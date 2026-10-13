@@ -1,10 +1,12 @@
 ﻿using FluentResults;
 using LocadoraDeVeiculos.Core.Aplicacao.Compartilhado;
 using LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Commands;
+using LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Services;
 using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
 using LocadoraDeVeiculos.Infraestrutura.Orm.jwt.Services;
 using LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
 using MediatR;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 
@@ -14,7 +16,9 @@ public class RotacionarTokenCommandHandler(
     LocadoraDeVeiculosDbContext dbContext,
     AccessTokenProvider accessTokenProvider,
     RefreshTokenProvider refreshTokenProvider,
-    ILogger<RotacionarTokenCommandHandler> logger
+    ILogger<RotacionarTokenCommandHandler> logger,
+    UserManager<Usuario>? userManager = null,
+    IAuditoriaDeAutenticacao? auditoria = null
 ) : IRequestHandler<RotacionarTokenCommand, Result<(AccessToken, RefreshToken, string)>>
 {
     public async Task<Result<(AccessToken, RefreshToken, string)>> Handle(RotacionarTokenCommand command, CancellationToken cancellationToken)
@@ -30,6 +34,17 @@ public class RotacionarTokenCommandHandler(
             await dbContext.SaveChangesAsync(cancellationToken);
 
             return Result.Ok((novoAccessToken, novoRefreshToken, novoTokenBruto));
+        }
+        catch (ReusoDeRefreshTokenException ex)
+        {
+            // Token já trocado que volta: cookie copiado. As sessões já foram derrubadas; o dono da empresa precisa ficar sabendo.
+            logger.LogWarning("Rotação de token recusada: reuso de refresh token do usuário {UserId}.", ex.UsuarioId);
+
+            var dono = userManager is null ? null : await userManager.FindByIdAsync(ex.UsuarioId.ToString());
+            if (dono is not null && auditoria is not null)
+                await auditoria.RegistrarAsync(EventosDeAutenticacao.ReusoDeRefreshToken, dono, cancellationToken);
+
+            return Result.Fail(ResultadosErro.NaoAutorizadoErro("Sessão inválida ou expirada. Faça login novamente."));
         }
         catch (SecurityTokenException ex)
         {

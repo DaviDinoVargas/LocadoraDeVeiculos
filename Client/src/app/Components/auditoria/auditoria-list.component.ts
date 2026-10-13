@@ -21,7 +21,13 @@ const ROTULOS_DE_ACAO: Record<string, string> = {
   SenhaRedefinida: 'Senha redefinida',
   DoisFatoresAtivado: '2FA ativado',
   DoisFatoresDesativado: '2FA desativado',
-  ContaEncerrada: 'Conta encerrada'
+  ContaEncerrada: 'Conta encerrada',
+  ReusoDeRefreshToken: 'Sessão copiada (reuso de token)',
+  Logout: 'Logout',
+  RostoCadastrado: 'Rosto cadastrado',
+  RostoRemovido: 'Rosto removido',
+  RostoVerificado: 'Rosto verificado',
+  RostoNaoConfere: 'Rosto não confere'
 };
 
 /**

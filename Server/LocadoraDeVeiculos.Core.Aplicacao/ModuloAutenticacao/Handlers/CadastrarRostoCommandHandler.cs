@@ -16,7 +16,8 @@ public class CadastrarRostoCommandHandler(
     UserManager<Usuario> userManager,
     IFacialAuthClient facialAuthClient,
     IArmazenamentoFacial armazenamento,
-    ILogger<CadastrarRostoCommandHandler> logger
+    ILogger<CadastrarRostoCommandHandler> logger,
+    IAuditoriaDeAutenticacao? auditoria = null
 ) : IRequestHandler<CadastrarRostoCommand, Result<int>>
 {
     public async Task<Result<int>> Handle(CadastrarRostoCommand command, CancellationToken cancellationToken)
@@ -42,6 +43,9 @@ public class CadastrarRostoCommandHandler(
                     "Não foi possível cadastrar o rosto. Verifique se a imagem mostra um rosto claramente."));
 
             await armazenamento.RegistrarConsentimentoAsync(personId, ConsentimentoBiometrico.VersaoAtual, cancellationToken);
+
+            if (auditoria is not null)
+                await auditoria.RegistrarAsync(EventosDeAutenticacao.RostoCadastrado, usuario, cancellationToken);
 
             return Result.Ok(resultado.Amostras);
         }

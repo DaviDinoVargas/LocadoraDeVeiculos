@@ -10,6 +10,12 @@ using System.Text;
 
 namespace LocadoraDeVeiculos.Infraestrutura.Orm.jwt.Services;
 
+/// <summary>Um refresh token já trocado voltou a ser apresentado: sessões derrubadas. Carrega o dono para a auditoria.</summary>
+public class ReusoDeRefreshTokenException(Guid usuarioId) : SecurityTokenException("Token de rotação já utilizado/revogado (suspeita de reuso).")
+{
+    public Guid UsuarioId { get; } = usuarioId;
+}
+
 public class RefreshTokenProvider(
     LocadoraDeVeiculosDbContext dbContext,
     UserManager<Usuario> userManager,
@@ -74,9 +80,13 @@ public class RefreshTokenProvider(
             // repetido): quem tem o token novo e quem tem o velho são pessoas diferentes e não dá para saber qual é o
             // dono legítimo. A resposta segura é derrubar todas as sessões desse usuário.
             if (token.MotivoRevogacao == MotivoRotacao)
+            {
                 await DerrubarSessoesPorReusoAsync(token.UsuarioId);
 
-            throw new SecurityTokenException("Token de rotação já utilizado/revogado (suspeita de reuso).");
+                throw new ReusoDeRefreshTokenException(token.UsuarioId);
+            }
+
+            throw new SecurityTokenException("Token de rotação já revogado.");
         }
 
         if (token.ExpiraEmUtc <= DateTime.UtcNow)
@@ -108,7 +118,7 @@ public class RefreshTokenProvider(
             {
                 await DerrubarSessoesPorReusoAsync(token.UsuarioId);
 
-                throw new SecurityTokenException("Token de rotação já utilizado/revogado (suspeita de reuso).");
+                throw new ReusoDeRefreshTokenException(token.UsuarioId);
             }
         }
         else

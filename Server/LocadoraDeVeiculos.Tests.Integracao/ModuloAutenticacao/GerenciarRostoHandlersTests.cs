@@ -236,4 +236,40 @@ public sealed class GerenciarRostoHandlersTests
         Assert.IsTrue(resultado.IsFailed);
         StringAssert.Contains(Mensagens(resultado), "Nenhum rosto detectado");
     }
+
+    // ---------- auditoria (S14) ----------
+
+    [TestMethod]
+    public async Task Verificar_RegistraNaTrilha_SeOsRostosBatemOuNao()
+    {
+        var usuario = await CriarUsuarioAsync("audita@teste.com");
+        var auditoria = new Mock<IAuditoriaDeAutenticacao>();
+        var facial = new Mock<IFacialAuthClient>();
+        facial.SetupSequence(f => f.VerificarAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FacialVerifyResult(Encontrado: true, Bateu: true, Confianca: 0.9, NenhumRostoNaImagem: false))
+            .ReturnsAsync(new FacialVerifyResult(Encontrado: true, Bateu: false, Confianca: 0.2, NenhumRostoNaImagem: false));
+        var handler = new VerificarRostoCommandHandler(_userManager, facial.Object, NullLogger<VerificarRostoCommandHandler>.Instance, auditoria.Object);
+
+        await handler.Handle(new VerificarRostoCommand(usuario.Id, "img"), CancellationToken.None);
+        await handler.Handle(new VerificarRostoCommand(usuario.Id, "img"), CancellationToken.None);
+
+        auditoria.Verify(a => a.RegistrarAsync(EventosDeAutenticacao.RostoVerificado, It.Is<Usuario>(u => u.Id == usuario.Id), It.IsAny<CancellationToken>()), Times.Once);
+        auditoria.Verify(a => a.RegistrarAsync(EventosDeAutenticacao.RostoNaoConfere, It.Is<Usuario>(u => u.Id == usuario.Id), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [TestMethod]
+    public async Task Remover_RegistraNaTrilha_SoQuandoApagou()
+    {
+        var usuario = await CriarUsuarioAsync("apaga@teste.com");
+        var auditoria = new Mock<IAuditoriaDeAutenticacao>();
+        var facial = new Mock<IFacialAuthClient>();
+        facial.SetupSequence(f => f.RemoverAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(false).ReturnsAsync(true);
+        var handler = new RemoverRostoCommandHandler(_userManager, facial.Object, NullLogger<RemoverRostoCommandHandler>.Instance, auditoria.Object);
+
+        await handler.Handle(new RemoverRostoCommand(usuario.Id), CancellationToken.None);
+        auditoria.Verify(a => a.RegistrarAsync(EventosDeAutenticacao.RostoRemovido, It.IsAny<Usuario>(), It.IsAny<CancellationToken>()), Times.Never);
+
+        await handler.Handle(new RemoverRostoCommand(usuario.Id), CancellationToken.None);
+        auditoria.Verify(a => a.RegistrarAsync(EventosDeAutenticacao.RostoRemovido, It.Is<Usuario>(u => u.Id == usuario.Id), It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

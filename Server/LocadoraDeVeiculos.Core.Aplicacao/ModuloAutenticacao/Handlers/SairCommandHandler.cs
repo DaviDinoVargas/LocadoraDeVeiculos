@@ -1,6 +1,7 @@
 ﻿using FluentResults;
 using LocadoraDeVeiculos.Core.Aplicacao.Compartilhado;
 using LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Commands;
+using LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Services;
 using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
 using LocadoraDeVeiculos.Infraestrutura.Orm.jwt.Services;
 using LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
@@ -21,7 +22,8 @@ public class SairCommandHandler(
     LocadoraDeVeiculosDbContext dbContext,
     UserManager<Usuario> userManager,
     RefreshTokenProvider refreshTokenProvider,
-    ILogger<SairCommandHandler> logger
+    ILogger<SairCommandHandler> logger,
+    IAuditoriaDeAutenticacao? auditoria = null
 ) : IRequestHandler<SairCommand, Result>
 {
     public async Task<Result> Handle(SairCommand command, CancellationToken cancellationToken)
@@ -43,6 +45,9 @@ public class SairCommandHandler(
             usuarioEncontrado.AccessTokenVersionId = Guid.NewGuid();
 
             await dbContext.SaveChangesAsync(cancellationToken);
+
+            if (auditoria is not null)
+                await auditoria.RegistrarAsync(EventosDeAutenticacao.Logout, usuarioEncontrado, cancellationToken);
 
             return Result.Ok();
         }

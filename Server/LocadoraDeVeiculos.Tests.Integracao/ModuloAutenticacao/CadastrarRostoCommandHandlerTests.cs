@@ -155,4 +155,23 @@ public sealed class CadastrarRostoCommandHandlerTests
 
         _armazenamento.Verify(a => a.RegistrarConsentimentoAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
+
+    [TestMethod]
+    public async Task Handle_CadastroConcluido_RegistraNaTrilha_ERecusadoNao()
+    {
+        var usuario = await CriarUsuarioAsync("trilha@teste.com");
+        var auditoria = new Mock<IAuditoriaDeAutenticacao>();
+        var facial = new Mock<IFacialAuthClient>();
+        facial.SetupSequence(f => f.CadastrarAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FacialEnrollResult(Sucesso: false, Amostras: 0))
+            .ReturnsAsync(new FacialEnrollResult(Sucesso: true, Amostras: 1));
+        var handler = new CadastrarRostoCommandHandler(_userManager, facial.Object, _armazenamento.Object, NullLogger<CadastrarRostoCommandHandler>.Instance, auditoria.Object);
+        var comando = new CadastrarRostoCommand(usuario.Id, "img", true, ConsentimentoBiometrico.VersaoAtual);
+
+        await handler.Handle(comando, CancellationToken.None);
+        auditoria.Verify(a => a.RegistrarAsync(EventosDeAutenticacao.RostoCadastrado, It.IsAny<Usuario>(), It.IsAny<CancellationToken>()), Times.Never);
+
+        await handler.Handle(comando, CancellationToken.None);
+        auditoria.Verify(a => a.RegistrarAsync(EventosDeAutenticacao.RostoCadastrado, It.Is<Usuario>(u => u.Id == usuario.Id), It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

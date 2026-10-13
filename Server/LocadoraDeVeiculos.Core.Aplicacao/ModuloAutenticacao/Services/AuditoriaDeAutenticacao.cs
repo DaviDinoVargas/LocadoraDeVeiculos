@@ -27,6 +27,12 @@ public static class EventosDeAutenticacao
     public const string SenhaRedefinida = "SenhaRedefinida";
     public const string DoisFatoresAtivado = "DoisFatoresAtivado";
     public const string DoisFatoresDesativado = "DoisFatoresDesativado";
+    public const string ReusoDeRefreshToken = "ReusoDeRefreshToken";
+    public const string Logout = "Logout";
+    public const string RostoCadastrado = "RostoCadastrado";
+    public const string RostoRemovido = "RostoRemovido";
+    public const string RostoVerificado = "RostoVerificado";
+    public const string RostoNaoConfere = "RostoNaoConfere";
 }
 
 public interface IAuditoriaDeAutenticacao
