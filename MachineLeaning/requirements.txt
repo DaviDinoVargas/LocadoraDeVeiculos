@@ -1,7 +1,7 @@
 fastapi==0.115.6
 uvicorn[standard]==0.32.1
 pydantic==2.10.3
-python-multipart==0.0.19
+python-multipart==0.0.31
 
 # Visão computacional / OCR de placas (YOLO_Tesseract)
 opencv-python==4.10.0.84
@@ -11,7 +11,7 @@ pytesseract==0.3.13
 
 # Reconhecimento facial (FaceAuth)
 mediapipe==0.10.18
-Pillow==11.0.0
+Pillow==12.3.0
 
 # Chatbot (consulta a Web API .NET em nome do usuário logado)
 httpx==0.28.1
