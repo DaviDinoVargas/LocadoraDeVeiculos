@@ -1,10 +1,11 @@
-using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
+﻿using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
 using LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -16,6 +17,21 @@ namespace LocadoraDeVeiculos.Tests.WebApi.Compartilhado;
 /// Sobe a Web API de verdade (pipeline, autenticação, autorização, rate limit) trocando só o SQL Server
 /// por um banco em memória. Os segredos que a API exige na subida recebem valores de teste.
 /// </summary>
+internal sealed class IpDeTesteStartupFilter : IStartupFilter
+{
+    public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+    {
+        app.Use(async (contexto, proximo) =>
+        {
+            if (contexto.Request.Headers.TryGetValue("X-Test-Ip", out var ip) && System.Net.IPAddress.TryParse(ip.ToString(), out var endereco))
+                contexto.Connection.RemoteIpAddress = endereco;
+
+            await proximo();
+        });
+        next(app);
+    };
+}
+
 public class ApiFactory : WebApplicationFactory<LocadoraDeVeiculos.WebApi.Program>
 {
     public const string ChaveJwt = "chave-de-teste-com-mais-de-trinta-e-dois-caracteres";
@@ -90,6 +106,36 @@ public class ApiFactory : WebApplicationFactory<LocadoraDeVeiculos.WebApi.Progra
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
+    /// <summary>Cria uma conta com e-mail e senha conhecidos, para testar o login de verdade.</summary>
+    public async Task CriarContaAsync(string email, string senha, string cargo = "Empresa")
+    {
+        using var escopo = Services.CreateScope();
+        var usuarios = escopo.ServiceProvider.GetRequiredService<UserManager<Usuario>>();
+        var cargos = escopo.ServiceProvider.GetRequiredService<RoleManager<Cargo>>();
+
+        if (!await cargos.RoleExistsAsync(cargo))
+            await cargos.CreateAsync(new Cargo { Id = Guid.NewGuid(), Name = cargo, NormalizedName = cargo.ToUpperInvariant() });
+
+        var usuario = new Usuario { UserName = email, Email = email, FullName = "Conta de Teste", AccessTokenVersionId = Guid.NewGuid() };
+        var criado = await usuarios.CreateAsync(usuario, senha);
+        if (!criado.Succeeded)
+            throw new InvalidOperationException(string.Join("; ", criado.Errors.Select(e => e.Description)));
+
+        await usuarios.AddToRoleAsync(usuario, cargo);
+    }
+
+    /// <summary>Faz o login com o cabeçalho X-Test-Ip, que o servidor de teste (sem IP de verdade) usa como endereço remoto.</summary>
+    public async Task<HttpResponseMessage> LoginDoIpAsync(string ip, string email, string senha)
+    {
+        using var cliente = CreateClient();
+        using var requisicao = new HttpRequestMessage(HttpMethod.Post, "/api/auth/autenticar")
+        {
+            Content = System.Net.Http.Json.JsonContent.Create(new { email, senha })
+        };
+        requisicao.Headers.Add("X-Test-Ip", ip);
+        return await cliente.SendAsync(requisicao);
+    }
+
     public HttpClient CriarClienteAutenticado(string token)
     {
         var cliente = CreateClient();
@@ -110,6 +156,9 @@ public class ApiFactory : WebApplicationFactory<LocadoraDeVeiculos.WebApi.Progra
                 servicos.Remove(descritor);
 
             servicos.AddDbContext<LocadoraDeVeiculosDbContext>(o => o.UseInMemoryDatabase(nomeDoBanco));
+
+            // O TestServer não tem IP remoto; com X-Test-Ip o teste escolhe de "onde" a requisição vem.
+            servicos.AddTransient<IStartupFilter, IpDeTesteStartupFilter>();
         });
     }
 

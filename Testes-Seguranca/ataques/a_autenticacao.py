@@ -118,15 +118,20 @@ def executar(ctx):
     r.checar('A14', CAT, 'Limite global: depois de ~300 pedidos/min do mesmo usuário vem 429 (rota de negócio)', '429 após ~300',
              f'{codigos.count(429)} respostas 429 de 330', codigos.count(429) > 0 and codigos[:250].count(429) == 0, 'media', 'S10')
 
-    # --- A15: o bloqueio de conta não pode ser usado como arma por quem não é o dono (S28) ---------------
+    # --- A15: o bloqueio de conta não pode ser usado como arma por quem não é o dono (S28/S10) -------------
+    # Um atacante em UM IP esgota o próprio limite por (conta, IP) em 5 erros e é barrado sem somar mais erros à conta:
+    # o dono, de outro lugar, continua entrando. Só erros vindos de vários IPs chegam ao bloqueio da conta (10).
     vitima = ambiente.nova_empresa(base, 'vitima')
     ctx.lembrar(vitima.senha)
-    for _ in range(6):
-        ambiente.login(base, vitima.email, 'Errada@123456', ip=ip_unico())          # atacante (IPs diferentes)
-    dono = ambiente.login(base, vitima.email, vitima.senha, ip=ip_unico())          # o dono, de outro lugar
-    r.pendente('A15', CAT, 'Bloqueio de conta permite DoS dirigido (risco aceito)',
-               f'após 6 erros vindos de IPs diferentes o dono {"conseguiu" if dono.ok else "NÃO conseguiu"} entrar (status {dono.status}); '
-               'é o preço da proteção contra força bruta distribuída, mitigado pela mensagem genérica e pelo limite por IP', 'S28')
+    ip_atacante = ip_unico()
+    for _ in range(8):
+        ambiente.login(base, vitima.email, 'Errada@123456', ip=ip_atacante)
+    dono = ambiente.login(base, vitima.email, vitima.senha, ip=ip_unico())
+    r.checar('A15', CAT, 'Atacante de um IP só não tranca o dono para fora da conta', 'dono entra (200) depois de 8 erros vindos de outro IP',
+             dono.status, dono.ok, 'media', 'S28')
+    barrado = ambiente.login(base, vitima.email, vitima.senha, ip=ip_atacante)
+    r.checar('A15b', CAT, 'O IP que errou demais é barrado até com a senha certa (limite por conta e IP)', '4xx para o IP do atacante',
+             barrado.status, 400 <= barrado.status < 500, 'media', 'S10')
 
     # --- A16: cadastro exige confirmação de que o e-mail é de quem cadastrou (S6) -----------------------
     novo = ambiente.nova_empresa(base, 'confirma')

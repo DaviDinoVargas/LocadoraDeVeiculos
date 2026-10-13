@@ -22,7 +22,9 @@ public class AutenticarUsuarioCommandHandler(
     RefreshTokenProvider refreshTokenProvider,
     ILogger<AutenticarUsuarioCommandHandler> logger,
     IAuditoriaDeAutenticacao? auditoria = null,
-    VerificadorDeSegundoFator? segundoFator = null
+    VerificadorDeSegundoFator? segundoFator = null,
+    LimitadorDeLoginPorConta? limitador = null,
+    ITenantProvider? tenant = null
 ) : IRequestHandler<AutenticarUsuarioCommand, Result<(AccessToken, RefreshToken, string)>>
 {
     private const string MensagemGenericaDeFalha = "Usuário ou senha inválidos.";
@@ -30,11 +32,24 @@ public class AutenticarUsuarioCommandHandler(
     private Task Auditar(string evento, Usuario usuario, CancellationToken cancellationToken) =>
         auditoria?.RegistrarAsync(evento, usuario, cancellationToken) ?? Task.CompletedTask;
 
+    private string? Ip => tenant?.EnderecoIp;
+
+    private void ContarFalha(string email) => limitador?.RegistrarFalha(email, Ip);
+
     public async Task<Result<(AccessToken, RefreshToken, string)>> Handle(
         AutenticarUsuarioCommand command, CancellationToken cancellationToken)
     {
         try
         {
+            // S10/S28: este IP já errou demais a senha desta conta. Recusa sem tocar na conta (não soma erro ao bloqueio
+            // dela, então quem ataca de um IP só não tranca o dono para fora) e com a mesma mensagem de sempre.
+            if (limitador?.EstaBloqueado(command.Email, Ip) == true)
+            {
+                logger.LogWarning("Login recusado: limite de erros por conta e IP atingido para {Email}.", MascaramentoDeDados.MascararEmail(command.Email));
+                EqualizadorDeTempoDeLogin.GastarCustoDeHash(userManager.PasswordHasher, command.Senha);
+                return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(MensagemGenericaDeFalha));
+            }
+
             var usuarioEncontrado = await userManager.FindByEmailAsync(command.Email);
 
             // Mensagem idêntica para "usuário não existe" e "senha incorreta": evita enumeração de e-mails.
@@ -45,6 +60,7 @@ public class AutenticarUsuarioCommandHandler(
                 // Sem isto o e-mail inexistente responde em ~4 ms e o existente em ~120 ms (custo do PBKDF2):
                 // dá para descobrir quem tem conta medindo o tempo. Gasta-se o mesmo custo de hash e descarta-se.
                 EqualizadorDeTempoDeLogin.GastarCustoDeHash(userManager.PasswordHasher, command.Senha);
+                ContarFalha(command.Email);
 
                 return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(MensagemGenericaDeFalha));
             }
@@ -62,6 +78,7 @@ public class AutenticarUsuarioCommandHandler(
             {
                 logger.LogWarning("Login bloqueado por excesso de tentativas para o usuário {UserId}.", usuarioEncontrado.Id);
                 await Auditar(EventosDeAutenticacao.LoginBloqueado, usuarioEncontrado, cancellationToken);
+                ContarFalha(command.Email);
                 // Mesma mensagem de "senha incorreta" e de "e-mail inexistente": uma mensagem própria para
                 // bloqueio revelaria que o e-mail tem conta e permitiria confirmar que o ataque funcionou.
                 return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(MensagemGenericaDeFalha));
@@ -71,6 +88,7 @@ public class AutenticarUsuarioCommandHandler(
             {
                 logger.LogWarning("Tentativa de login com senha incorreta para o usuário {UserId}.", usuarioEncontrado.Id);
                 await Auditar(EventosDeAutenticacao.LoginFalhou, usuarioEncontrado, cancellationToken);
+                ContarFalha(command.Email);
                 return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(MensagemGenericaDeFalha));
             }
 
@@ -86,6 +104,7 @@ public class AutenticarUsuarioCommandHandler(
                 {
                     logger.LogWarning("Segundo fator recusado para o usuário {UserId}.", usuarioEncontrado.Id);
                     await Auditar(EventosDeAutenticacao.LoginFalhou, usuarioEncontrado, cancellationToken);
+                    ContarFalha(command.Email);
 
                     return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(MensagemGenericaDeFalha));
                 }
@@ -96,6 +115,7 @@ public class AutenticarUsuarioCommandHandler(
             var (refreshToken, refreshTokenBruto) = await refreshTokenProvider.GerarRefreshTokenAsync(usuarioEncontrado);
 
             await Auditar(EventosDeAutenticacao.LoginOk, usuarioEncontrado, cancellationToken);
+            limitador?.Zerar(command.Email, Ip);
 
             return Result.Ok((accessToken, refreshToken, refreshTokenBruto));
         }

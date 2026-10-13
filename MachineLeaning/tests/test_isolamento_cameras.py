@@ -179,6 +179,38 @@ def test_modulo_facial_tem_limite_proprio(monkeypatch):
     assert 429 in codigos[120:]
 
 
+def test_cameras_tem_limite_por_usuario_e_acoes_tem_limite_mais_estrito(cameras, monkeypatch):
+    monkeypatch.setattr(settings, 'CAMERA_EMPRESA_ID', DONA)
+
+    # ações (liga/desliga/ticket): 30 por minuto por usuário
+    acoes = [cameras.post('/stream-ticket', headers=_h('tok-dona')).status_code for _ in range(33)]
+    assert acoes[:30] == [200] * 30 and set(acoes[30:]) == {429}
+    # a leitura continua liberada para o mesmo usuário (contador à parte) e outro usuário não é afetado
+    assert cameras.get('/last', headers=_h('tok-dona')).status_code == 200
+    assert cameras.post('/stream-ticket', headers=_h('tok-func-dona')).status_code == 200
+
+    limites.zerar()
+    leituras = [cameras.get('/last', headers=_h('tok-dona')).status_code for _ in range(305)]
+    assert leituras[:300] == [200] * 300 and set(leituras[300:]) == {429}
+
+
+def test_quem_nao_e_da_empresa_leva_403_antes_de_gastar_o_limite(cameras, monkeypatch):
+    monkeypatch.setattr(settings, 'CAMERA_EMPRESA_ID', DONA)
+
+    codigos = {cameras.post('/stream-ticket', headers=_h('tok-outra')).status_code for _ in range(40)}
+
+    assert codigos == {403}
+
+
+def test_stream_tem_limite_por_ip_mesmo_com_ticket_invalido(cameras, monkeypatch):
+    monkeypatch.setattr(settings, 'CAMERA_EMPRESA_ID', DONA)
+
+    codigos = [cameras.get('/stream/0?ticket=falso').status_code for _ in range(24)]
+
+    assert set(codigos[:20]) == {401}
+    assert set(codigos[20:]) == {429}
+
+
 # ---------- S25: o padrão do serviço falha fechado ----------
 
 def test_escuta_so_na_propria_maquina_por_padrao():

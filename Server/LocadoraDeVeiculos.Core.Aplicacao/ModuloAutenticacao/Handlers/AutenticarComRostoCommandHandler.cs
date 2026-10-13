@@ -1,4 +1,4 @@
-using FluentResults;
+﻿using FluentResults;
 using LocadoraDeVeiculos.Core.Aplicacao.Compartilhado;
 using LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Commands;
 using LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Services;
@@ -20,7 +20,9 @@ public class AutenticarComRostoCommandHandler(
     RefreshTokenProvider refreshTokenProvider,
     ILogger<AutenticarComRostoCommandHandler> logger,
     IAuditoriaDeAutenticacao? auditoria = null,
-    VerificadorDeSegundoFator? segundoFator = null
+    VerificadorDeSegundoFator? segundoFator = null,
+    LimitadorDeLoginPorConta? limitador = null,
+    ITenantProvider? tenant = null
 ) : IRequestHandler<AutenticarComRostoCommand, Result<(AccessToken, RefreshToken, string)>>
 {
     // Mensagem genérica igual à do login por senha: evita enumeração de e-mails e,
@@ -31,11 +33,20 @@ public class AutenticarComRostoCommandHandler(
     private Task Auditar(string evento, Usuario usuario, CancellationToken cancellationToken) =>
         auditoria?.RegistrarAsync(evento, usuario, cancellationToken) ?? Task.CompletedTask;
 
+    private string? Ip => tenant?.EnderecoIp;
+
     public async Task<Result<(AccessToken, RefreshToken, string)>> Handle(
         AutenticarComRostoCommand command, CancellationToken cancellationToken)
     {
         try
         {
+            // S10/S28: mesmo limite por (conta, IP) do login por senha, sem somar erro à conta.
+            if (limitador?.EstaBloqueado(command.Email, Ip) == true)
+            {
+                logger.LogWarning("Login facial recusado: limite de erros por conta e IP atingido para {Email}.", MascaramentoDeDados.MascararEmail(command.Email));
+                return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(MensagemGenericaDeFalha));
+            }
+
             var usuarioEncontrado = await userManager.FindByEmailAsync(command.Email);
 
             if (usuarioEncontrado is null)
@@ -63,7 +74,10 @@ public class AutenticarComRostoCommandHandler(
                 // (uma falha no contador). Foto sem rosto detectável é problema da imagem, não é
                 // tentativa de acesso, e não conta.
                 if (!verificacao.NenhumRostoNaImagem)
+                {
                     await userManager.AccessFailedAsync(usuarioEncontrado);
+                    limitador?.RegistrarFalha(command.Email, Ip);
+                }
 
                 await Auditar(EventosDeAutenticacao.LoginFacialFalhou, usuarioEncontrado, cancellationToken);
 
@@ -84,12 +98,14 @@ public class AutenticarComRostoCommandHandler(
                 if (segundo == ResultadoDoSegundoFator.CodigoInvalido)
                 {
                     await Auditar(EventosDeAutenticacao.LoginFacialFalhou, usuarioEncontrado, cancellationToken);
+                    limitador?.RegistrarFalha(command.Email, Ip);
 
                     return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(MensagemGenericaDeFalha));
                 }
             }
 
             await userManager.ResetAccessFailedCountAsync(usuarioEncontrado);
+            limitador?.Zerar(command.Email, Ip);
 
             var accessToken = await tokenProvider.GerarAccessTokenAsync(usuarioEncontrado);
 

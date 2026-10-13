@@ -86,6 +86,7 @@ public static class DependencyInjection
         services.AddScoped<IAuditoriaDeAutenticacao, AuditoriaDeAutenticacao>();
         services.AddScoped<IEncerradorDeAcesso, EncerradorDeAcesso>();
         services.AddScoped<VerificadorDeSegundoFator>();
+        services.AddSingleton<LimitadorDeLoginPorConta>();
 
         // Recuperação de senha por e-mail (S18): a fila é única; o envio usa SMTP se configurado, o log só em Development.
         services.AddSingleton<FilaDeRecuperacaoDeSenha>();

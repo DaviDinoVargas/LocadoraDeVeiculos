@@ -1,4 +1,5 @@
-﻿using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
+﻿using LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Services;
+using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
@@ -31,7 +32,7 @@ public static class IdentityConfig
             // O bloqueio só é aplicado de fato quando o login passa pelo SignInManager
             // (CheckPasswordSignInAsync com lockoutOnFailure: true), não pelo UserManager sozinho.
             options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
-            options.Lockout.MaxFailedAccessAttempts = 5;
+            options.Lockout.MaxFailedAccessAttempts = PoliticaDeBloqueio.TentativasPorConta;
             options.Lockout.AllowedForNewUsers = true;
         })
         .AddEntityFrameworkStores<LocadoraDeVeiculosDbContext>()

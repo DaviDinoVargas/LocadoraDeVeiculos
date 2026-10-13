@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from shared import auth
+from shared import auth, limites
 from shared.camera_manager import CameraHub
 
 from .camera_server import list_cameras, open_camera
@@ -34,8 +34,13 @@ except Exception as e:  # noqa: BLE001 - ultralytics/torch/modelo ausente
 
 HAS_YOLO = service is not None
 
-router = APIRouter(tags=["cameras"], dependencies=[Depends(auth.exigir_dono_das_cameras)])
+# S10: a autenticação vem primeiro (preenche request.state.usuario) para o limite contar por usuário, não por IP.
+router = APIRouter(tags=["cameras"], dependencies=[Depends(auth.exigir_dono_das_cameras),
+                                                   Depends(limites.limitar("cameras", maximo=300, janela_s=60))])
 stream_router = APIRouter(tags=["cameras"])
+
+# Ações que abrem/fecham hardware ou emitem credencial: bem mais restritas que a leitura (/last, /cameras).
+_limite_acao = Depends(limites.limitar("cameras-acao", maximo=30, janela_s=60))
 
 _detections: list[dict] = []
 _lock = threading.Lock()
@@ -108,7 +113,7 @@ def get_cameras(atualizar: bool = False):
         return {"cameras": abertas, "error": "Falha ao procurar câmeras", "count": len(abertas)}
 
 
-@router.post("/start")
+@router.post("/start", dependencies=[_limite_acao])
 def start_camera(req: StartCameraRequest):
     """Inicia processamento de uma câmera"""
     if service is None:
@@ -121,7 +126,7 @@ def start_camera(req: StartCameraRequest):
     return {"ok": True, "camera": req.camera, "fps": req.fps}
 
 
-@router.post("/stop/{camera_id}")
+@router.post("/stop/{camera_id}", dependencies=[_limite_acao])
 def stop_camera(camera_id: int):
     """Para o processamento de uma câmera"""
     if service is None or not service.stop_camera(camera_id):
@@ -141,7 +146,7 @@ def get_last_detections(limit: int = 50, since: float = 0.0, camera: Optional[in
     return {"detections": itens[:max(limit, 0)], "yolo_available": HAS_YOLO}
 
 
-@router.get("/test/{camera_id}")
+@router.get("/test/{camera_id}", dependencies=[_limite_acao])
 def test_camera(camera_id: int):
     """Testa se uma câmera está funcionando (usa o capturador compartilhado)."""
     if not hub.acquire(camera_id):
@@ -160,7 +165,7 @@ def test_camera(camera_id: int):
     }
 
 
-@router.post("/stream-ticket")
+@router.post("/stream-ticket", dependencies=[_limite_acao])
 def emitir_ticket(usuario: auth.Usuario = Depends(auth.exigir_dono_das_cameras)):
     """O <img> do stream não envia Authorization; o Angular troca o JWT por um
     ticket de uso único (30 s) e o passa na URL do stream."""
@@ -176,7 +181,7 @@ def _desenhar(frame, camera_id, itens):
     cv2.putText(frame, f"Camera {camera_id}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
 
-@stream_router.get("/stream/{camera_id}", dependencies=[Depends(auth.consumir_ticket_stream)])
+@stream_router.get("/stream/{camera_id}", dependencies=[Depends(limites.limitar("stream", maximo=20, janela_s=60)), Depends(auth.consumir_ticket_stream)])
 async def video_stream(camera_id: int, request: Request):
     """Stream MJPEG da câmera, com as caixas do YOLO desenhadas por cima."""
     if not await asyncio.to_thread(hub.acquire, camera_id):
