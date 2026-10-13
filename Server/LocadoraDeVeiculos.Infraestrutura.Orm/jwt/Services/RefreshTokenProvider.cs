@@ -19,6 +19,11 @@ public class RefreshTokenProvider(
     private readonly HttpContext? httpContext = contextAccessor.HttpContext;
     private readonly TimeSpan expiracaoTokenEmDias = TimeSpan.FromDays(7);
 
+    private const string MotivoRotacao = "Rotação";
+
+    // Tokens vencidos/revogados guardam IP e User-Agent (dados pessoais): depois deste prazo não têm mais utilidade.
+    private static readonly TimeSpan RetencaoDeTokensEncerrados = TimeSpan.FromDays(30);
+
     public async Task<(RefreshToken entidade, string tokenBruto)> GerarRefreshTokenAsync(Usuario usuario)
     {
         var tokenBruto = GerarTokenOpaco();
@@ -39,6 +44,13 @@ public class RefreshTokenProvider(
 
         dbContext.RefreshTokens.Add(novoRefreshToken);
 
+        // Limpeza de tokens antigos do usuário na própria emissão (a tabela não cresce para sempre).
+        var limite = now - RetencaoDeTokensEncerrados;
+        var antigos = await dbContext.RefreshTokens
+            .Where(t => t.UsuarioId == usuario.Id && t.Id != novoRefreshToken.Id && t.ExpiraEmUtc < limite)
+            .ToListAsync();
+        dbContext.RefreshTokens.RemoveRange(antigos);
+
         await dbContext.SaveChangesAsync();
 
         // Só o token BRUTO deve sair do servidor (via cookie). O banco guarda apenas o hash:
@@ -57,7 +69,15 @@ public class RefreshTokenProvider(
             throw new SecurityTokenException("Token de rotação não foi encontado.");
 
         if (token.RevogadoEmUtc is not null)
+        {
+            // Um token que já foi trocado por outro e volta a ser apresentado só pode ter sido copiado (cookie roubado ou
+            // repetido): quem tem o token novo e quem tem o velho são pessoas diferentes e não dá para saber qual é o
+            // dono legítimo. A resposta segura é derrubar todas as sessões desse usuário.
+            if (token.MotivoRevogacao == MotivoRotacao)
+                await DerrubarSessoesPorReusoAsync(token.UsuarioId);
+
             throw new SecurityTokenException("Token de rotação já utilizado/revogado (suspeita de reuso).");
+        }
 
         if (token.ExpiraEmUtc <= DateTime.UtcNow)
             throw new SecurityTokenException("Token de rotação expirado.");
@@ -71,11 +91,32 @@ public class RefreshTokenProvider(
 
         var novoHash = Hash(novoTokenBruto);
 
-        token.RevogadoEmUtc = DateTime.UtcNow;
-        token.SubstituidoPorTokenHash = novoHash;
-        token.MotivoRevogacao = "Rotação";
-
         var now = DateTime.UtcNow;
+
+        if (dbContext.Database.IsRelational())
+        {
+            // Rotação atômica: o UPDATE só vale se o token ainda não foi revogado. Duas chamadas simultâneas com o mesmo
+            // cookie não conseguem as duas: a segunda afeta 0 linhas e é tratada como reuso.
+            var afetadas = await dbContext.RefreshTokens
+                .Where(t => t.Id == token.Id && t.RevogadoEmUtc == null)
+                .ExecuteUpdateAsync(set => set
+                    .SetProperty(t => t.RevogadoEmUtc, now)
+                    .SetProperty(t => t.SubstituidoPorTokenHash, novoHash)
+                    .SetProperty(t => t.MotivoRevogacao, MotivoRotacao));
+
+            if (afetadas == 0)
+            {
+                await DerrubarSessoesPorReusoAsync(token.UsuarioId);
+
+                throw new SecurityTokenException("Token de rotação já utilizado/revogado (suspeita de reuso).");
+            }
+        }
+        else
+        {
+            token.RevogadoEmUtc = now;
+            token.SubstituidoPorTokenHash = novoHash;
+            token.MotivoRevogacao = MotivoRotacao;
+        }
 
         var novoRefreshToken = new RefreshToken
         {
@@ -106,6 +147,19 @@ public class RefreshTokenProvider(
             .FirstOrDefaultAsync(t => t.TokenHash == hash);
 
         return token?.UsuarioId;
+    }
+
+    private async Task DerrubarSessoesPorReusoAsync(Guid usuarioId)
+    {
+        await RevogarTokensUsuarioAsync(usuarioId, "Reuso detectado");
+
+        var usuario = await userManager.FindByIdAsync(usuarioId.ToString());
+
+        if (usuario is not null)
+        {
+            usuario.AccessTokenVersionId = Guid.NewGuid();
+            await userManager.UpdateAsync(usuario);
+        }
     }
 
     public async Task RevogarTokensUsuarioAsync(Guid usuarioId, string motivo)
