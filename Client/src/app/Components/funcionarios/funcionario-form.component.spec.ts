@@ -36,25 +36,39 @@ describe('FuncionarioFormComponent — senha no cadastro e na edição', () => {
     fixture.detectChanges();
   };
 
-  it('cadastro: a senha é obrigatória e precisa de 6 caracteres', () => {
+  it('cadastro: a senha é obrigatória e segue a política do servidor (8+, maiúscula, minúscula, número)', () => {
     montar(null);
     component.form.patchValue(preenchido);
 
     expect(component.form.valid).toBeFalse();
-    component.form.patchValue({ senha: '123', confirmarSenha: '123' });
+    component.form.patchValue({ senha: 'Ab1', confirmarSenha: 'Ab1' });
     expect(component.form.controls.senha.hasError('minlength')).toBeTrue();
-    component.form.patchValue({ senha: '123456', confirmarSenha: '123456' });
+    component.form.patchValue({ senha: 'senhafraca1', confirmarSenha: 'senhafraca1' });
+    expect(component.form.controls.senha.hasError('semMaiuscula')).toBeTrue();
+    component.form.patchValue({ senha: 'SENHAFRACA1', confirmarSenha: 'SENHAFRACA1' });
+    expect(component.form.controls.senha.hasError('semMinuscula')).toBeTrue();
+    component.form.patchValue({ senha: 'SenhaFraca', confirmarSenha: 'SenhaFraca' });
+    expect(component.form.controls.senha.hasError('semNumero')).toBeTrue();
+    component.form.patchValue({ senha: 'SenhaForte1', confirmarSenha: 'SenhaForte1' });
     expect(component.form.valid).toBeTrue();
+  });
+
+  it('edição: a nova senha, quando informada, também segue a política', () => {
+    montar('abc');
+    component.form.patchValue({ senha: 'curta', confirmarSenha: 'curta' });
+    expect(component.form.controls.senha.hasError('minlength')).toBeTrue();
+    component.form.patchValue({ senha: 'NovaSenha9', confirmarSenha: 'NovaSenha9' });
+    expect(component.form.controls.senha.valid).toBeTrue();
   });
 
   it('o erro "senhas diferentes" fica no campo de confirmação', () => {
     montar(null);
-    component.form.patchValue({ ...preenchido, senha: '123456', confirmarSenha: '654321' });
+    component.form.patchValue({ ...preenchido, senha: 'SenhaForte1', confirmarSenha: 'SenhaForte2' });
 
     expect(component.form.controls.confirmarSenha.hasError('mismatch')).toBeTrue();
     expect(component.form.valid).toBeFalse();
 
-    component.form.patchValue({ confirmarSenha: '123456' });
+    component.form.patchValue({ confirmarSenha: 'SenhaForte1' });
     expect(component.form.controls.confirmarSenha.hasError('mismatch')).toBeFalse();
   });
 
@@ -78,10 +92,10 @@ describe('FuncionarioFormComponent — senha no cadastro e na edição', () => {
 
   it('edição: uma nova senha digitada é enviada', () => {
     montar('f1');
-    component.form.patchValue({ senha: 'nova-senha', confirmarSenha: 'nova-senha' });
+    component.form.patchValue({ senha: 'NovaSenha9', confirmarSenha: 'NovaSenha9' });
 
     component.salvar();
 
-    expect(svc.atualizar.calls.mostRecent().args[1].senha).toBe('nova-senha');
+    expect(svc.atualizar.calls.mostRecent().args[1].senha).toBe('NovaSenha9');
   });
 });

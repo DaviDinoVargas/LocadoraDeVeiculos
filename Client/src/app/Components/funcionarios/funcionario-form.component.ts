@@ -16,6 +16,7 @@ import { PageHeaderComponent } from '../../shared/layout/page-header.component';
 import { PageComponent } from '../../shared/layout/page.component';
 import { MascaraDirective } from '../../shared/mascaras/mascara.directive';
 import { MENSAGENS_CPF, VALIDADORES_CPF } from '../../shared/validators/documentos';
+import { MENSAGENS_SENHA, VALIDADORES_SENHA } from '../../shared/validators/senha';
 import { FuncionarioDto } from './funcionario.model';
 import { FuncionariosService } from './funcionarios.service';
 
@@ -49,7 +50,7 @@ export class FuncionarioFormComponent implements FormProtegido {
 
   readonly mensagensCpf = MENSAGENS_CPF;
   readonly mensagensSalario = { min: 'O salário deve ser maior ou igual a 0.' };
-  readonly mensagensSenha = { minlength: 'A senha precisa de ao menos 6 caracteres.' };
+  readonly mensagensSenha = MENSAGENS_SENHA;
   readonly mensagensConfirmacao = { mismatch: 'As senhas não coincidem.' };
   readonly mostrarSenha = signal(false);
   readonly mostrarConfirmacao = signal(false);
@@ -93,10 +94,10 @@ export class FuncionarioFormComponent implements FormProtegido {
     // O modo vem da rota já na criação: na edição a senha é opcional; no cadastro é obrigatória.
     const editando = !!inject(ActivatedRoute).snapshot.paramMap.get('id');
     if (!editando) {
-      this.form.controls.senha.setValidators([Validators.required, Validators.minLength(6)]);
+      this.form.controls.senha.setValidators([Validators.required, ...VALIDADORES_SENHA]);
       this.form.controls.confirmarSenha.setValidators([Validators.required]);
     } else {
-      this.form.controls.senha.setValidators([Validators.minLength(6)]);
+      this.form.controls.senha.setValidators(VALIDADORES_SENHA);
     }
     this.form.addValidators(senhasIguais);
     this.form.updateValueAndValidity();
