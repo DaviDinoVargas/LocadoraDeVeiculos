@@ -1,4 +1,6 @@
-﻿using LocadoraDeVeiculos.Infraestrutura.Orm.ModuloPlanoCobranca;
+﻿using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
+using LocadoraDeVeiculos.Infraestrutura.Orm.ModuloPlanoCobranca;
+using LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloAutenticacao;
 using LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
 using LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloAluguel;
 using LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloAutomovel;
@@ -26,6 +28,10 @@ public static class DependencyInjection
         this IServiceCollection services, IConfiguration configuration)
     {
         services.AddEntityFrameworkConfig(configuration);
+
+        // Biometria facial cifrada no banco (S1). Falha já na subida se a chave não estiver configurada.
+        services.AddSingleton(CifradorFacial.DaConfiguracao(configuration));
+        services.AddScoped<IArmazenamentoFacial, ArmazenamentoFacialEmOrm>();
 
         services.AddScoped<RepositorioFuncionarioEmOrm>();
         services.AddScoped<RepositorioGrupoAutomovelEmOrm>();

@@ -25,7 +25,8 @@ public class ApiFactory : WebApplicationFactory<LocadoraDeVeiculos.WebApi.Progra
             ["JWT_AUDIENCE_DOMAIN"] = "localhost",
             ["LUCKYPENNY_LICENSE_KEY"] = "chave-de-teste",
             ["CORS_ALLOWED_ORIGINS"] = "http://localhost:4200",
-            ["MlApi__InternalToken"] = "segredo-de-teste-com-mais-de-trinta-e-dois-caracteres"
+            ["MlApi__InternalToken"] = "segredo-de-teste-com-mais-de-trinta-e-dois-caracteres",
+            ["FACE_ENCRYPTION_KEYS"] = "1:AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="
         };
 
         foreach (var (chave, valor) in configuracoes ?? [])

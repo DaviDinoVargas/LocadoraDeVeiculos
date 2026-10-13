@@ -12,7 +12,7 @@ namespace LocadoraDeVeiculos.WebApi
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static int Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
@@ -37,6 +37,14 @@ namespace LocadoraDeVeiculos.WebApi
             builder.Services.AddSegurancaHttp(builder.Configuration);
 
             var app = builder.Build();
+
+            // Comando de manutenção (S1): importa o antigo faces.json para o banco e sai, sem subir o servidor.
+            if (ImportadorDeFaces.FoiSolicitado(args))
+            {
+                app.AplicarMigracoesOrm();
+
+                return ImportadorDeFaces.ExecutarAsync(app.Services, args, Console.Out).GetAwaiter().GetResult();
+            }
 
             // Primeiro de tudo: troca o IP do proxy pelo do cliente (só se o proxy estiver em TRUSTED_PROXIES).
             app.UseForwardedHeaders();
@@ -72,6 +80,8 @@ namespace LocadoraDeVeiculos.WebApi
                 app.Logger.LogWarning("AllowedHosts está como \"*\": defina os hosts permitidos (AllowedHosts) neste ambiente.");
 
             app.Run();
+
+            return 0;
         }
     }
 }

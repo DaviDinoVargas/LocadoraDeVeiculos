@@ -104,6 +104,30 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.Migrations
                     b.ToTable("Alugueis");
                 });
 
+            modelBuilder.Entity("LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao.AmostraFacial", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("Conteudo")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<DateTime>("CriadoEmUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PessoaId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(320)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PessoaId");
+
+                    b.ToTable("AmostrasFaciais", (string)null);
+                });
+
             modelBuilder.Entity("LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao.Cargo", b =>
                 {
                     b.Property<Guid>("Id")

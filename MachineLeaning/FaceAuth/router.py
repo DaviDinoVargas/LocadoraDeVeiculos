@@ -3,33 +3,49 @@ import base64
 import cv2
 import numpy as np
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from shared.auth import exigir_token_interno
 
-from . import data_manager
 from .face_recognition import comparar_faces, extrair_landmarks_de_imagem, normalizar_landmarks
 
 # Todo o módulo facial é só para o backend .NET (servidor-a-servidor): exige o
 # X-Internal-Token (segredo compartilhado, ver shared/auth.py). O navegador nunca
-# o recebe. Antes só /face/enroll era protegido, e qualquer um que alcançasse o
-# proxy do Angular podia apagar o rosto de outra pessoa (DELETE), listar quem
-# tem rosto cadastrado (GET status) ou usar /verify como oráculo de similaridade.
-# O Angular fala com a Web API (/api/auth/rosto...), que valida o JWT, descobre
-# o personId a partir do usuário logado e só então chama este serviço.
+# o recebe. O Angular fala com a Web API (/api/auth/rosto...), que valida o JWT,
+# descobre quem é o usuário logado e só então chama este serviço.
+#
+# O serviço NÃO GUARDA NADA: dado biométrico fica cifrado no banco da Web API (S1).
+# Aqui só se calcula: imagem -> landmarks (cadastro) e imagem x amostras -> match (verificação).
+# Nada disso é registrado em log.
 router = APIRouter(prefix="/face", tags=["face"], dependencies=[Depends(exigir_token_interno)])
 
-# Amostras suficientes para o rosto ser considerado uma correspondência.
-# Uma única amostra combinando já é aceita (modo "ou": basta bater com
-# qualquer uma das cadastradas), então o valor abaixo é só o piso de
-# similaridade por amostra.
+# Uma única amostra combinando já é aceita (modo "ou": basta bater com qualquer uma das
+# cadastradas), então o valor abaixo é só o piso de similaridade por amostra.
 LIMIAR_DISTANCIA = 0.02
 SIMILARIDADE_MINIMA = 0.9
 
+# Teto defensivo: a Web API guarda no máximo 3 amostras por pessoa.
+MAXIMO_DE_AMOSTRAS = 10
+
 
 class ImagemFacialRequest(BaseModel):
-    personId: str
     imageBase64: str
+
+
+class CompararRequest(BaseModel):
+    imageBase64: str
+    samples: list[list[float]] = Field(max_length=MAXIMO_DE_AMOSTRAS)
+
+
+def achatar_landmarks(landmarks) -> list[float]:
+    """[{x,y,z}, ...] -> [x0,y0,z0,x1,y1,z1,...]: formato simples de guardar cifrado na Web API."""
+    return [float(lm[eixo]) for lm in landmarks for eixo in ('x', 'y', 'z')]
+
+
+def desachatar_landmarks(valores: list[float]):
+    if len(valores) % 3 != 0:
+        return []
+    return [{'x': valores[i], 'y': valores[i + 1], 'z': valores[i + 2]} for i in range(0, len(valores), 3)]
 
 
 def _decodificar_imagem(image_base64: str):
@@ -46,43 +62,36 @@ def _decodificar_imagem(image_base64: str):
         raise HTTPException(status_code=400, detail="Não foi possível decodificar a imagem enviada")
 
 
-@router.post("/enroll")
-def cadastrar_rosto(request: ImagemFacialRequest):
-    """Cadastra uma amostra facial (landmarks do MediaPipe FaceMesh) para
-    um personId. Chamar algumas vezes com ângulos levemente diferentes
-    melhora a taxa de acerto na verificação.
-
-    Só pode ser chamado pelo backend .NET (token interno no router) —
-    nunca diretamente pelo navegador."""
-    imagem = _decodificar_imagem(request.imageBase64)
+def _landmarks_normalizados(image_base64: str):
+    imagem = _decodificar_imagem(image_base64)
     landmarks = extrair_landmarks_de_imagem(imagem)
     if landmarks is None:
         raise HTTPException(status_code=422, detail="Nenhum rosto detectado na imagem")
-
-    normalizados = normalizar_landmarks(landmarks)
-    total_amostras = data_manager.salvar_amostra(request.personId, normalizados)
-    return {"ok": True, "personId": request.personId, "amostras": total_amostras}
+    return normalizar_landmarks(landmarks)
 
 
-@router.post("/verify")
-def verificar_rosto(request: ImagemFacialRequest):
-    """Compara a imagem enviada com as amostras cadastradas do personId."""
-    amostras_salvas = data_manager.carregar_amostras(request.personId)
-    if not amostras_salvas:
-        raise HTTPException(status_code=404, detail="Nenhum rosto cadastrado para este personId")
+@router.post("/landmarks")
+def extrair_landmarks(request: ImagemFacialRequest):
+    """Extrai os landmarks normalizados (MediaPipe FaceMesh) de uma foto, para a Web API cifrar e
+    guardar. Só pode ser chamado pelo backend .NET (token interno no router)."""
+    normalizados = _landmarks_normalizados(request.imageBase64)
+    return {"landmarks": achatar_landmarks(normalizados)}
 
-    imagem = _decodificar_imagem(request.imageBase64)
-    landmarks = extrair_landmarks_de_imagem(imagem)
-    if landmarks is None:
-        raise HTTPException(status_code=422, detail="Nenhum rosto detectado na imagem")
 
-    normalizados = normalizar_landmarks(landmarks)
+@router.post("/compare")
+def comparar_com_amostras(request: CompararRequest):
+    """Compara a foto enviada com as amostras que a Web API leu do banco. As amostras existem em
+    memória só durante esta chamada."""
+    if not request.samples:
+        raise HTTPException(status_code=400, detail="Nenhuma amostra para comparar")
+
+    normalizados = _landmarks_normalizados(request.imageBase64)
 
     melhor_similaridade = 0.0
     bateu = False
-    for amostra in amostras_salvas:
+    for amostra in request.samples:
         match, similaridade = comparar_faces(
-            normalizados, amostra,
+            normalizados, desachatar_landmarks(amostra),
             threshold=LIMIAR_DISTANCIA,
             similaridade_minima=SIMILARIDADE_MINIMA,
         )
@@ -91,16 +100,3 @@ def verificar_rosto(request: ImagemFacialRequest):
             bateu = True
 
     return {"match": bateu, "confidence": round(melhor_similaridade, 4)}
-
-
-@router.get("/status/{person_id}")
-def status_cadastro(person_id: str):
-    return {"personId": person_id, "cadastrado": data_manager.esta_cadastrado(person_id)}
-
-
-@router.delete("/{person_id}")
-def remover_cadastro(person_id: str):
-    removido = data_manager.remover_pessoa(person_id)
-    if not removido:
-        raise HTTPException(status_code=404, detail="Nenhum rosto cadastrado para este personId")
-    return {"ok": True}

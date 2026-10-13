@@ -1,5 +1,7 @@
+using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
 using Microsoft.Extensions.Configuration;
 using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading;
@@ -22,14 +24,16 @@ public interface IFacialAuthClient
     Task<bool> RemoverAsync(string personId, CancellationToken cancellationToken);
 }
 
-public class FacialAuthClient(IHttpClientFactory httpClientFactory, IConfiguration configuration) : IFacialAuthClient
+public class FacialAuthClient(
+    IHttpClientFactory httpClientFactory,
+    IConfiguration configuration,
+    IArmazenamentoFacial armazenamento
+) : IFacialAuthClient
 {
     private const string NomeCliente = "MlApi";
 
     // Precisa bater com ML_INTERNAL_TOKEN no serviço de ML (shared/settings.py). TODO o módulo
-    // /face/* exige esse cabeçalho: só esta API fala com ele, o navegador nunca. Sem isso
-    // qualquer um que alcançasse o proxy do Angular poderia plantar o próprio rosto no personId
-    // de outra pessoa (enroll), apagar o rosto dela (delete) ou usar /verify como oráculo.
+    // /face/* exige esse cabeçalho: só esta API fala com ele, o navegador nunca.
     private string SegredoInterno => SegredoInternoDoMl.Resolver(configuration);
 
     private HttpRequestMessage Requisicao(HttpMethod metodo, string url, object? corpo = null)
@@ -43,15 +47,19 @@ public class FacialAuthClient(IHttpClientFactory httpClientFactory, IConfigurati
 
     public static string PersonIdParaEmail(string email) => $"usuario:{email.Trim().ToLowerInvariant()}";
 
+    // O serviço de ML não guarda nada (S1): as amostras ficam cifradas no banco desta API. Na verificação
+    // elas seguem junto com a imagem, só em memória e só nesta chamada interna.
     public async Task<FacialVerifyResult> VerificarAsync(string personId, string imagemBase64, CancellationToken cancellationToken)
     {
+        var amostras = await armazenamento.ObterAsync(personId, cancellationToken);
+
+        if (amostras.Count == 0)
+            return new FacialVerifyResult(Encontrado: false, Bateu: false, Confianca: 0);
+
         var client = httpClientFactory.CreateClient(NomeCliente);
 
-        using var mensagem = Requisicao(HttpMethod.Post, "/face/verify", new { personId, imageBase64 = imagemBase64 });
+        using var mensagem = Requisicao(HttpMethod.Post, "/face/compare", new { imageBase64 = imagemBase64, samples = amostras });
         var resposta = await client.SendAsync(mensagem, cancellationToken);
-
-        if (resposta.StatusCode == System.Net.HttpStatusCode.NotFound)
-            return new FacialVerifyResult(Encontrado: false, Bateu: false, Confianca: 0);
 
         // 422 = nenhum rosto detectado; 400 = a imagem nem decodifica. Nos dois casos o usuário
         // precisa tirar outra foto, não é "rosto diferente".
@@ -70,44 +78,35 @@ public class FacialAuthClient(IHttpClientFactory httpClientFactory, IConfigurati
     {
         var client = httpClientFactory.CreateClient(NomeCliente);
 
-        using var mensagem = Requisicao(HttpMethod.Post, "/face/enroll", new { personId, imageBase64 = imagemBase64 });
-
+        using var mensagem = Requisicao(HttpMethod.Post, "/face/landmarks", new { imageBase64 = imagemBase64 });
         var resposta = await client.SendAsync(mensagem, cancellationToken);
 
         if (!resposta.IsSuccessStatusCode)
             return new FacialEnrollResult(Sucesso: false, Amostras: 0);
 
-        var corpo = await resposta.Content.ReadFromJsonAsync<FacialEnrollResponseDto>(cancellationToken: cancellationToken);
+        var corpo = await resposta.Content.ReadFromJsonAsync<FacialLandmarksResponseDto>(cancellationToken: cancellationToken);
 
-        return new FacialEnrollResult(Sucesso: true, Amostras: corpo?.Amostras ?? 0);
+        if (corpo?.Landmarks is not { Count: > 0 })
+            return new FacialEnrollResult(Sucesso: false, Amostras: 0);
+
+        var total = await armazenamento.SalvarAsync(personId, corpo.Landmarks, cancellationToken);
+
+        return new FacialEnrollResult(Sucesso: true, Amostras: total);
     }
 
-    public async Task<bool> PossuiRostoAsync(string personId, CancellationToken cancellationToken)
-    {
-        var client = httpClientFactory.CreateClient(NomeCliente);
-
-        using var mensagem = Requisicao(HttpMethod.Get, $"/face/status/{Uri.EscapeDataString(personId)}");
-        var resposta = await client.SendAsync(mensagem, cancellationToken);
-        resposta.EnsureSuccessStatusCode();
-
-        var corpo = await resposta.Content.ReadFromJsonAsync<FacialStatusResponseDto>(cancellationToken: cancellationToken);
-
-        return corpo?.Cadastrado ?? false;
-    }
+    public Task<bool> PossuiRostoAsync(string personId, CancellationToken cancellationToken) =>
+        armazenamento.ExisteAsync(personId, cancellationToken);
 
     public async Task<bool> RemoverAsync(string personId, CancellationToken cancellationToken)
     {
-        var client = httpClientFactory.CreateClient(NomeCliente);
+        await armazenamento.RemoverAsync(personId, cancellationToken);
 
-        using var mensagem = Requisicao(HttpMethod.Delete, $"/face/{Uri.EscapeDataString(personId)}");
-        var resposta = await client.SendAsync(mensagem, cancellationToken);
-
-        return resposta.IsSuccessStatusCode || resposta.StatusCode == System.Net.HttpStatusCode.NotFound;
+        // Idempotente: "já não havia nada" também é sucesso.
+        return true;
     }
 
-    private record FacialStatusResponseDto(string PersonId, bool Cadastrado);
     private record FacialVerifyResponseDto(bool Match, double Confidence);
-    private record FacialEnrollResponseDto(bool Ok, string PersonId, int Amostras);
+    private record FacialLandmarksResponseDto(List<double> Landmarks);
 }
 
 public record FacialVerifyResult(bool Encontrado, bool Bateu, double Confianca, bool NenhumRostoNaImagem = false);

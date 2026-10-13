@@ -20,45 +20,81 @@ def _limpar_estado():
     yield
 
 
-# ---------- módulo facial: token interno em TODOS os endpoints ----------
+# ---------- módulo facial: token interno em TODOS os endpoints, sem guardar nada ----------
+
+PONTOS = [{'x': 0.1 * i, 'y': 0.2 * i, 'z': 0.01 * i} for i in range(1, 6)]
+
 
 @pytest.fixture
-def face_client(tmp_path, monkeypatch):
-    from FaceAuth import data_manager
-    from FaceAuth.router import router
-    monkeypatch.setattr(data_manager, '_DATA_DIR', str(tmp_path))
-    monkeypatch.setattr(data_manager, '_DATA_FILE', str(tmp_path / 'faces.json'))
-    data_manager.salvar_amostra('usuario:alvo@x.com', [0.1, 0.2])
+def face_client(monkeypatch):
+    from FaceAuth import router as face_router
+    # Sem MediaPipe: o extrator devolve sempre os mesmos pontos (a lógica testada é a do router).
+    monkeypatch.setattr(face_router, 'extrair_landmarks_de_imagem', lambda imagem: [dict(p) for p in PONTOS])
+    monkeypatch.setattr(face_router, '_decodificar_imagem', lambda b64: object())
     app = FastAPI()
-    app.include_router(router)
+    app.include_router(face_router.router)
     return TestClient(app)
 
 
-@pytest.mark.parametrize('metodo,url', [
-    ('post', '/face/enroll'),
-    ('post', '/face/verify'),
-    ('get', '/face/status/usuario:alvo@x.com'),
-    ('delete', '/face/usuario:alvo@x.com'),
+@pytest.mark.parametrize('url,corpo', [
+    ('/face/landmarks', {'imageBase64': 'x'}),
+    ('/face/compare', {'imageBase64': 'x', 'samples': [[0.1, 0.2, 0.3]]}),
 ])
-def test_face_sem_token_interno_e_401(face_client, metodo, url):
-    corpo = {'json': {'personId': 'usuario:alvo@x.com', 'imageBase64': 'x'}} if metodo == 'post' else {}
-    assert getattr(face_client, metodo)(url, **corpo).status_code == 401
-    errado = getattr(face_client, metodo)(url, headers={'X-Internal-Token': 'errado'}, **corpo)
-    assert errado.status_code == 401
+def test_face_sem_token_interno_e_401(face_client, url, corpo):
+    assert face_client.post(url, json=corpo).status_code == 401
+    assert face_client.post(url, json=corpo, headers={'X-Internal-Token': 'errado'}).status_code == 401
 
 
-def test_face_sem_token_nao_apaga_o_cadastro(face_client):
-    from FaceAuth import data_manager
-    face_client.delete('/face/usuario:alvo@x.com')
-    assert data_manager.esta_cadastrado('usuario:alvo@x.com')
-
-
-def test_face_com_token_interno_funciona(face_client):
+@pytest.mark.parametrize('metodo,url', [
+    ('post', '/face/enroll'), ('post', '/face/verify'),
+    ('get', '/face/status/usuario:alvo@x.com'), ('delete', '/face/usuario:alvo@x.com'),
+])
+def test_endpoints_que_guardavam_dados_nao_existem_mais(face_client, metodo, url):
     h = {'X-Internal-Token': settings.INTERNAL_TOKEN}
-    assert face_client.get('/face/status/usuario:alvo@x.com', headers=h).json()['cadastrado'] is True
-    assert face_client.delete('/face/usuario:alvo@x.com', headers=h).status_code == 200
-    assert face_client.get('/face/status/usuario:alvo@x.com', headers=h).json()['cadastrado'] is False
-    assert face_client.delete('/face/usuario:alvo@x.com', headers=h).status_code == 404
+    assert getattr(face_client, metodo)(url, headers=h).status_code in (404, 405)
+
+
+def test_o_servico_nao_tem_mais_persistencia_facial():
+    import importlib.util
+    assert importlib.util.find_spec('FaceAuth.data_manager') is None
+
+
+def test_landmarks_devolve_vetor_achatado_xyz(face_client):
+    h = {'X-Internal-Token': settings.INTERNAL_TOKEN}
+    r = face_client.post('/face/landmarks', json={'imageBase64': 'x'}, headers=h)
+    assert r.status_code == 200
+    achatado = r.json()['landmarks']
+    assert len(achatado) == len(PONTOS) * 3
+    assert achatado[:3] == [pytest.approx(PONTOS[0]['x'] - sum(p['x'] for p in PONTOS) / len(PONTOS)),
+                            pytest.approx(PONTOS[0]['y'] - sum(p['y'] for p in PONTOS) / len(PONTOS)),
+                            pytest.approx(PONTOS[0]['z'])]
+
+
+def test_compare_mesma_pessoa_bate_e_pessoa_diferente_nao(face_client):
+    h = {'X-Internal-Token': settings.INTERNAL_TOKEN}
+    igual = face_client.post('/face/landmarks', json={'imageBase64': 'x'}, headers=h).json()['landmarks']
+    outro = [v + 0.5 for v in igual]
+
+    bate = face_client.post('/face/compare', json={'imageBase64': 'x', 'samples': [outro, igual]}, headers=h).json()
+    assert bate['match'] is True and bate['confidence'] == 1.0
+
+    nao_bate = face_client.post('/face/compare', json={'imageBase64': 'x', 'samples': [outro]}, headers=h).json()
+    assert nao_bate['match'] is False
+
+
+def test_compare_sem_amostras_e_400_e_amostras_demais_sao_recusadas(face_client):
+    h = {'X-Internal-Token': settings.INTERNAL_TOKEN}
+    assert face_client.post('/face/compare', json={'imageBase64': 'x', 'samples': []}, headers=h).status_code == 400
+    demais = [[0.0, 0.0, 0.0]] * 11
+    assert face_client.post('/face/compare', json={'imageBase64': 'x', 'samples': demais}, headers=h).status_code == 422
+
+
+def test_sem_rosto_na_imagem_e_422(face_client, monkeypatch):
+    from FaceAuth import router as face_router
+    monkeypatch.setattr(face_router, 'extrair_landmarks_de_imagem', lambda imagem: None)
+    h = {'X-Internal-Token': settings.INTERNAL_TOKEN}
+    assert face_client.post('/face/landmarks', json={'imageBase64': 'x'}, headers=h).status_code == 422
+    assert face_client.post('/face/compare', json={'imageBase64': 'x', 'samples': [[0.0, 0.0, 0.0]]}, headers=h).status_code == 422
 
 
 # ---------- JWT validado pela Web API ----------
