@@ -163,6 +163,10 @@ function lerRecolhido(): boolean {
         </div>
         <hlm-dropdown-menu-separator />
         <hlm-dropdown-menu-group>
+          <button hlmDropdownMenuItem type="button" (triggered)="irPara('/conta')">
+            <ng-icon name="lucideKeyRound" aria-hidden="true" />
+            Minha conta
+          </button>
           <button hlmDropdownMenuItem type="button" (triggered)="irPara('/verificacao-facial')">
             <ng-icon name="lucideScanFace" aria-hidden="true" />
             Verificação facial

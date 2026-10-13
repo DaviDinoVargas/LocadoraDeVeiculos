@@ -1,0 +1,160 @@
+<app-page largura="form">
+  <app-page-header titulo="Minha conta" descricao="Senha, verificação em duas etapas e encerramento da conta." />
+
+  <!-- Trocar senha -->
+  <section class="border-border bg-card flex flex-col gap-4 rounded-xl border p-5" aria-labelledby="titulo-senha">
+    <div>
+      <h2 id="titulo-senha" class="text-title-m flex items-center gap-2">
+        <ng-icon name="lucideKeyRound" aria-hidden="true" />
+        Alterar senha
+      </h2>
+      <p class="text-body-m text-muted-foreground mt-1">
+        Ao trocar a senha, todas as sessões abertas são encerradas e você entra de novo com a senha nova.
+      </p>
+    </div>
+
+    <form [formGroup]="formSenha" (ngSubmit)="trocarSenha()" class="grid gap-4 sm:grid-cols-3" novalidate>
+      @if (erroSenha()) {
+        <div hlmAlert variant="destructive" class="sm:col-span-3" role="alert">
+          <ng-icon name="lucideCircleAlert" aria-hidden="true" />
+          <p hlmAlertDescription>{{ erroSenha() }}</p>
+        </div>
+      }
+      <app-form-field label="Senha atual" required>
+        <input hlmInput type="password" formControlName="atual" autocomplete="current-password" />
+      </app-form-field>
+      <app-form-field label="Nova senha" required [mensagens]="mensagensSenha">
+        <input hlmInput type="password" formControlName="nova" autocomplete="new-password" />
+      </app-form-field>
+      <app-form-field label="Confirmar nova senha" required [mensagens]="mensagensConfirmacao">
+        <input hlmInput type="password" formControlName="confirmar" autocomplete="new-password" />
+      </app-form-field>
+      <div class="sm:col-span-3">
+        <button hlmBtn type="submit" [disabled]="salvandoSenha()" [attr.aria-busy]="salvandoSenha()">Alterar senha</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- Verificação em duas etapas -->
+  <section class="border-border bg-card flex flex-col gap-4 rounded-xl border p-5" aria-labelledby="titulo-2fa">
+    <div>
+      <h2 id="titulo-2fa" class="text-title-m flex items-center gap-2">
+        <ng-icon name="lucideSmartphone" aria-hidden="true" />
+        Verificação em duas etapas
+      </h2>
+      <p class="text-body-m text-muted-foreground mt-1">
+        Além da senha, o login passa a pedir um código de 6 dígitos gerado por um aplicativo autenticador no seu celular
+        (Google Authenticator, Microsoft Authenticator, Authy…).
+      </p>
+    </div>
+
+    @if (erro2fa()) {
+      <div hlmAlert variant="destructive" role="alert">
+        <ng-icon name="lucideCircleAlert" aria-hidden="true" />
+        <p hlmAlertDescription>{{ erro2fa() }}</p>
+      </div>
+    }
+
+    @if (codigosDeRecuperacao().length) {
+      <div class="border-border bg-muted/40 flex flex-col gap-3 rounded-lg border p-4" role="status">
+        <h3 class="text-label-l">Guarde estes códigos de recuperação</h3>
+        <p class="text-body-s text-muted-foreground">
+          Cada código vale uma vez e substitui o aplicativo se você perder o celular. Eles aparecem só agora: guarde-os em um lugar seguro.
+        </p>
+        <ul class="text-body-m grid grid-cols-2 gap-1 font-mono tabular sm:grid-cols-5">
+          @for (codigo of codigosDeRecuperacao(); track codigo) {
+            <li>{{ codigo }}</li>
+          }
+        </ul>
+        <div class="flex gap-2">
+          <button hlmBtn variant="outline" size="sm" type="button" (click)="copiarCodigos()">
+            <ng-icon name="lucideCopy" aria-hidden="true" />
+            Copiar
+          </button>
+          <button hlmBtn size="sm" type="button" (click)="fecharCodigos()">Já guardei</button>
+        </div>
+      </div>
+    }
+
+    @if (status2fa(); as status) {
+      @if (status.habilitado) {
+        <div class="flex items-center gap-2">
+          <ng-icon name="lucideShieldCheck" class="text-success text-xl" aria-hidden="true" />
+          <p class="text-body-m">
+            <strong>Ativada.</strong> {{ status.codigosDeRecuperacaoRestantes }} código(s) de recuperação restante(s).
+          </p>
+        </div>
+
+        <form [formGroup]="formDesativar" (ngSubmit)="desativarDoisFatores()" class="grid gap-4 sm:grid-cols-3" novalidate>
+          <app-form-field label="Senha atual" required>
+            <input hlmInput type="password" formControlName="senha" autocomplete="current-password" />
+          </app-form-field>
+          <app-form-field label="Código do aplicativo (ou de recuperação)" required>
+            <input hlmInput formControlName="codigo" inputmode="numeric" autocomplete="one-time-code" />
+          </app-form-field>
+          <div class="flex items-end">
+            <button hlmBtn variant="outline" type="submit" class="text-destructive border-destructive" [disabled]="processando2fa()">
+              Desativar
+            </button>
+          </div>
+        </form>
+      } @else if (configuracao(); as config) {
+        <ol class="text-body-m flex list-decimal flex-col gap-2 pl-5">
+          <li>Abra o aplicativo autenticador e adicione uma conta <strong>digitando a chave</strong> abaixo.</li>
+          <li>Digite o código de 6 dígitos que o aplicativo mostrar.</li>
+        </ol>
+        <div class="border-border bg-muted/40 flex flex-col gap-1 rounded-lg border p-3">
+          <span class="text-label-m text-muted-foreground">Chave de configuração</span>
+          <code class="text-title-m tabular break-all select-all" aria-label="Chave de configuração do aplicativo autenticador">{{ config.chave }}</code>
+          <span class="text-body-s text-muted-foreground">Tipo: baseada em tempo (TOTP) · 6 dígitos · 30 segundos.</span>
+        </div>
+
+        <form [formGroup]="formAtivar" (ngSubmit)="ativarDoisFatores()" class="flex flex-wrap items-end gap-3" novalidate>
+          <app-form-field label="Código de 6 dígitos" required>
+            <input hlmInput formControlName="codigo" inputmode="numeric" autocomplete="one-time-code" placeholder="000 000" />
+          </app-form-field>
+          <button hlmBtn type="submit" [disabled]="processando2fa()">Ativar</button>
+          <button hlmBtn variant="outline" type="button" (click)="cancelarConfiguracao()">Cancelar</button>
+        </form>
+      } @else {
+        <div>
+          <button hlmBtn type="button" [disabled]="processando2fa()" (click)="configurarDoisFatores()">
+            <ng-icon name="lucideShieldCheck" aria-hidden="true" />
+            Configurar verificação em duas etapas
+          </button>
+        </div>
+      }
+    }
+  </section>
+
+  <!-- Encerrar conta -->
+  @if (ehEmpresa) {
+    <section class="border-destructive/40 bg-card flex flex-col gap-4 rounded-xl border p-5" aria-labelledby="titulo-encerrar">
+      <div>
+        <h2 id="titulo-encerrar" class="text-title-m text-destructive flex items-center gap-2">
+          <ng-icon name="lucideUserX" aria-hidden="true" />
+          Encerrar a conta da empresa
+        </h2>
+        <p class="text-body-m text-muted-foreground mt-1">
+          Bloqueia para sempre a sua conta e as de todos os funcionários, encerra as sessões e <strong>apaga os rostos cadastrados</strong>
+          e os consentimentos. Não dá para desfazer.
+        </p>
+      </div>
+
+      <form [formGroup]="formEncerrar" (ngSubmit)="encerrarConta()" class="flex flex-wrap items-end gap-3" novalidate>
+        @if (erroEncerrar()) {
+          <div hlmAlert variant="destructive" class="w-full" role="alert">
+            <ng-icon name="lucideCircleAlert" aria-hidden="true" />
+            <p hlmAlertDescription>{{ erroEncerrar() }}</p>
+          </div>
+        }
+        <app-form-field label="Confirme com a sua senha" required>
+          <input hlmInput type="password" formControlName="senha" autocomplete="current-password" />
+        </app-form-field>
+        <button hlmBtn variant="outline" type="submit" class="text-destructive border-destructive" [disabled]="encerrando()">
+          Encerrar conta
+        </button>
+      </form>
+    </section>
+  }
+</app-page>

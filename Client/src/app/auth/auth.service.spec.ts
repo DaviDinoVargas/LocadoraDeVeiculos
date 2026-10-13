@@ -194,4 +194,79 @@ describe('AuthService', () => {
       req.flush(null, { status: 204, statusText: 'No Content' });
     });
   });
+
+  describe('consentimento, recuperação de senha e segundo fator', () => {
+    it('busca o termo de consentimento no servidor', () => {
+      service.obterTermoDeConsentimento().subscribe();
+
+      const req = httpMock.expectOne('/api/auth/rosto/consentimento');
+      expect(req.request.method).toBe('GET');
+      req.flush({ versao: 'v1', texto: 't' });
+    });
+
+    it('cadastrar o rosto envia o aceite e a versão do texto exibido', () => {
+      service.cadastrarRosto('data:image/jpeg;base64,abc', '2026-10-v1').subscribe();
+
+      const req = httpMock.expectOne('/api/auth/rosto');
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ imagemBase64: 'data:image/jpeg;base64,abc', consentimento: true, versaoDoTexto: '2026-10-v1' });
+      req.flush({ amostras: 1 });
+    });
+
+    it('login envia o código do autenticador só quando ele existe', () => {
+      service.autenticar('a@b.com', 'Senha@12345').subscribe({ error: () => {} });
+      const sem = httpMock.expectOne('/api/auth/autenticar');
+      expect(sem.request.body).toEqual({ email: 'a@b.com', senha: 'Senha@12345' });
+      sem.flush(null, { status: 428, statusText: 'Precondition Required' });
+
+      service.autenticar('a@b.com', 'Senha@12345', '123456').subscribe({ error: () => {} });
+      const com = httpMock.expectOne('/api/auth/autenticar');
+      expect(com.request.body).toEqual({ email: 'a@b.com', senha: 'Senha@12345', codigoAutenticador: '123456' });
+      com.flush(null, { status: 401, statusText: 'x' });
+    });
+
+    it('esqueci-senha e redefinir-senha usam os endpoints públicos', () => {
+      service.solicitarRecuperacaoDeSenha('a@b.com').subscribe();
+      const a = httpMock.expectOne('/api/auth/esqueci-senha');
+      expect(a.request.body).toEqual({ email: 'a@b.com' });
+      a.flush({});
+
+      service.redefinirSenha('a@b.com', 'tok', 'Nova@12345', 'Nova@12345').subscribe();
+      const b = httpMock.expectOne('/api/auth/redefinir-senha');
+      expect(b.request.body).toEqual({ email: 'a@b.com', token: 'tok', novaSenha: 'Nova@12345', confirmarNovaSenha: 'Nova@12345' });
+      b.flush(null, { status: 204, statusText: 'No Content' });
+    });
+
+    it('trocar a senha e encerrar a conta limpam a sessão local (o servidor derrubou as sessões)', () => {
+      const limpar = spyOn(service, 'limparStorage').and.callThrough();
+      service.alterarSenha('Velha@12345', 'Nova@12345', 'Nova@12345').subscribe();
+      httpMock.expectOne('/api/auth/alterar-senha').flush(null, { status: 204, statusText: 'No Content' });
+      expect(limpar).toHaveBeenCalledTimes(1);
+
+      service.encerrarConta('Senha@12345').subscribe();
+      const req = httpMock.expectOne('/api/auth/encerrar-conta');
+      expect(req.request.body).toEqual({ senha: 'Senha@12345' });
+      req.flush(null, { status: 204, statusText: 'No Content' });
+      expect(limpar).toHaveBeenCalledTimes(2);
+    });
+
+    it('endpoints de 2FA: status, iniciar, ativar e desativar', () => {
+      service.statusDoisFatores().subscribe();
+      expect(httpMock.expectOne('/api/auth/2fa').request.method).toBe('GET');
+      httpMock.match('/api/auth/2fa').forEach(r => r.flush({ habilitado: false, codigosDeRecuperacaoRestantes: 0 }));
+
+      service.iniciarDoisFatores().subscribe();
+      httpMock.expectOne('/api/auth/2fa/iniciar').flush({ chave: 'k', uri: 'u' });
+
+      service.ativarDoisFatores('123456').subscribe();
+      const at = httpMock.expectOne('/api/auth/2fa/ativar');
+      expect(at.request.body).toEqual({ codigo: '123456' });
+      at.flush({ codigos: [] });
+
+      service.desativarDoisFatores('Senha@12345', '123456').subscribe();
+      const de = httpMock.expectOne('/api/auth/2fa/desativar');
+      expect(de.request.body).toEqual({ senha: 'Senha@12345', codigo: '123456' });
+      de.flush(null, { status: 204, statusText: 'No Content' });
+    });
+  });
 });

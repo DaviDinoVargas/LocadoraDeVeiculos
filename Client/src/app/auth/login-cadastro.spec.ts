@@ -70,7 +70,7 @@ describe('Login e cadastro — sem Angular Material, com formulário à direita'
       configurar();
       auth.autenticar.and.returnValue(throwError(() => ({ status: 401 })));
       const fixture = criar();
-      fixture.componentInstance.form.setValue({ email: 'a@b.com', senha: 'errada' });
+      fixture.componentInstance.form.setValue({ email: 'a@b.com', senha: 'errada', codigo: '' });
 
       fixture.componentInstance.entrar();
       fixture.detectChanges();
@@ -84,7 +84,7 @@ describe('Login e cadastro — sem Angular Material, com formulário à direita'
       configurar();
       auth.autenticar.and.returnValue(of({ accessToken: 't', expires: '' }));
       const fixture = criar();
-      fixture.componentInstance.form.setValue({ email: 'a@b.com', senha: '123456' });
+      fixture.componentInstance.form.setValue({ email: 'a@b.com', senha: '123456', codigo: '' });
 
       fixture.componentInstance.entrar();
 

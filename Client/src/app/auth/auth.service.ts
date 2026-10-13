@@ -18,6 +18,23 @@ export interface AccessToken {
   usuario?: Usuario;
 }
 
+export interface StatusDoisFatores {
+  habilitado: boolean;
+  codigosDeRecuperacaoRestantes: number;
+}
+
+export interface ConfiguracaoDoisFatores {
+  chave: string;
+  uri: string;
+}
+
+// Termo que o usuário precisa aceitar antes de cadastrar o rosto (texto e versão vêm do servidor).
+export interface TermoDeConsentimento {
+  versao: string;
+  texto: string;
+  retencaoEmMeses: number;
+}
+
 export interface Usuario {
   id: string;
   nomeCompleto: string;
@@ -40,8 +57,8 @@ export class AuthService {
   private readonly http = inject(HttpClient);
 
   /** LOGIN */
-  autenticar(email: string, senha: string): Observable<AccessToken> {
-    return this.http.post<RespostaToken>(`${this.baseUrl}/autenticar`, { email, senha }, { withCredentials: true })
+  autenticar(email: string, senha: string, codigoAutenticador?: string): Observable<AccessToken> {
+    return this.http.post<RespostaToken>(`${this.baseUrl}/autenticar`, { email, senha, ...(codigoAutenticador ? { codigoAutenticador } : {}) }, { withCredentials: true })
       .pipe(
         map(response => this.mapTokenResponse(response)),
         catchError(err => throwError(() => err))
@@ -58,18 +75,23 @@ export class AuthService {
   }
 
   /** LOGIN VIA RECONHECIMENTO FACIAL */
-  entrarComRosto(email: string, imagemBase64: string): Observable<AccessToken> {
-    return this.http.post<RespostaToken>(`${this.baseUrl}/entrar-facial`, { email, imagemBase64 }, { withCredentials: true })
+  entrarComRosto(email: string, imagemBase64: string, codigoAutenticador?: string): Observable<AccessToken> {
+    return this.http.post<RespostaToken>(`${this.baseUrl}/entrar-facial`, { email, imagemBase64, ...(codigoAutenticador ? { codigoAutenticador } : {}) }, { withCredentials: true })
       .pipe(
         map(response => this.mapTokenResponse(response)),
         catchError(err => throwError(() => err))
       );
   }
 
-  /** CADASTRA O ROSTO DO USUÁRIO JÁ AUTENTICADO */
-  cadastrarRosto(imagemBase64: string): Observable<{ amostras: number }> {
+  /** TERMO DE CONSENTIMENTO DO ROSTO (texto e versão vêm do servidor: o aceite vale para a versão exibida) */
+  obterTermoDeConsentimento(): Observable<TermoDeConsentimento> {
+    return this.http.get<TermoDeConsentimento>(`${this.baseUrl}/rosto/consentimento`);
+  }
+
+  /** CADASTRA O ROSTO DO USUÁRIO JÁ AUTENTICADO (só vale com o aceite explícito da versão atual do termo) */
+  cadastrarRosto(imagemBase64: string, versaoDoTexto: string): Observable<{ amostras: number }> {
     const token = this.getAccessToken();
-    return this.http.post<{ amostras: number }>(`${this.baseUrl}/rosto`, { imagemBase64 }, {
+    return this.http.post<{ amostras: number }>(`${this.baseUrl}/rosto`, { imagemBase64, consentimento: true, versaoDoTexto }, {
       headers: token ? { Authorization: `Bearer ${token}` } : undefined
     });
   }
@@ -95,6 +117,51 @@ export class AuthService {
    */
   private cabecalhos(token: string | null): Record<string, string> {
     return { 'X-Locadora-Client': 'web', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+  }
+
+  /** A tela já mostra o erro no próprio formulário: sem toast repetido do interceptor. */
+  private semToast(): HttpContext {
+    return new HttpContext().set(SILENCIAR_ERRO, true);
+  }
+
+  // ---- Conta e segurança (S1, S18, S27). Trocar a senha e encerrar a conta derrubam TODAS as sessões no servidor:
+  // aqui a sessão local também é limpa e a tela leva ao login.
+
+  /** "Esqueci minha senha": a resposta é igual para qualquer e-mail (o servidor nunca diz se a conta existe). */
+  solicitarRecuperacaoDeSenha(email: string): Observable<unknown> {
+    return this.http.post(`${this.baseUrl}/esqueci-senha`, { email }, { context: this.semToast() });
+  }
+
+  /** Define a nova senha com o token que chegou por e-mail. */
+  redefinirSenha(email: string, token: string, novaSenha: string, confirmarNovaSenha: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/redefinir-senha`, { email, token, novaSenha, confirmarNovaSenha }, { context: this.semToast() });
+  }
+
+  alterarSenha(senhaAtual: string, novaSenha: string, confirmarNovaSenha: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/alterar-senha`, { senhaAtual, novaSenha, confirmarNovaSenha }, { withCredentials: true })
+      .pipe(map(() => this.limparStorage()));
+  }
+
+  statusDoisFatores(): Observable<StatusDoisFatores> {
+    return this.http.get<StatusDoisFatores>(`${this.baseUrl}/2fa`);
+  }
+
+  iniciarDoisFatores(): Observable<ConfiguracaoDoisFatores> {
+    return this.http.post<ConfiguracaoDoisFatores>(`${this.baseUrl}/2fa/iniciar`, {});
+  }
+
+  /** Confirma o primeiro código do aplicativo e devolve os códigos de recuperação (aparecem só desta vez). */
+  ativarDoisFatores(codigo: string): Observable<{ codigos: string[] }> {
+    return this.http.post<{ codigos: string[] }>(`${this.baseUrl}/2fa/ativar`, { codigo });
+  }
+
+  desativarDoisFatores(senha: string, codigo: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/2fa/desativar`, { senha, codigo });
+  }
+
+  encerrarConta(senha: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/encerrar-conta`, { senha }, { withCredentials: true })
+      .pipe(map(() => this.limparStorage()));
   }
 
   /** ROTACIONAR TOKEN */

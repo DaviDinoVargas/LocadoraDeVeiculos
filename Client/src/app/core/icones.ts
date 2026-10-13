@@ -9,7 +9,8 @@ import {
   lucideScanLine, lucideSearch, lucideSend, lucideSettings, lucideSlidersHorizontal, lucideSun, lucideTag,
   lucideTrash2, lucideTriangleAlert, lucideTrophy, lucideUser, lucideUserCog, lucideUsers, lucideVideo, lucideVideoOff,
   lucideWifiOff, lucideX, lucideColumns3, lucideRows3, lucideShieldAlert, lucideMaximize, lucideCamera,
-  lucideIdCard, lucideLayers, lucideUndo2, lucideBriefcase, lucideRoute, lucideSparkles
+  lucideIdCard, lucideLayers, lucideUndo2, lucideBriefcase, lucideRoute, lucideSparkles,
+  lucideKeyRound, lucideShieldCheck, lucideSmartphone, lucideClipboardList, lucideMail, lucideCopy, lucideUserX
 } from '@ng-icons/lucide';
 
 /** Único conjunto de ícones do app (Lucide). Registrado uma vez em app.config via provideIcons. */
@@ -24,5 +25,6 @@ export const ICONES = {
   lucideScanLine, lucideSearch, lucideSend, lucideSettings, lucideSlidersHorizontal, lucideSun, lucideTag,
   lucideTrash2, lucideTriangleAlert, lucideTrophy, lucideUser, lucideUserCog, lucideUsers, lucideVideo, lucideVideoOff,
   lucideWifiOff, lucideX, lucideColumns3, lucideRows3, lucideShieldAlert, lucideMaximize, lucideCamera,
-  lucideIdCard, lucideLayers, lucideUndo2, lucideBriefcase, lucideRoute, lucideSparkles
+  lucideIdCard, lucideLayers, lucideUndo2, lucideBriefcase, lucideRoute, lucideSparkles,
+  lucideKeyRound, lucideShieldCheck, lucideSmartphone, lucideClipboardList, lucideMail, lucideCopy, lucideUserX
 };

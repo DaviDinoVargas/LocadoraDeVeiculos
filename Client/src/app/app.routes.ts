@@ -29,7 +29,13 @@ export const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
   { path: 'login', loadComponent: () => import('./auth/login.component').then(m => m.LoginComponent), title: 'Entrar' },
   { path: 'registrar', loadComponent: () => import('./auth/register.component').then(m => m.RegisterComponent), title: 'Criar conta' },
+  { path: 'esqueci-senha', loadComponent: () => import('./auth/esqueci-senha.component').then(m => m.EsqueciSenhaComponent), title: 'Esqueci minha senha' },
+  { path: 'redefinir-senha', loadComponent: () => import('./auth/redefinir-senha.component').then(m => m.RedefinirSenhaComponent), title: 'Nova senha' },
   protegida('home', () => import('./Components/home/home.component').then(m => m.HomeComponent), EMPRESA_E_FUNCIONARIO, { title: 'Início' }),
+
+  // Conta do próprio usuário (senha, 2FA, encerrar conta) e trilha de auditoria da empresa
+  protegida('conta', () => import('./Components/conta/conta.component').then(m => m.ContaComponent), EMPRESA_E_FUNCIONARIO, { title: 'Minha conta' }),
+  protegida('auditoria', () => import('./Components/auditoria/auditoria-list.component').then(m => m.AuditoriaListComponent), SOMENTE_EMPRESA, { title: 'Auditoria' }),
 
   // Funcionários
   protegida('funcionarios', () => import('./Components/funcionarios/funcionarios-list.component').then(m => m.FuncionariosListComponent), SOMENTE_EMPRESA, { title: 'Funcionários' }),

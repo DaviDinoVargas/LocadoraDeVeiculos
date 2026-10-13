@@ -3,7 +3,7 @@ import { NgIcon } from '@ng-icons/core';
 import { HlmAlertImports } from '@spartan-ng/helm/alert';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { filter } from 'rxjs/operators';
-import { AuthService } from '../../auth/auth.service';
+import { AuthService, TermoDeConsentimento } from '../../auth/auth.service';
 import { mensagensDeErro } from '../../core/api-error';
 import { ConfirmacaoService } from '../../core/confirmacao.service';
 import { PageHeaderComponent } from '../../shared/layout/page-header.component';
@@ -28,6 +28,9 @@ export class VerificacaoFacialComponent implements OnInit, OnDestroy {
   private readonly webcam = inject(WebcamCaptureService);
 
   readonly cadastrado = signal(false);
+  /** Termo de consentimento do servidor: o cadastro só habilita depois que o usuário o lê e marca o aceite. */
+  readonly termo = signal<TermoDeConsentimento | null>(null);
+  readonly aceitouTermo = signal(false);
   readonly estadoCamera = signal<EstadoCamera>('parada');
   readonly processando = signal(false);
   readonly mensagem = signal('');
@@ -43,6 +46,14 @@ export class VerificacaoFacialComponent implements OnInit, OnDestroy {
       next: resp => this.cadastrado.set(resp.cadastrado),
       error: () => this.mostrarMensagem('Não foi possível consultar o cadastro do rosto agora.', 'erro')
     });
+    this.auth.obterTermoDeConsentimento().subscribe({
+      next: termo => this.termo.set(termo),
+      error: () => this.mostrarMensagem('Não foi possível carregar o termo de consentimento. O cadastro do rosto fica indisponível.', 'erro')
+    });
+  }
+
+  alternarAceite(marcado: boolean): void {
+    this.aceitouTermo.set(marcado);
   }
 
   ngOnDestroy(): void {
@@ -79,7 +90,8 @@ export class VerificacaoFacialComponent implements OnInit, OnDestroy {
   }
 
   cadastrarRosto(): void {
-    if (this.estadoCamera() !== 'ativa' || this.processando()) {
+    const termo = this.termo();
+    if (this.estadoCamera() !== 'ativa' || this.processando() || !termo || !this.aceitouTermo()) {
       return;
     }
     const imagem = this.capturarFrameBase64();
@@ -87,7 +99,7 @@ export class VerificacaoFacialComponent implements OnInit, OnDestroy {
       return;
     }
     this.processando.set(true);
-    this.auth.cadastrarRosto(imagem).subscribe({
+    this.auth.cadastrarRosto(imagem, termo.versao).subscribe({
       next: resp => {
         this.processando.set(false);
         this.cadastrado.set(true);

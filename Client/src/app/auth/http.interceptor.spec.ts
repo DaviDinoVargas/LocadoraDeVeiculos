@@ -83,4 +83,13 @@ describe('HttpErrorInterceptor — mensagens de erro', () => {
     expect(snack.erro).not.toHaveBeenCalled();
     expect(recebeu).toBeTrue();
   });
+
+  it('428 (falta o código do segundo fator) não gera snackbar: a tela de login pede o código', () => {
+    let recebeu = false;
+    http.get('/api/x').subscribe({ error: () => (recebeu = true) });
+    backend.expectOne('/api/x').flush(['Informe o código'], { status: 428, statusText: 'erro' });
+
+    expect(snack.erro).not.toHaveBeenCalled();
+    expect(recebeu).toBeTrue();
+  });
 });

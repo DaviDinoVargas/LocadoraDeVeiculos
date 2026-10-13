@@ -16,6 +16,11 @@ export const HttpErrorInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
+      // 428 = a senha estava certa e falta o código do segundo fator: a tela de login pede o código, sem toast de erro.
+      if (error.status === 428) {
+        return throwError(() => error);
+      }
+
       let errorMessage = 'Erro na requisição';
 
       if (error.error instanceof ErrorEvent) {

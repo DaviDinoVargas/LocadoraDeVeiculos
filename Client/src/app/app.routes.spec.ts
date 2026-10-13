@@ -17,14 +17,15 @@ describe('app.routes — papéis por rota', () => {
 
   it('rotas de gestão (API só-Empresa) não ficam abertas ao Funcionario', () => {
     for (const path of ['funcionarios', 'planos-cobranca', 'grupoveiculos', 'parceiros',
-      'cupons', 'desafios-cupom', 'configuracoes/combustivel', 'veiculos/new', 'veiculos/:id/edit']) {
+      'cupons', 'desafios-cupom', 'configuracoes/combustivel', 'veiculos/new', 'veiculos/:id/edit',
+      'taxas-servicos/new', 'taxas-servicos/:id/edit', 'auditoria']) {
       expect(papeisDe(path)).withContext(path).toEqual(SOMENTE_EMPRESA);
     }
   });
 
   it('rotas operacionais continuam liberadas aos dois papéis', () => {
     for (const path of ['home', 'veiculos', 'clientes', 'condutores', 'alugueis',
-      'devolucoes', 'taxas-servicos', 'camera-monitor', 'verificacao-facial']) {
+      'devolucoes', 'taxas-servicos', 'camera-monitor', 'verificacao-facial', 'conta']) {
       expect(papeisDe(path)).withContext(path).toEqual(EMPRESA_E_FUNCIONARIO);
     }
   });

@@ -39,8 +39,12 @@ export class LoginComponent implements OnInit, OnDestroy {
 
   readonly form = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
-    senha: ['', Validators.required]
+    senha: ['', Validators.required],
+    codigo: ['']
   });
+
+  /** A senha (ou o rosto) estava certa e a conta tem 2FA: o servidor respondeu 428 e a tela pede o código do aplicativo. */
+  readonly pedirCodigo = signal(false);
 
   readonly returnUrl: string = this.route.snapshot.queryParams['returnUrl'] || '/home';
   readonly carregando = signal(false);
@@ -105,7 +109,8 @@ export class LoginComponent implements OnInit, OnDestroy {
 
     this.carregando.set(true);
     this.erro.set('');
-    this.auth.entrarComRosto(email, imagem).subscribe({
+    const codigo = this.form.controls.codigo.value.trim();
+    this.auth.entrarComRosto(email, imagem, codigo || undefined).subscribe({
       next: () => {
         this.carregando.set(false);
         this.webcam.desligar();
@@ -114,6 +119,11 @@ export class LoginComponent implements OnInit, OnDestroy {
       },
       error: err => {
         this.carregando.set(false);
+        if (err.status === 428) {
+          this.pedirCodigo.set(true);
+          this.erro.set('Sua conta usa verificação em duas etapas: informe o código do aplicativo autenticador e capture de novo.');
+          return;
+        }
         this.erro.set(
           err.status === 422
             ? 'Nenhum rosto detectado. Aproxime-se da câmera e tente novamente.'
@@ -131,9 +141,9 @@ export class LoginComponent implements OnInit, OnDestroy {
 
     this.carregando.set(true);
     this.erro.set('');
-    const { email, senha } = this.form.getRawValue();
+    const { email, senha, codigo } = this.form.getRawValue();
 
-    this.auth.autenticar(email, senha).subscribe({
+    this.auth.autenticar(email, senha, codigo.trim() || undefined).subscribe({
       next: () => {
         this.carregando.set(false);
         this.notificacao.sucesso('Login realizado com sucesso');
@@ -141,7 +151,11 @@ export class LoginComponent implements OnInit, OnDestroy {
       },
       error: err => {
         this.carregando.set(false);
-        if (err.status === 401) {
+        if (err.status === 428) {
+          // Senha certa, conta com 2FA: pede o código sem dizer nada além disso.
+          this.pedirCodigo.set(true);
+          this.erro.set('Informe o código do aplicativo autenticador (ou um código de recuperação).');
+        } else if (err.status === 401) {
           this.erro.set('E-mail ou senha incorretos.');
         } else if (err.status === 0) {
           this.erro.set('Não foi possível conectar ao servidor. Verifique sua conexão.');

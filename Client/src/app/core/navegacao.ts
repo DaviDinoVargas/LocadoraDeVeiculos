@@ -90,6 +90,7 @@ export const MENU: readonly GrupoMenu[] = [
   {
     rotulo: 'Configurações',
     itens: [
+      { rotulo: 'Auditoria', icone: 'lucideClipboardList', caminho: '/auditoria', roles: SOMENTE_EMPRESA },
       {
         rotulo: 'Configurações',
         icone: 'lucideSettings',
