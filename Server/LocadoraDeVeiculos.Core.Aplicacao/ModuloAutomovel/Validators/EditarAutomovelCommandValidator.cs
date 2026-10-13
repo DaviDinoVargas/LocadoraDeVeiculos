@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using LocadoraDeVeiculos.Core.Aplicacao.Compartilhado;
 using LocadoraDeVeiculos.Core.Aplicacao.ModuloAutomovel.Commands;
 using System;
 
@@ -40,6 +41,9 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAutomovel.Validators
                 .NotEmpty().WithMessage("O campo {PropertyName} é obrigatório.")
                 .InclusiveBetween(1900, DateTime.Now.Year + 1)
                 .WithMessage("O campo {PropertyName} deve estar entre {From} e {To}.");
+
+            RuleFor(p => p.Foto)
+                .FotoDoVeiculoValida();
 
             RuleFor(p => p.GrupoAutomovelId)
                 .NotEmpty().WithMessage("O campo {PropertyName} é obrigatório.");
