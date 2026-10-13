@@ -375,3 +375,9 @@ FodyWeavers.xsd
 *.pth
 MachineLeaning/**/crops/
 MachineLeaning/FaceAuth/data/
+
+# Dado biométrico (landmarks faciais): NUNCA versionar, em nenhuma pasta. Desde a S1 ele vive cifrado no
+# banco; qualquer faces.json que apareça é resto da migração e deve ser apagado, não commitado.
+faces.json
+**/faces*.json
+*.faces
