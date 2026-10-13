@@ -157,6 +157,7 @@ def _app():
 
 
 HEADERS = {'X-Internal-Token': settings.INTERNAL_TOKEN}
+VETOR_FALSO = [1.0] + [0.0] * 127
 
 
 @pytest.fixture
@@ -164,6 +165,7 @@ def rosto_falso(monkeypatch):
     lms = [{'x': 0.3 + 0.4 * (i % 20) / 20, 'y': 0.2 + 0.6 * (i // 20) / 24, 'z': 0.0} for i in range(468)]
     monkeypatch.setattr(face, 'extrair_landmarks_de_imagem', lambda imagem: lms)
     monkeypatch.setattr(face, '_decodificar_imagem', lambda b64: np.zeros((480, 640, 3), dtype=np.uint8))
+    monkeypatch.setattr(face, '_vetor_do_rosto', lambda imagem, landmarks: VETOR_FALSO)
     return lms
 
 
@@ -192,12 +194,12 @@ def test_rosto_vivo_passa_e_traz_a_pontuacao(monkeypatch, rosto_falso):
     corpo = _app().post('/face/landmarks', json={'imageBase64': 'x'}, headers=HEADERS).json()
 
     assert corpo['provaDeVidaAtiva'] is True and corpo['vivo'] is True and corpo['pontuacaoDeVida'] == 0.93
-    assert len(corpo['landmarks']) == 468 * 3
+    assert corpo['vetor'] == VETOR_FALSO
 
 
 def test_foto_de_foto_nao_confirma_identidade_mesmo_com_a_geometria_igual(monkeypatch, rosto_falso):
     monkeypatch.setattr(settings, 'ANTISPOOF_ATIVO', True)
-    amostra = face.achatar_landmarks(face.normalizar_landmarks(rosto_falso))
+    amostra = VETOR_FALSO
 
     monkeypatch.setattr(face, '_obter_prova_de_vida', lambda: _ProvaFalsa(True, 0.9))
     real = _app().post('/face/compare', json={'imageBase64': 'x', 'samples': [amostra]}, headers=HEADERS).json()
@@ -212,7 +214,7 @@ def test_foto_de_foto_nao_confirma_identidade_mesmo_com_a_geometria_igual(monkey
 def test_sem_os_pesos_o_modulo_recusa_com_503_e_nao_libera(monkeypatch, rosto_falso):
     monkeypatch.setattr(settings, 'ANTISPOOF_ATIVO', True)
     monkeypatch.setattr(face, '_obter_prova_de_vida', lambda: _ProvaFalsa(True, erro=ProvaDeVidaIndisponivel('ausente')))
-    amostra = face.achatar_landmarks(face.normalizar_landmarks(rosto_falso))
+    amostra = VETOR_FALSO
 
     r1 = _app().post('/face/landmarks', json={'imageBase64': 'x'}, headers=HEADERS)
     r2 = _app().post('/face/compare', json={'imageBase64': 'x', 'samples': [amostra]}, headers=HEADERS)

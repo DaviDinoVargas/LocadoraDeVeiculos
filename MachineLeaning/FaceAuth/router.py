@@ -1,4 +1,5 @@
 import base64
+from typing import Annotated
 
 import cv2
 import numpy as np
@@ -9,7 +10,8 @@ from shared import limites, settings
 from shared.auth import exigir_token_interno
 
 from .antispoof.liveness import ProvaDeVida, ProvaDeVidaIndisponivel, caixa_dos_landmarks
-from .face_recognition import comparar_faces, extrair_landmarks_de_imagem, normalizar_landmarks
+from .embedding import TAMANHO_DO_VETOR, ReconhecedorFacial, ReconhecimentoIndisponivel, similaridade_cosseno
+from .face_recognition import extrair_landmarks_de_imagem
 
 # Todo o módulo facial é só para o backend .NET (servidor-a-servidor): exige o
 # X-Internal-Token (segredo compartilhado, ver shared/auth.py). O navegador nunca
@@ -17,24 +19,21 @@ from .face_recognition import comparar_faces, extrair_landmarks_de_imagem, norma
 # descobre quem é o usuário logado e só então chama este serviço.
 #
 # O serviço NÃO GUARDA NADA: dado biométrico fica cifrado no banco da Web API (S1).
-# Aqui só se calcula: imagem -> landmarks (cadastro) e imagem x amostras -> match (verificação).
-# Nada disso é registrado em log.
-# O limite protege a CPU do ML (MediaPipe) mesmo de quem tem o token interno; chave = IP de origem (a Web API).
+# Aqui só se calcula: imagem -> vetor do rosto (cadastro) e imagem x vetores -> match (verificação).
+# O vetor é um embedding de 128 números (SFace, S33); a comparação é por cosseno. Nada disso é registrado em log.
+# O limite protege a CPU do ML (MediaPipe + modelos) mesmo de quem tem o token interno; chave = IP de origem (a Web API).
 router = APIRouter(prefix="/face", tags=["face"],
                    dependencies=[Depends(exigir_token_interno), Depends(limites.limitar("face", maximo=120, janela_s=60))])
-
-# Uma única amostra combinando já é aceita (modo "ou": basta bater com qualquer uma das
-# cadastradas), então o valor abaixo é só o piso de similaridade por amostra.
-LIMIAR_DISTANCIA = 0.02
-SIMILARIDADE_MINIMA = 0.9
 
 # Teto defensivo: a Web API guarda no máximo 3 amostras por pessoa.
 MAXIMO_DE_AMOSTRAS = 10
 
-
 # Uma foto de webcam (640x480, JPEG) tem ~100 KB; 4 milhões de caracteres de base64 (~3 MB) já é folga
 # de sobra e impede que o corpo da requisição vire um jeito de esgotar a memória (S9).
 MAXIMO_BASE64_CHARS = 4_000_000
+
+# Cada amostra tem 128 números; o teto folgado evita que uma amostra gigante vire consumo de memória.
+MAXIMO_DE_NUMEROS_POR_AMOSTRA = 2048
 
 
 class ImagemFacialRequest(BaseModel):
@@ -43,18 +42,7 @@ class ImagemFacialRequest(BaseModel):
 
 class CompararRequest(BaseModel):
     imageBase64: str = Field(max_length=MAXIMO_BASE64_CHARS)
-    samples: list[list[float]] = Field(max_length=MAXIMO_DE_AMOSTRAS)
-
-
-def achatar_landmarks(landmarks) -> list[float]:
-    """[{x,y,z}, ...] -> [x0,y0,z0,x1,y1,z1,...]: formato simples de guardar cifrado na Web API."""
-    return [float(lm[eixo]) for lm in landmarks for eixo in ('x', 'y', 'z')]
-
-
-def desachatar_landmarks(valores: list[float]):
-    if len(valores) % 3 != 0:
-        return []
-    return [{'x': valores[i], 'y': valores[i + 1], 'z': valores[i + 2]} for i in range(0, len(valores), 3)]
+    samples: list[Annotated[list[float], Field(max_length=MAXIMO_DE_NUMEROS_POR_AMOSTRA)]] = Field(max_length=MAXIMO_DE_AMOSTRAS)
 
 
 def _decodificar_imagem(image_base64: str):
@@ -72,6 +60,7 @@ def _decodificar_imagem(image_base64: str):
 
 
 _prova_de_vida: ProvaDeVida | None = None
+_reconhecedor: ReconhecedorFacial | None = None
 
 
 def _obter_prova_de_vida() -> ProvaDeVida:
@@ -79,6 +68,13 @@ def _obter_prova_de_vida() -> ProvaDeVida:
     if _prova_de_vida is None:
         _prova_de_vida = ProvaDeVida(settings.ANTISPOOF_DIR, settings.ANTISPOOF_LIMIAR)
     return _prova_de_vida
+
+
+def _obter_reconhecedor() -> ReconhecedorFacial:
+    global _reconhecedor
+    if _reconhecedor is None:
+        _reconhecedor = ReconhecedorFacial(settings.FACE_MODEL_DIR)
+    return _reconhecedor
 
 
 def _avaliar_vida(imagem, landmarks) -> dict:
@@ -95,42 +91,43 @@ def _avaliar_vida(imagem, landmarks) -> dict:
     return {"provaDeVidaAtiva": True, "vivo": resultado.vivo, "pontuacaoDeVida": resultado.pontuacao}
 
 
-def _landmarks_normalizados(image_base64: str):
+def _vetor_do_rosto(imagem, landmarks) -> list[float]:
+    """Embedding de 128 números do rosto. Sem o modelo: 503, nunca cai para um método mais fraco."""
+    try:
+        return _obter_reconhecedor().vetor(imagem, landmarks)
+    except ReconhecimentoIndisponivel:
+        raise HTTPException(status_code=503, detail="Reconhecimento facial indisponível")
+
+
+def _analisar(image_base64: str):
     imagem = _decodificar_imagem(image_base64)
     landmarks = extrair_landmarks_de_imagem(imagem)
     if landmarks is None:
         raise HTTPException(status_code=422, detail="Nenhum rosto detectado na imagem")
-    return normalizar_landmarks(landmarks), _avaliar_vida(imagem, landmarks)
+    return _vetor_do_rosto(imagem, landmarks), _avaliar_vida(imagem, landmarks)
 
 
 @router.post("/landmarks")
-def extrair_landmarks(request: ImagemFacialRequest):
-    """Extrai os landmarks normalizados (MediaPipe FaceMesh) de uma foto, para a Web API cifrar e
-    guardar. Só pode ser chamado pelo backend .NET (token interno no router)."""
-    normalizados, vida = _landmarks_normalizados(request.imageBase64)
-    return {"landmarks": achatar_landmarks(normalizados), **vida}
+def extrair_vetor(request: ImagemFacialRequest):
+    """Calcula o vetor (embedding de 128 números) do rosto da foto, para a Web API cifrar e guardar. O nome da rota é
+    histórico; o corpo devolve `vetor`. Só pode ser chamado pelo backend .NET (token interno no router)."""
+    vetor, vida = _analisar(request.imageBase64)
+    return {"vetor": vetor, **vida}
 
 
 @router.post("/compare")
 def comparar_com_amostras(request: CompararRequest):
-    """Compara a foto enviada com as amostras que a Web API leu do banco. As amostras existem em
-    memória só durante esta chamada."""
+    """Compara a foto enviada com os vetores que a Web API leu do banco (cosseno; basta bater com um). Os vetores existem em
+    memória só durante esta chamada. Amostras que não têm 128 números (formato antigo) são ignoradas."""
     if not request.samples:
         raise HTTPException(status_code=400, detail="Nenhuma amostra para comparar")
 
-    normalizados, vida = _landmarks_normalizados(request.imageBase64)
+    vetor, vida = _analisar(request.imageBase64)
 
-    melhor_similaridade = 0.0
-    bateu = False
-    for amostra in request.samples:
-        match, similaridade = comparar_faces(
-            normalizados, desachatar_landmarks(amostra),
-            threshold=LIMIAR_DISTANCIA,
-            similaridade_minima=SIMILARIDADE_MINIMA,
-        )
-        melhor_similaridade = max(melhor_similaridade, similaridade)
-        if match:
-            bateu = True
+    similaridades = [similaridade_cosseno(vetor, amostra) for amostra in request.samples if len(amostra) == TAMANHO_DO_VETOR]
+    melhor = max(similaridades, default=0.0)
 
-    # Foto que não parece uma pessoa de verdade nunca confirma identidade, mesmo que a geometria bata.
-    return {"match": bateu and vida["vivo"], "confidence": round(melhor_similaridade, 4), **vida}
+    # Foto que não parece uma pessoa de verdade nunca confirma identidade, mesmo que o vetor bata.
+    bateu = melhor >= settings.FACE_COSINE_THRESHOLD and vida["vivo"]
+
+    return {"match": bool(bateu), "confidence": round(max(melhor, 0.0), 4), **vida}

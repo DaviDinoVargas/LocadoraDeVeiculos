@@ -189,7 +189,7 @@ public sealed class FacialAuthClientTests
     [TestMethod]
     public async Task Cadastrar_PedeOsLandmarksAoMlComTokenInternoEGuardaNoArmazenamento()
     {
-        var handler = new HandlerFalso(HttpStatusCode.OK, "{\"landmarks\":[0.5,0.25,0.75]}");
+        var handler = new HandlerFalso(HttpStatusCode.OK, "{\"vetor\":[0.5,0.25,0.75]}");
         var armazenamento = new ArmazenamentoEmMemoria();
 
         var resultado = await CriarCliente(handler, armazenamento).CadastrarAsync("usuario:a@b.com", "img", CancellationToken.None);
@@ -320,7 +320,7 @@ public sealed class FacialAuthClientTests
     public async Task Cadastrar_FotoQueNaoParecePessoaReal_NaoGuardaNada_EAvisaOMotivo()
     {
         var armazenamento = new ArmazenamentoEmMemoria();
-        var handler = new HandlerFalso(HttpStatusCode.OK, "{\"landmarks\":[0.5,0.25],\"provaDeVidaAtiva\":true,\"vivo\":false,\"pontuacaoDeVida\":0.1}");
+        var handler = new HandlerFalso(HttpStatusCode.OK, "{\"vetor\":[0.5,0.25],\"provaDeVidaAtiva\":true,\"vivo\":false,\"pontuacaoDeVida\":0.1}");
 
         var resultado = await CriarCliente(handler, armazenamento, exigirProvaDeVida: true).CadastrarAsync("usuario:a@b.com", "img", CancellationToken.None);
 
@@ -333,7 +333,7 @@ public sealed class FacialAuthClientTests
     public async Task Cadastrar_PessoaReal_Guarda()
     {
         var armazenamento = new ArmazenamentoEmMemoria();
-        var handler = new HandlerFalso(HttpStatusCode.OK, "{\"landmarks\":[0.5,0.25],\"provaDeVidaAtiva\":true,\"vivo\":true,\"pontuacaoDeVida\":0.9}");
+        var handler = new HandlerFalso(HttpStatusCode.OK, "{\"vetor\":[0.5,0.25],\"provaDeVidaAtiva\":true,\"vivo\":true,\"pontuacaoDeVida\":0.9}");
 
         var resultado = await CriarCliente(handler, armazenamento, exigirProvaDeVida: true).CadastrarAsync("usuario:a@b.com", "img", CancellationToken.None);
 

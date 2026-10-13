@@ -53,14 +53,6 @@ namespace LocadoraDeVeiculos.WebApi
 
             var app = builder.Build();
 
-            // Comando de manutenção (S1): importa o antigo faces.json para o banco e sai, sem subir o servidor.
-            if (ImportadorDeFaces.FoiSolicitado(args))
-            {
-                app.AplicarMigracoesOrm();
-
-                return ImportadorDeFaces.ExecutarAsync(app.Services, args, Console.Out).GetAwaiter().GetResult();
-            }
-
             // Primeiro de tudo: troca o IP do proxy pelo do cliente (só se o proxy estiver em TRUSTED_PROXIES).
             app.UseForwardedHeaders();
             app.UseCabecalhosDeSeguranca(app.Environment.IsDevelopment());

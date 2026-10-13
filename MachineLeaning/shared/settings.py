@@ -72,3 +72,8 @@ CORS_ORIGINS = [
 ANTISPOOF_ATIVO = os.environ.get('ANTISPOOF_ENABLED', 'true').strip().lower() not in ('0', 'false', 'no', 'off')
 ANTISPOOF_DIR = os.environ.get('ANTISPOOF_DIR') or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'FaceAuth', 'modelos')
 ANTISPOOF_LIMIAR = float(os.environ.get('ANTISPOOF_THRESHOLD', '0.5'))
+
+# Reconhecimento facial por embedding (S33): modelo SFace e limiar de cosseno. O padrão sai da medição no LFW (docs/S33_EMBEDDING_FACIAL.md).
+FACE_MODEL_DIR = os.environ.get('FACE_MODEL_DIR') or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'FaceAuth', 'modelos')
+FACE_COSINE_THRESHOLD = float(os.environ.get('FACE_COSINE_THRESHOLD', '0.363'))
+

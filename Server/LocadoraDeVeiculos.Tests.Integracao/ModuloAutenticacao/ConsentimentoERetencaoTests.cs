@@ -1,3 +1,4 @@
+using static LocadoraDeVeiculos.Tests.Integracao.ModuloAutenticacao.VetoresDeTeste;
 using LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Commands;
 using Moq;
 using LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Handlers;
@@ -84,7 +85,7 @@ public sealed class ConsentimentoERetencaoTests
     [TestMethod]
     public async Task Consentimento_FicaRegistradoComAVersao_ERevogarOApagarJuntoComORosto()
     {
-        await _armazenamento.SalvarAsync("usuario:a@b.com", [0.1, 0.2], CancellationToken.None);
+        await _armazenamento.SalvarAsync("usuario:a@b.com", V(0.1, 0.2), CancellationToken.None);
         await _armazenamento.RegistrarConsentimentoAsync("usuario:A@b.com", "2026-10-v1", CancellationToken.None);
 
         Assert.AreEqual("2026-10-v1", await _armazenamento.ObterVersaoDoConsentimentoAsync("usuario:a@b.com", CancellationToken.None));
@@ -101,8 +102,8 @@ public sealed class ConsentimentoERetencaoTests
     [TestMethod]
     public async Task RegistrarUso_RenovaAContagemDeRetencaoDeTodasAsAmostras()
     {
-        await _armazenamento.SalvarAsync("usuario:a@b.com", [1], CancellationToken.None);
-        await _armazenamento.SalvarAsync("usuario:a@b.com", [2], CancellationToken.None);
+        await _armazenamento.SalvarAsync("usuario:a@b.com", V(1), CancellationToken.None);
+        await _armazenamento.SalvarAsync("usuario:a@b.com", V(2), CancellationToken.None);
         await DefinirUltimoUsoAsync("usuario:a@b.com", DateTime.UtcNow.AddDays(-300));
 
         await _armazenamento.RegistrarUsoAsync("usuario:a@b.com", CancellationToken.None);
@@ -115,9 +116,9 @@ public sealed class ConsentimentoERetencaoTests
     [TestMethod]
     public async Task Limpeza_ApagaORostoSemUsoHaMaisDeUmAno_ComOConsentimento_EPreservaQuemUsouRecentemente()
     {
-        await _armazenamento.SalvarAsync("usuario:velho@b.com", [1], CancellationToken.None);
+        await _armazenamento.SalvarAsync("usuario:velho@b.com", V(1), CancellationToken.None);
         await _armazenamento.RegistrarConsentimentoAsync("usuario:velho@b.com", "v1", CancellationToken.None);
-        await _armazenamento.SalvarAsync("usuario:ativo@b.com", [2], CancellationToken.None);
+        await _armazenamento.SalvarAsync("usuario:ativo@b.com", V(2), CancellationToken.None);
         await _armazenamento.RegistrarConsentimentoAsync("usuario:ativo@b.com", "v1", CancellationToken.None);
         await DefinirUltimoUsoAsync("usuario:velho@b.com", DateTime.UtcNow.AddDays(-366));
         await DefinirUltimoUsoAsync("usuario:ativo@b.com", DateTime.UtcNow.AddDays(-364));
@@ -170,7 +171,7 @@ public sealed class ConsentimentoERetencaoTests
     [TestMethod]
     public async Task Limpeza_EhIdempotente_ESemNadaParaApagarNaoMexeEmNada()
     {
-        await _armazenamento.SalvarAsync("usuario:a@b.com", [1], CancellationToken.None);
+        await _armazenamento.SalvarAsync("usuario:a@b.com", V(1), CancellationToken.None);
         var limpeza = new LimpezaDeDadosPessoais(_db);
 
         var primeira = await limpeza.ExecutarAsync(DateTime.UtcNow, CancellationToken.None);
@@ -199,7 +200,7 @@ public sealed class ConsentimentoERetencaoTests
         foreach (var u in new[] { empresa, f1, f2 })
         {
             await _refresh.GerarRefreshTokenAsync(u);
-            await _armazenamento.SalvarAsync(FacialAuthClient.PersonIdParaEmail(u.Email!), [1], CancellationToken.None);
+            await _armazenamento.SalvarAsync(FacialAuthClient.PersonIdParaEmail(u.Email!), V(1), CancellationToken.None);
             await _armazenamento.RegistrarConsentimentoAsync(FacialAuthClient.PersonIdParaEmail(u.Email!), "v1", CancellationToken.None);
         }
 

@@ -394,3 +394,7 @@ Testes-Seguranca/**/resultado.json
 Testes-Seguranca/**/resumo.md
 Testes-Seguranca/**/*.log
 Testes-Seguranca/**/__pycache__/
+
+# Modelos de reconhecimento/prova de vida baixados (S3/S33): conferidos por SHA-256, nunca versionados
+*.onnx
+MachineLeaning/FaceAuth/modelos/

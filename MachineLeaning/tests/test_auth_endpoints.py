@@ -25,12 +25,24 @@ def _limpar_estado():
 PONTOS = [{'x': 0.1 * i, 'y': 0.2 * i, 'z': 0.01 * i} for i in range(1, 6)]
 
 
+def _vetor_unitario(posicao):
+    v = [0.0] * 128
+    v[posicao] = 1.0
+    return v
+
+
+VETOR = _vetor_unitario(0)       # o "rosto" que o modelo falso devolve
+OUTRO_ROSTO = _vetor_unitario(1)   # ortogonal: cosseno 0
+
+
 @pytest.fixture
 def face_client(monkeypatch):
     from FaceAuth import router as face_router
     # Sem MediaPipe: o extrator devolve sempre os mesmos pontos (a lógica testada é a do router).
     monkeypatch.setattr(face_router, 'extrair_landmarks_de_imagem', lambda imagem: [dict(p) for p in PONTOS])
     monkeypatch.setattr(face_router, '_decodificar_imagem', lambda b64: object())
+    # Sem o SFace: o vetor do rosto é fixo (a lógica testada é a do router; o modelo real tem teste próprio).
+    monkeypatch.setattr(face_router, '_vetor_do_rosto', lambda imagem, landmarks: list(VETOR))
     app = FastAPI()
     app.include_router(face_router.router)
     return TestClient(app)
@@ -59,27 +71,69 @@ def test_o_servico_nao_tem_mais_persistencia_facial():
     assert importlib.util.find_spec('FaceAuth.data_manager') is None
 
 
-def test_landmarks_devolve_vetor_achatado_xyz(face_client):
+def test_landmarks_devolve_o_vetor_de_128_numeros(face_client):
     h = {'X-Internal-Token': settings.INTERNAL_TOKEN}
     r = face_client.post('/face/landmarks', json={'imageBase64': 'x'}, headers=h)
     assert r.status_code == 200
-    achatado = r.json()['landmarks']
-    assert len(achatado) == len(PONTOS) * 3
-    assert achatado[:3] == [pytest.approx(PONTOS[0]['x'] - sum(p['x'] for p in PONTOS) / len(PONTOS)),
-                            pytest.approx(PONTOS[0]['y'] - sum(p['y'] for p in PONTOS) / len(PONTOS)),
-                            pytest.approx(PONTOS[0]['z'])]
+    corpo = r.json()
+    assert corpo['vetor'] == VETOR and len(corpo['vetor']) == 128
+    assert 'landmarks' not in corpo, 'a geometria dos 468 pontos não sai mais do ML'
 
 
 def test_compare_mesma_pessoa_bate_e_pessoa_diferente_nao(face_client):
     h = {'X-Internal-Token': settings.INTERNAL_TOKEN}
-    igual = face_client.post('/face/landmarks', json={'imageBase64': 'x'}, headers=h).json()['landmarks']
-    outro = [v + 0.5 for v in igual]
 
-    bate = face_client.post('/face/compare', json={'imageBase64': 'x', 'samples': [outro, igual]}, headers=h).json()
+    bate = face_client.post('/face/compare', json={'imageBase64': 'x', 'samples': [OUTRO_ROSTO, VETOR]}, headers=h).json()
     assert bate['match'] is True and bate['confidence'] == 1.0
 
-    nao_bate = face_client.post('/face/compare', json={'imageBase64': 'x', 'samples': [outro]}, headers=h).json()
-    assert nao_bate['match'] is False
+    nao_bate = face_client.post('/face/compare', json={'imageBase64': 'x', 'samples': [OUTRO_ROSTO]}, headers=h).json()
+    assert nao_bate['match'] is False and nao_bate['confidence'] == 0.0
+
+
+def test_amostras_no_formato_antigo_ou_malformadas_nunca_batem(face_client):
+    h = {'X-Internal-Token': settings.INTERNAL_TOKEN}
+    antigo_1404 = [0.1] * 1404          # geometria dos 468 pontos (método anterior)
+    curto = [1.0, 0.0, 0.0]
+
+    resposta = face_client.post('/face/compare', json={'imageBase64': 'x', 'samples': [antigo_1404, curto]}, headers=h).json()
+
+    assert resposta['match'] is False and resposta['confidence'] == 0.0
+
+
+def test_o_limiar_de_cosseno_decide(face_client, monkeypatch):
+    h = {'X-Internal-Token': settings.INTERNAL_TOKEN}
+    # vetor com cosseno conhecido em relação ao VETOR: cos = 0.5
+    meio = [0.0] * 128
+    meio[0], meio[1] = 0.5, (1 - 0.25) ** 0.5
+
+    monkeypatch.setattr(settings, 'FACE_COSINE_THRESHOLD', 0.49)
+    assert face_client.post('/face/compare', json={'imageBase64': 'x', 'samples': [meio]}, headers=h).json()['match'] is True
+    monkeypatch.setattr(settings, 'FACE_COSINE_THRESHOLD', 0.51)
+    assert face_client.post('/face/compare', json={'imageBase64': 'x', 'samples': [meio]}, headers=h).json()['match'] is False
+
+
+def test_amostra_gigante_e_recusada_antes_de_gastar_memoria(face_client):
+    h = {'X-Internal-Token': settings.INTERNAL_TOKEN}
+    assert face_client.post('/face/compare', json={'imageBase64': 'x', 'samples': [[0.0] * 5000]}, headers=h).status_code == 422
+
+
+def test_sem_o_modelo_de_reconhecimento_o_modulo_recusa_com_503(face_client, monkeypatch):
+    from FaceAuth import router as face_router
+    from FaceAuth.embedding import ReconhecimentoIndisponivel
+
+    class SemModelo:
+        def vetor(self, imagem, landmarks):
+            raise ReconhecimentoIndisponivel('ausente')
+
+    monkeypatch.undo()   # volta ao _vetor_do_rosto real
+    monkeypatch.setattr(face_router, 'extrair_landmarks_de_imagem', lambda imagem: [dict(p) for p in PONTOS])
+    monkeypatch.setattr(face_router, '_decodificar_imagem', lambda b64: object())
+    monkeypatch.setattr(face_router, '_obter_reconhecedor', lambda: SemModelo())
+    h = {'X-Internal-Token': settings.INTERNAL_TOKEN}
+
+    r = face_client.post('/face/landmarks', json={'imageBase64': 'x'}, headers=h)
+
+    assert r.status_code == 503 and 'ausente' not in r.text
 
 
 def test_compare_sem_amostras_e_400_e_amostras_demais_sao_recusadas(face_client):

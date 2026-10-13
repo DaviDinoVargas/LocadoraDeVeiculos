@@ -1,3 +1,4 @@
+using static LocadoraDeVeiculos.Tests.Integracao.ModuloAutenticacao.VetoresDeTeste;
 using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
 using LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
 using LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloAutenticacao;
@@ -145,11 +146,12 @@ public sealed class ArmazenamentoFacialTests
         await using var contexto = NovoContexto(banco);
         var armazenamento = new ArmazenamentoFacialEmOrm(contexto, NovoCifrador((1, 7)));
 
-        await armazenamento.SalvarAsync("usuario:Ana@Loja.com", [0.5, 0.25, 0.125], CancellationToken.None);
+        await armazenamento.SalvarAsync("usuario:Ana@Loja.com", V(0.5, 0.25, 0.125), CancellationToken.None);
 
         var amostras = await armazenamento.ObterAsync("usuario:ana@loja.com", CancellationToken.None);
         Assert.AreEqual(1, amostras.Count);
-        CollectionAssert.AreEqual(new[] { 0.5, 0.25, 0.125 }, amostras[0].ToArray());
+        CollectionAssert.AreEqual(new[] { 0.5, 0.25, 0.125 }, amostras[0].Take(3).ToArray());
+        Assert.AreEqual(128, amostras[0].Count);
 
         var gravado = (await contexto.Set<AmostraFacial>().SingleAsync()).Conteudo;
         var textoGravado = System.Text.Encoding.UTF8.GetString(gravado);
@@ -164,7 +166,7 @@ public sealed class ArmazenamentoFacialTests
 
         for (var i = 1; i <= 5; i++)
         {
-            await armazenamento.SalvarAsync("usuario:a@b.com", [i], CancellationToken.None);
+            await armazenamento.SalvarAsync("usuario:a@b.com", V(i), CancellationToken.None);
             await Task.Delay(5);
         }
 
@@ -174,11 +176,37 @@ public sealed class ArmazenamentoFacialTests
     }
 
     [TestMethod]
+    public async Task Armazenamento_IgnoraORostoNoFormatoAntigo_ETrataQuemSoTemEleComoSemRosto()
+    {
+        await using var contexto = NovoContexto(NovoBanco());
+        var armazenamento = new ArmazenamentoFacialEmOrm(contexto, NovoCifrador((1, 7)));
+        await armazenamento.SalvarAsync("usuario:velho@b.com", FormatoAntigo(), CancellationToken.None);
+
+        Assert.AreEqual(0, (await armazenamento.ObterAsync("usuario:velho@b.com", CancellationToken.None)).Count, "o formato antigo não é entregue ao ML");
+        Assert.IsFalse(await armazenamento.ExisteAsync("usuario:velho@b.com", CancellationToken.None), "a tela pede o recadastro");
+    }
+
+    [TestMethod]
+    public async Task Armazenamento_CadastroNoMetodoNovo_ApagaDeVezOFormatoAntigo()
+    {
+        await using var contexto = NovoContexto(NovoBanco());
+        var armazenamento = new ArmazenamentoFacialEmOrm(contexto, NovoCifrador((1, 7)));
+        await armazenamento.SalvarAsync("usuario:ana@b.com", FormatoAntigo(), CancellationToken.None);
+        await armazenamento.SalvarAsync("usuario:outra@b.com", FormatoAntigo(), CancellationToken.None);
+
+        var total = await armazenamento.SalvarAsync("usuario:ana@b.com", V(1), CancellationToken.None);
+
+        Assert.AreEqual(1, total, "a amostra antiga da Ana foi apagada, só resta a nova");
+        Assert.AreEqual(1, (await armazenamento.ObterAsync("usuario:ana@b.com", CancellationToken.None)).Count);
+        Assert.AreEqual(2, contexto.Set<AmostraFacial>().Count(), "a amostra antiga de OUTRA pessoa não é tocada");
+    }
+
+    [TestMethod]
     public async Task Armazenamento_NaoMisturaPessoas()
     {
         await using var contexto = NovoContexto(NovoBanco());
         var armazenamento = new ArmazenamentoFacialEmOrm(contexto, NovoCifrador((1, 7)));
-        await armazenamento.SalvarAsync("usuario:a@b.com", [1], CancellationToken.None);
+        await armazenamento.SalvarAsync("usuario:a@b.com", V(1), CancellationToken.None);
 
         Assert.IsTrue(await armazenamento.ExisteAsync("usuario:a@b.com", CancellationToken.None));
         Assert.IsFalse(await armazenamento.ExisteAsync("usuario:b@b.com", CancellationToken.None));
@@ -190,8 +218,8 @@ public sealed class ArmazenamentoFacialTests
     {
         await using var contexto = NovoContexto(NovoBanco());
         var armazenamento = new ArmazenamentoFacialEmOrm(contexto, NovoCifrador((1, 7)));
-        await armazenamento.SalvarAsync("usuario:a@b.com", [1], CancellationToken.None);
-        await armazenamento.SalvarAsync("usuario:a@b.com", [2], CancellationToken.None);
+        await armazenamento.SalvarAsync("usuario:a@b.com", V(1), CancellationToken.None);
+        await armazenamento.SalvarAsync("usuario:a@b.com", V(2), CancellationToken.None);
 
         Assert.IsTrue(await armazenamento.RemoverAsync("usuario:a@b.com", CancellationToken.None));
         Assert.IsFalse(await armazenamento.RemoverAsync("usuario:a@b.com", CancellationToken.None));

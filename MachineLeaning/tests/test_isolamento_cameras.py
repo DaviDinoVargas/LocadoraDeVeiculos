@@ -168,6 +168,7 @@ def test_modulo_facial_tem_limite_proprio(monkeypatch):
     from FaceAuth import router as face
     monkeypatch.setattr(face, 'extrair_landmarks_de_imagem', lambda imagem: [{'x': 0.1, 'y': 0.2, 'z': 0.3}])
     monkeypatch.setattr(face, '_decodificar_imagem', lambda b64: object())
+    monkeypatch.setattr(face, '_vetor_do_rosto', lambda imagem, landmarks: [0.0] * 128)
     app = FastAPI()
     app.include_router(face.router)
     cliente = TestClient(app)

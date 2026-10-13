@@ -94,6 +94,14 @@ def executar(ctx):
     r.checar('D17', CAT, 'ML: a prova de vida vem LIGADA por padrão (falha fechada)', "padrão 'true'", 'ligada' if padrao_ligado else 'desligada',
              padrao_ligado, 'alta', 'S3')
 
+    # --- D18: reconhecimento por embedding (S33): modelo conferido por hash e sem volta ao comparador por geometria ----------
+    embedding = _ler('MachineLeaning', 'FaceAuth', 'embedding.py')
+    roteador = _ler('MachineLeaning', 'FaceAuth', 'router.py')
+    forte = ('SHA256_ESPERADO' in embedding and '_sha256(self.caminho) != self._sha256' in embedding and 'TAMANHO_ESPERADO' in embedding
+             and 'comparar_faces' not in roteador and 'similaridade_cosseno' in roteador)
+    r.checar('D18', CAT, 'Reconhecimento facial por embedding: modelo conferido por SHA-256/tamanho e o roteador não usa mais a geometria de landmarks',
+             'hash no código e sem comparar_faces no router', 'ok' if forte else 'faltando', forte, 'alta', 'S33')
+
     seeder = RAIZ / 'Server' / 'LocadoraDeVeiculos.Infraestrutura.Orm' / 'Identify' / 'RoleSeeder.cs'
     r.checar('D14', CAT, 'Sem código morto que usa IgnoreQueryFilters (RoleSeeder)', 'arquivo removido', 'existe' if seeder.exists() else 'removido',
              not seeder.exists(), 'baixa', 'S30')

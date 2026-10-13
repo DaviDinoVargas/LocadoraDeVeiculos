@@ -8,14 +8,14 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Services;
 /// </summary>
 public static class ConsentimentoBiometrico
 {
-    public const string VersaoAtual = "2026-10-v1";
+    public const string VersaoAtual = "2026-10-v2";
 
     public const int RetencaoEmMeses = 12;
 
     public const string Texto = """
         TERMO DE CONSENTIMENTO PARA USO DO ROSTO (DADO BIOMÉTRICO)
 
-        O que é coletado. Ao cadastrar o seu rosto, o sistema extrai da imagem da sua câmera uma representação matemática do rosto (pontos de referência, ou "landmarks"). A fotografia NÃO é guardada.
+        O que é coletado. Ao cadastrar o seu rosto, o sistema extrai da imagem da sua câmera uma representação matemática do rosto (uma lista de 128 números calculada por um modelo de reconhecimento facial). A fotografia NÃO é guardada.
 
         Para que serve. Somente para confirmar a sua identidade no login por reconhecimento facial e na verificação facial. Não é usado para nenhuma outra finalidade, não é compartilhado com terceiros e não é vendido.
 

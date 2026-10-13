@@ -1,14 +1,16 @@
 # Política de privacidade — dado biométrico (rosto)
 
-**Versão do texto:** `2026-10-v1` · **Aplicação:** LocadoraDeVeiculos (projeto acadêmico — TCC)
+**Versão do texto:** `2026-10-v2` · **Aplicação:** LocadoraDeVeiculos (projeto acadêmico — TCC)
 
 > Este é um projeto educacional, sem fins comerciais. Esta página documenta como o rosto é tratado e é o texto que o sistema
 > mostra ao usuário antes do cadastro facial (a fonte do texto exibido é `ConsentimentoBiometrico.cs`). Não substitui
 > aconselhamento jurídico.
 
 ## 1. O que é coletado
-Ao cadastrar o rosto, a câmera captura uma imagem e o sistema extrai dela uma **representação matemática** (468 pontos de
-referência do rosto, *landmarks*). **A fotografia não é guardada.** A representação é a única coisa que fica.
+Ao cadastrar o rosto, a câmera captura uma imagem e o sistema extrai dela uma **representação matemática** (uma lista de
+128 números, calculada por um modelo de reconhecimento facial). **A fotografia não é guardada.** A representação é a única
+coisa que fica. Até a versão `2026-10-v1` a representação era a geometria de 468 pontos do rosto; quem a tinha precisa cadastrar
+o rosto de novo, e a antiga é apagada no novo cadastro.
 
 ## 2. Finalidade
 Somente confirmar a identidade da pessoa no **login por reconhecimento facial** e na **verificação facial**. Não há outro uso,

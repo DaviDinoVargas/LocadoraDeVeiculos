@@ -102,14 +102,14 @@ public class FacialAuthClient(
 
         var corpo = await resposta.Content.ReadFromJsonAsync<FacialLandmarksResponseDto>(cancellationToken: cancellationToken);
 
-        if (corpo?.Landmarks is not { Count: > 0 })
+        if (corpo?.Vetor is not { Count: > 0 })
             return new FacialEnrollResult(Sucesso: false, Amostras: 0);
 
         // Uma foto de foto/tela não pode virar o "rosto cadastrado".
         if (ProvaDeVidaReprovada(corpo.ProvaDeVidaAtiva, corpo.Vivo))
             return new FacialEnrollResult(Sucesso: false, Amostras: 0, ProvaDeVidaReprovada: true);
 
-        var total = await armazenamento.SalvarAsync(personId, corpo.Landmarks, cancellationToken);
+        var total = await armazenamento.SalvarAsync(personId, corpo.Vetor, cancellationToken);
 
         return new FacialEnrollResult(Sucesso: true, Amostras: total);
     }
@@ -126,7 +126,7 @@ public class FacialAuthClient(
     }
 
     private record FacialVerifyResponseDto(bool Match, double Confidence, bool ProvaDeVidaAtiva = false, bool Vivo = true);
-    private record FacialLandmarksResponseDto(List<double> Landmarks, bool ProvaDeVidaAtiva = false, bool Vivo = true);
+    private record FacialLandmarksResponseDto(List<double> Vetor, bool ProvaDeVidaAtiva = false, bool Vivo = true);
 }
 
 public record FacialVerifyResult(bool Encontrado, bool Bateu, double Confianca, bool NenhumRostoNaImagem = false, bool ProvaDeVidaReprovada = false);

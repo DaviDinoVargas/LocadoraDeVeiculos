@@ -15,9 +15,19 @@ public class ArmazenamentoFacialEmOrm(LocadoraDeVeiculosDbContext dbContext, Cif
     // Amostras recentes de ângulos levemente diferentes melhoram o acerto; mais que isso só acumula biometria.
     public const int MaximoDeAmostras = 3;
 
+    /// <summary>
+    /// Tamanho do vetor do rosto no método atual (embedding SFace, S33). Amostras de outro tamanho (a geometria de 468 pontos
+    /// do método anterior, 1404 números) não servem mais: são ignoradas na leitura e apagadas quando o rosto é recadastrado.
+    /// </summary>
+    public const int TamanhoDoVetor = 128;
+
     public async Task<int> SalvarAsync(string pessoaId, IReadOnlyList<double> landmarks, CancellationToken cancellationToken)
     {
         var pessoa = Normalizar(pessoaId);
+
+        // Cadastro no método atual: o rosto no formato antigo (que não compara mais) é apagado de vez.
+        if (landmarks.Count == TamanhoDoVetor)
+            await ApagarAmostrasNoFormatoAntigoAsync(pessoa, cancellationToken);
 
         dbContext.Set<AmostraFacial>().Add(new AmostraFacial
         {
@@ -44,6 +54,21 @@ public class ArmazenamentoFacialEmOrm(LocadoraDeVeiculosDbContext dbContext, Cif
         return await dbContext.Set<AmostraFacial>().CountAsync(a => a.PessoaId == pessoa, cancellationToken);
     }
 
+    private async Task ApagarAmostrasNoFormatoAntigoAsync(string pessoa, CancellationToken cancellationToken)
+    {
+        var existentes = await dbContext.Set<AmostraFacial>().Where(a => a.PessoaId == pessoa).ToListAsync(cancellationToken);
+        var antigas = existentes.Where(a => Ler(a, pessoa).Length != TamanhoDoVetor).ToList();
+
+        if (antigas.Count > 0)
+        {
+            dbContext.Set<AmostraFacial>().RemoveRange(antigas);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    private double[] Ler(AmostraFacial amostra, string pessoa) =>
+        JsonSerializer.Deserialize<double[]>(cifrador.Decifrar(amostra.Conteudo, pessoa)) ?? [];
+
     public async Task<IReadOnlyList<IReadOnlyList<double>>> ObterAsync(string pessoaId, CancellationToken cancellationToken)
     {
         var pessoa = Normalizar(pessoaId);
@@ -53,18 +78,17 @@ public class ArmazenamentoFacialEmOrm(LocadoraDeVeiculosDbContext dbContext, Cif
             .Where(a => a.PessoaId == pessoa)
             .ToListAsync(cancellationToken);
 
+        // Só o método atual: quem tem o rosto no formato antigo aparece como "sem rosto" e precisa recadastrar.
         return amostras
             .OrderBy(a => a.CriadoEmUtc)
-            .Select(a => (IReadOnlyList<double>)(JsonSerializer.Deserialize<double[]>(cifrador.Decifrar(a.Conteudo, pessoa)) ?? []))
+            .Select(a => Ler(a, pessoa))
+            .Where(v => v.Length == TamanhoDoVetor)
+            .Select(v => (IReadOnlyList<double>)v)
             .ToList();
     }
 
-    public Task<bool> ExisteAsync(string pessoaId, CancellationToken cancellationToken)
-    {
-        var pessoa = Normalizar(pessoaId);
-
-        return dbContext.Set<AmostraFacial>().AnyAsync(a => a.PessoaId == pessoa, cancellationToken);
-    }
+    public async Task<bool> ExisteAsync(string pessoaId, CancellationToken cancellationToken) =>
+        (await ObterAsync(pessoaId, cancellationToken)).Count > 0;
 
     public async Task<bool> RemoverAsync(string pessoaId, CancellationToken cancellationToken)
     {
