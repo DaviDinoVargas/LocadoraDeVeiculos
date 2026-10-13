@@ -10,7 +10,9 @@ public sealed class BiometriaForaDoGitTests
 {
     private static readonly string[] PadroesProibidos =
     [
-        "faces.json", "FaceAuth/data/", ".faces", "/crops/", ".pt", ".pth", ".pfx"
+        "faces.json", "FaceAuth/data/", ".faces", "/crops/", ".pt", ".pth", ".pfx",
+        // resultados dos testes de ataque descrevem falhas abertas: ficam fora do git
+        "Seguranca-Resultados", "Testes-Seguranca/resultados", "Testes-Seguranca/resultado.json"
     ];
 
     private static string? RaizDoRepositorio()
@@ -76,7 +78,7 @@ public sealed class BiometriaForaDoGitTests
 
         var gitignore = File.ReadAllText(Path.Combine(raiz, ".gitignore"));
 
-        foreach (var regra in new[] { "faces.json", "MachineLeaning/FaceAuth/data/", "*.pt", "MachineLeaning/**/crops/" })
+        foreach (var regra in new[] { "faces.json", "MachineLeaning/FaceAuth/data/", "*.pt", "MachineLeaning/**/crops/", "Seguranca-Resultados/" })
             StringAssert.Contains(gitignore, regra, $".gitignore precisa conter \"{regra}\".");
     }
 }

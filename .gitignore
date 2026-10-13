@@ -368,6 +368,10 @@ FodyWeavers.xsd
 # Segredos de ambiente local (senhas de dev, etc.) — nunca commitar. Veja .env.example.
 .env
 
+# Certificado HTTPS de desenvolvimento exportado para uso no docker-compose
+# (ver certs/README.md) — nunca commitar um certificado, mesmo de dev.
+/certs/*.pfx
+
 # Machine Learning (MachineLeaning/) — pesos de modelo, dados biométricos
 # cadastrados localmente e artefatos que cada máquina gera na hora
 .venv/
@@ -381,3 +385,12 @@ MachineLeaning/FaceAuth/data/
 faces.json
 **/faces*.json
 *.faces
+
+# Testes de segurança: os SCRIPTS (Testes-Seguranca/) vão para o git; os RESULTADOS (achados de ataque, logs das
+# instâncias de teste, métricas) ficam fora do repositório (A:\TCC\Seguranca-Resultados) e nunca devem ser versionados.
+Seguranca-Resultados/
+Testes-Seguranca/resultados/
+Testes-Seguranca/**/resultado.json
+Testes-Seguranca/**/resumo.md
+Testes-Seguranca/**/*.log
+Testes-Seguranca/**/__pycache__/
