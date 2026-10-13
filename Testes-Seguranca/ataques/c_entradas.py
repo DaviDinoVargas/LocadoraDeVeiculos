@@ -87,9 +87,12 @@ def executar(ctx):
         return requisitar('POST', f'{base}/api/automoveis', token=emp.token, ip=ip_unico(), json_corpo={
             'placa': placa, 'marca': 'Marca', 'cor': 'Preto', 'modelo': 'Modelo', 'tipoCombustivel': 'Flex',
             'capacidadeTanque': 50, 'ano': 2022, 'foto': foto, 'grupoAutomovelId': gid})
-    perigosas = {'javascript:alert(1)': 'ABC1D23', 'https://rastreador.exemplo/pixel.png?u=1': 'ABC1D24', 'file:///c:/windows/win.ini': 'ABC1D25'}
-    aceitas = [f for f, placa in perigosas.items() if automovel(f, placa).ok]
-    r.checar('C11', CAT, 'Foto do veículo com esquema perigoso ou URL externa é recusada', 'todas recusadas', aceitas or 'todas recusadas',
-             not aceitas, 'baixa', 'S31')
+    perigosas = {'javascript:alert(1)': 'ABC1D23', 'file:///c:/windows/win.ini': 'ABC1D25', 'http://sem-tls.exemplo/f.png': 'ABC1D27',
+                 'data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==': 'ABC1D28'}
+    aceitas = [f[:30] for f, placa in perigosas.items() if automovel(f, placa).ok]
+    r.checar('C11a', CAT, 'Foto do veículo com esquema perigoso (javascript:, file:, http:, data:text/html) é recusada', 'todas recusadas',
+             aceitas or 'todas recusadas', not aceitas, 'media', 'S31')
+    boa = automovel('https://exemplo.com/onix.jpg', 'ABC1D24')
+    r.checar('C11b', CAT, 'Foto https legítima continua aceita (a funcionalidade não quebrou)', '2xx', boa.status, boa.ok, 'baixa', 'S31')
     enorme = automovel('data:image/png;base64,' + 'A' * (1_500_000), 'ABC1D26')
     r.checar('C12', CAT, 'Foto gigante (1,5 MB) é recusada', '400', enorme.status, enorme.status == 400, 'baixa', 'S31')

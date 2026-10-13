@@ -48,7 +48,8 @@ def executar(ctx):
              [x for x in escritas if x[1] != 403], all(s == 403 for _, s in escritas), 'alta')
 
     taxa = requisitar('POST', f'{base}/api/taxas-servicos', token=func.token, ip=ip_unico(), json_corpo={})
-    r.checar('B04', CAT, 'Funcionário não altera taxas/preços (decisão de produto)', '403', taxa.status, taxa.status == 403, 'baixa', 'S32')
+    # S32 é decisão de produto (o front documenta que o Funcionário gerencia taxas): registra o comportamento atual.
+    r.info('B04', CAT, 'Funcionário alcança a escrita de taxas de serviço (400 = autorizado, falhou só na validação; 403 = barrado)', taxa.status, 'S32')
 
     # --- B10-B16: isolamento entre empresas (IDOR) -------------------------------------------
     grupo = requisitar('POST', f'{base}/api/grupos-automovel', token=emp_a.token, ip=ip_unico(),

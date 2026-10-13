@@ -147,7 +147,7 @@ def sha256_do_peso() -> str | None:
     return h.hexdigest()
 
 
-def iniciar_ml(pasta_logs: Path, token_interno: str, url_api: str) -> Servico:
+def iniciar_ml(pasta_logs: Path, token_interno: str, url_api: str, empresa_das_cameras: str | None = None) -> Servico:
     """ML em modo de ambiente real (ML_ENV=production): é como ele precisa se comportar fora do desenvolvimento."""
     if not porta_livre(PORTA_ML):
         raise SystemExit(f'A porta {PORTA_ML} já está em uso.')
@@ -160,6 +160,8 @@ def iniciar_ml(pasta_logs: Path, token_interno: str, url_api: str) -> Servico:
         'CORS_ALLOWED_ORIGINS': 'http://localhost:4200',
         'PYTHONIOENCODING': 'utf-8',
     })
+    if empresa_das_cameras:
+        env['CAMERA_EMPRESA_ID'] = empresa_das_cameras
     sha = sha256_do_peso()
     if sha:
         env['YOLO_MODEL_SHA256'] = sha

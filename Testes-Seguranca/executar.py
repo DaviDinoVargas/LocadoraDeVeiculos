@@ -96,7 +96,11 @@ def main():
         ml = None
         if args.modo in ('ataques', 'tudo') and not args.sem_ml:
             try:
-                ml = ambiente.iniciar_ml(pasta, token_ml, base)
+                # A empresa dona das câmeras existe antes do ML subir: o ML recebe o id dela em CAMERA_EMPRESA_ID.
+                dona = ambiente.nova_empresa(base, 'dona')
+                ctx.lembrar(dona.senha, dona.token)
+                ctx.dona_das_cameras = dona
+                ml = ambiente.iniciar_ml(pasta, token_ml, base, dona.empresa_id)
                 servicos.append(ml)
                 ml.iniciar()
                 ctx.ml, ctx.token_ml = f'http://127.0.0.1:{ambiente.PORTA_ML}', token_ml

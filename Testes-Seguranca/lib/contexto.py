@@ -9,6 +9,7 @@ class Contexto:
     reg: Registro
     ml: str | None = None           # ML de teste (ML_ENV=production)
     token_ml: str | None = None
+    dona_das_cameras: object | None = None  # Conta da empresa dona das câmeras do ML de teste (CAMERA_EMPRESA_ID)
     segredos_gerados: list = field(default_factory=list)  # senhas/tokens usados: nunca podem aparecer nos logs
 
     def lembrar(self, *valores):

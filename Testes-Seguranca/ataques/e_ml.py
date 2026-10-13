@@ -34,12 +34,12 @@ def executar(ctx):
     r.checar('E02b', CAT, 'Stream com ticket inventado é recusado', '401', stream.status, stream.status == 401, 'alta')
 
     # --- E03: isolamento entre empresas no ML (S24) ---------------------------------------------------------------
-    emp = ambiente.nova_empresa(base, 'ml')
+    emp = ctx.dona_das_cameras  # a empresa configurada como dona das câmeras
     outra = ambiente.nova_empresa(base, 'ml2')
-    ctx.lembrar(emp.senha, outra.senha, emp.token, outra.token)
+    ctx.lembrar(outra.senha, outra.token)
     # /last não toca em hardware; /cameras sondaria as webcams reais da máquina, então não é usado com credencial válida.
     cam_empresa = requisitar('GET', f'{ml}/last', token=emp.token)
-    r.checar('E03a', CAT, 'ML aceita JWT válido de uma Empresa (controle: o fluxo legítimo funciona)', '200', cam_empresa.status, cam_empresa.status == 200)
+    r.checar('E03a', CAT, 'ML aceita a empresa dona das câmeras (controle: o fluxo legítimo funciona)', '200', cam_empresa.status, cam_empresa.status == 200)
     # S24: nada liga a conta que consulta à empresa dona das câmeras
     estranha = requisitar('GET', f'{ml}/last', token=outra.token)
     r.checar('E03b', CAT, 'Uma empresa que NÃO é dona das câmeras não vê as placas detectadas', '403', estranha.status,
