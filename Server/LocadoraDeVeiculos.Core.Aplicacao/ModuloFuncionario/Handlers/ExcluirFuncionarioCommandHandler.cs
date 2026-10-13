@@ -1,5 +1,6 @@
 ﻿using FluentResults;
 using LocadoraDeVeiculos.Core.Aplicacao.Compartilhado;
+using LocadoraDeVeiculos.Core.Aplicacao.ModuloAutenticacao.Services;
 using LocadoraDeVeiculos.Core.Aplicacao.ModuloFuncionario.Commands;
 using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
 using LocadoraDeVeiculos.Core.Dominio.ModuloFuncionario;
@@ -22,9 +23,29 @@ public class ExcluirFuncionarioCommandHandler(
     RepositorioFuncionarioEmOrm repositorioFuncionario,
     RefreshTokenProvider refreshTokenProvider,
     UserManager<Usuario> userManager,
+    IFacialAuthClient facialAuthClient,
     ILogger<ExcluirFuncionarioCommandHandler> logger
 ) : IRequestHandler<ExcluirFuncionarioCommand, Result<ExcluirFuncionarioResult>>
 {
+    /// <summary>
+    /// Desligar alguém precisa cortar o acesso na hora, não em até 15 minutos: derruba a sessão (refresh tokens e a versão do
+    /// access token), bloqueia a conta (sem isso o ex-funcionário ainda poderia entrar por senha ou rosto e o e-mail
+    /// continuaria preso) e apaga a biometria, que não tem mais finalidade.
+    /// </summary>
+    private async Task EncerrarAcessoAsync(Usuario usuario, CancellationToken cancellationToken)
+    {
+        await refreshTokenProvider.RevogarTokensUsuarioAsync(usuario.Id, "Exclusão");
+
+        usuario.AccessTokenVersionId = Guid.NewGuid();
+        await userManager.UpdateAsync(usuario);
+
+        await userManager.SetLockoutEnabledAsync(usuario, true);
+        await userManager.SetLockoutEndDateAsync(usuario, DateTimeOffset.MaxValue);
+
+        if (!string.IsNullOrWhiteSpace(usuario.Email))
+            await facialAuthClient.RemoverAsync(FacialAuthClient.PersonIdParaEmail(usuario.Email), cancellationToken);
+    }
+
     public async Task<Result<ExcluirFuncionarioResult>> Handle(
         ExcluirFuncionarioCommand command, CancellationToken cancellationToken)
     {
@@ -38,7 +59,7 @@ public class ExcluirFuncionarioCommandHandler(
             Usuario? usuario = await userManager.FindByIdAsync(funcionario.UsuarioId.ToString());
 
             if (usuario is not null)
-                await refreshTokenProvider.RevogarTokensUsuarioAsync(usuario.Id, "Exclusão");
+                await EncerrarAcessoAsync(usuario, cancellationToken);
 
             await repositorioFuncionario.ExcluirAsync(funcionario.Id);
 
