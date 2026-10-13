@@ -26,15 +26,6 @@ public class RepositorioFuncionarioEmOrm : RepositorioBaseEmOrm<Funcionario>, IR
             .FirstOrDefaultAsync(f => f.Id == funcionarioId);
     }
 
-    public async Task<Funcionario?> SelecionarPorUsuarioIdAsync(Guid usuarioId)
-    {
-        return await dbContext.Funcionarios
-            .IgnoreQueryFilters()
-            .Include(u => u.Empresa)
-            .Include(u => u.Usuario)
-            .FirstOrDefaultAsync(f => f.UsuarioId == usuarioId);
-    }
-
     public override async Task<List<Funcionario>> SelecionarTodosAsync()
     {
         return await dbContext.Funcionarios
