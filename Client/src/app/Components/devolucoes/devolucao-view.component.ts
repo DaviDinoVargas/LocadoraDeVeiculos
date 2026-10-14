@@ -14,10 +14,11 @@ import { AlugueisService } from '../alugueis/alugueis.service';
 import { PdfService } from '../pdf/pdf.service';
 import { DevolucaoCompletoDto, NIVEL_COMBUSTIVEL } from './devolucao.model';
 import { DevolucoesService } from './devolucoes.service';
+import { PlacaPipe } from '../../shared/mascaras/placa.pipe';
 
 @Component({
   selector: 'app-devolucao-view',
-  imports: [NgIcon, HlmButtonImports, HlmSkeleton, PageComponent, PageHeaderComponent],
+  imports: [NgIcon, HlmButtonImports, HlmSkeleton, PageComponent, PageHeaderComponent, PlacaPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './devolucao-view.component.html'
 })

@@ -34,8 +34,8 @@ describe('PdfService — relatórios em lista', () => {
     const texto = conteudo(doc);
     expect(texto).toContain('Relatório de aluguéis');
     expect(texto).toContain('Filtro: Em andamento');
-    expect(texto).toContain('ABC1D23');
-    expect(texto).toContain('XYZ9Z99');
+    expect(texto).toContain('ABC-1D23');
+    expect(texto).toContain('XYZ-9Z99');
     expect(texto).toContain('Em andamento'); // status traduzido
     expect(texto).toContain('2 aluguel(éis)');
     expect(texto).toContain('750,50');          // soma dos valores previstos
@@ -71,7 +71,7 @@ describe('PdfService — relatórios em lista', () => {
 
     const texto = conteudo(doc);
     expect(texto).toContain('Relatório de devoluções');
-    expect(texto).toContain('ABC1D23');
+    expect(texto).toContain('ABC-1D23');
     expect(texto).toContain('15000 km');
     expect(texto).toContain('2 devolução(ões)');
     expect(texto).toContain('2.000,25');

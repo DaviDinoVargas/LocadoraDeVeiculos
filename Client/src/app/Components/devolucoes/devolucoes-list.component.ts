@@ -11,6 +11,7 @@ import { PageComponent } from '../../shared/layout/page.component';
 import { PdfService } from '../pdf/pdf.service';
 import { SelecionarDevolucoesDto } from './devolucao.model';
 import { DevolucoesService } from './devolucoes.service';
+import { mascararPlaca } from '../../shared/mascaras/mascara.directive';
 
 @Component({
   selector: 'app-devolucoes-list',
@@ -37,7 +38,7 @@ export class DevolucoesListComponent {
 
   readonly colunas: ColunaTabela<SelecionarDevolucoesDto>[] = [
     { id: 'condutorNome', cabecalho: 'Condutor' },
-    { id: 'automovelPlaca', cabecalho: 'Veículo' },
+    { id: 'automovelPlaca', cabecalho: 'Veículo', formatar: d => mascararPlaca(d.automovelPlaca) },
     { id: 'clienteNome', cabecalho: 'Cliente' },
     { id: 'dataDevolucao', cabecalho: 'Data da devolução', tipo: 'data' },
     { id: 'quilometragemFinal', cabecalho: 'Km final', tipo: 'numero', formatar: d => `${d.quilometragemFinal} km` },
@@ -49,7 +50,7 @@ export class DevolucoesListComponent {
     { rotulo: 'Excluir', icone: 'lucideTrash2', destrutiva: true, executar: d => this.excluir(d.id) }
   ];
 
-  readonly tituloLinha = (d: SelecionarDevolucoesDto) => `${d.clienteNome} — ${d.automovelPlaca}`;
+  readonly tituloLinha = (d: SelecionarDevolucoesDto) => `${d.clienteNome} — ${mascararPlaca(d.automovelPlaca)}`;
 
   exportarPdf(): void {
     if (this.devolucoes().length === 0) return;

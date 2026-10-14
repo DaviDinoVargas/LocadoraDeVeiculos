@@ -21,6 +21,7 @@ import { SelecionarAlugueisDto } from '../alugueis/aluguel.model';
 import { AlugueisService } from '../alugueis/alugueis.service';
 import { CameraService, DeteccaoPlaca } from './camera.service';
 import { casarPlaca } from './placa-match';
+import { PlacaPipe } from '../../shared/mascaras/placa.pipe';
 
 export type EstadoTile = 'parada' | 'iniciando' | 'ao-vivo' | 'reconectando' | 'parando' | 'erro' | 'sem-permissao';
 
@@ -49,7 +50,7 @@ const MAX_PLACAS = 20;
   selector: 'app-camera-monitor',
   imports: [
     FormsModule, NgIcon, HlmAlertImports, HlmButtonImports, HlmInputImports, HlmNativeSelectImports, HlmSwitchImports, PageComponent,
-    PageHeaderComponent, StatusBadgeComponent, EmptyStateComponent, ErrorStateComponent
+    PageHeaderComponent, StatusBadgeComponent, EmptyStateComponent, ErrorStateComponent, PlacaPipe
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './camera-monitor.component.html'
@@ -82,7 +83,7 @@ export class CameraMonitorComponent implements OnInit {
 
   readonly camerasAtivas = computed(() => this.cameras().filter(c => this.estadoDe(c).estado !== 'parada' && this.estadoDe(c).estado !== 'erro' && this.estadoDe(c).estado !== 'sem-permissao'));
   readonly placasFiltradas = computed(() => {
-    const termo = this.filtroPlaca().trim().toLowerCase();
+    const termo = this.filtroPlaca().toLowerCase().replace(/[^a-z0-9]/g, '');
     const camera = this.filtroCamera();
     return this.placasDetectadas().filter(
       p =>

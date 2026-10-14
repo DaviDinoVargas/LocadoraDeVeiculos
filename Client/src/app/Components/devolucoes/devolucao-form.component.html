@@ -16,7 +16,7 @@
         <dl class="text-body-m col-span-12 grid gap-x-6 gap-y-3 sm:grid-cols-2">
           <div><dt class="text-muted-foreground">Condutor</dt><dd>{{ a.condutorNome }}</dd></div>
           <div><dt class="text-muted-foreground">Data de saída</dt><dd>{{ formatarData(a.dataSaida) }}</dd></div>
-          <div><dt class="text-muted-foreground">Veículo</dt><dd>{{ a.automovelPlaca }}</dd></div>
+          <div><dt class="text-muted-foreground">Veículo</dt><dd>{{ a.automovelPlaca | placa }}</dd></div>
           <div><dt class="text-muted-foreground">Retorno previsto</dt><dd>{{ formatarData(a.dataRetornoPrevisto) }}</dd></div>
           <div><dt class="text-muted-foreground">Cliente</dt><dd>{{ a.clienteNome }}</dd></div>
           <div><dt class="text-muted-foreground">Valor previsto</dt><dd class="tabular">{{ formatarMoeda(a.valorPrevisto) }}</dd></div>

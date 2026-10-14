@@ -44,7 +44,7 @@
               <hlm-native-select class="w-full" formControlName="automovelId">
                 <option hlmNativeSelectOption value="">Selecione um veículo</option>
                 @for (veiculo of veiculosDisponiveis(); track veiculo.id) {
-                  <option hlmNativeSelectOption [value]="veiculo.id">{{ veiculo.placa }} - {{ veiculo.marca }} {{ veiculo.modelo }}</option>
+                  <option hlmNativeSelectOption [value]="veiculo.id">{{ veiculo.placa | placa }} - {{ veiculo.marca }} {{ veiculo.modelo }}</option>
                 }
               </hlm-native-select>
             </app-form-field>

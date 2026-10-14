@@ -16,6 +16,7 @@ import { DevolucoesService } from '../devolucoes/devolucoes.service';
 import { PdfService } from '../pdf/pdf.service';
 import { SelecionarAlugueisDto } from './aluguel.model';
 import { AlugueisService } from './alugueis.service';
+import { mascararPlaca } from '../../shared/mascaras/mascara.directive';
 
 const ABAS: { status: string; rotulo: string }[] = [
   { status: 'todos', rotulo: 'Todos' },
@@ -70,7 +71,7 @@ export class AlugueisListComponent implements OnInit {
 
   readonly colunas: ColunaTabela<SelecionarAlugueisDto>[] = [
     { id: 'condutorNome', cabecalho: 'Condutor' },
-    { id: 'automovelPlaca', cabecalho: 'Veículo' },
+    { id: 'automovelPlaca', cabecalho: 'Veículo', formatar: a => mascararPlaca(a.automovelPlaca) },
     { id: 'clienteNome', cabecalho: 'Cliente' },
     { id: 'dataSaida', cabecalho: 'Saída', tipo: 'data' },
     { id: 'dataRetornoPrevisto', cabecalho: 'Retorno previsto', tipo: 'data' },
@@ -99,7 +100,7 @@ export class AlugueisListComponent implements OnInit {
     { rotulo: 'Excluir', icone: 'lucideTrash2', destrutiva: true, visivel: a => a.status === 'Reservado' || a.status === 'Cancelado', executar: a => this.excluir(a.id) }
   ]);
 
-  readonly tituloLinha = (a: SelecionarAlugueisDto) => `${a.clienteNome} — ${a.automovelPlaca}`;
+  readonly tituloLinha = (a: SelecionarAlugueisDto) => `${a.clienteNome} — ${mascararPlaca(a.automovelPlaca)}`;
 
   constructor() {
     effect(() => {

@@ -215,7 +215,7 @@
           <li class="border-border bg-card flex flex-col gap-3 rounded-xl border p-4">
             <div class="flex items-start justify-between gap-2">
               <div>
-                <p class="text-title-l tracking-wider tabular">{{ placa.plate }}</p>
+                <p class="text-title-l tracking-wider tabular">{{ placa.plate | placa }}</p>
                 <p class="text-body-s text-muted-foreground">Câmera {{ placa.camera }} · {{ formatarHora(placa.timestamp) }}</p>
               </div>
               @if (temAluguelEmAberto(placa.plate)) {
@@ -227,7 +227,7 @@
 
             @if (temAluguelEmAberto(placa.plate)) {
               @if (placaCadastradaDiferente(placa.plate); as cadastrada) {
-                <p class="text-body-s text-muted-foreground">Leitura aproximada: a placa cadastrada é <strong class="text-foreground tabular">{{ cadastrada }}</strong>.</p>
+                <p class="text-body-s text-muted-foreground">Leitura aproximada: a placa cadastrada é <strong class="text-foreground tabular">{{ cadastrada | placa }}</strong>.</p>
               }
               <dl class="text-body-m flex flex-col gap-1">
                 <div class="flex justify-between gap-3"><dt class="text-muted-foreground">Cliente</dt><dd class="truncate">{{ getAluguelInfo(placa.plate)?.clienteNome || '—' }}</dd></div>

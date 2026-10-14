@@ -14,6 +14,7 @@ import { GrupoVeiculoDto } from '../grupoveiculos/grupo-veiculo.model';
 import { GruposVeiculoService } from '../grupoveiculos/grupos-veiculo.service';
 import { VeiculoDto } from './veiculo.model';
 import { VeiculosService } from './veiculos.service';
+import { mascararPlaca } from '../../shared/mascaras/mascara.directive';
 
 @Component({
   selector: 'app-veiculos-list',
@@ -52,7 +53,7 @@ export class VeiculosListComponent implements OnInit {
 
   readonly colunas: ColunaTabela<VeiculoDto>[] = [
     { id: 'foto', cabecalho: 'Foto', ordenavel: false },
-    { id: 'placa', cabecalho: 'Placa', formatar: v => this.formatarPlaca(v.placa) },
+    { id: 'placa', cabecalho: 'Placa', formatar: v => mascararPlaca(v.placa) },
     { id: 'marca', cabecalho: 'Marca' },
     { id: 'modelo', cabecalho: 'Modelo' },
     { id: 'cor', cabecalho: 'Cor', prioridade: 'baixa' },
@@ -95,12 +96,6 @@ export class VeiculosListComponent implements OnInit {
   // O nome vem na própria lista (o Funcionario não pode ler /grupos-automovel para resolvê-lo).
   obterNomeGrupo(veiculo: VeiculoDto): string {
     return veiculo.grupoAutomovelNome || this.grupos().find(g => g.id === veiculo.grupoAutomovelId)?.nome || '—';
-  }
-
-  formatarPlaca(placa: string): string {
-    if (!placa) return '';
-    // Formata placa no padrão: AAA-0A00 ou AAA-0000
-    return placa.replace(/([A-Za-z]{3})([0-9A-Za-z]{4})/, '$1-$2').toUpperCase();
   }
 
   fotoVisivel(veiculo: VeiculoDto): boolean {

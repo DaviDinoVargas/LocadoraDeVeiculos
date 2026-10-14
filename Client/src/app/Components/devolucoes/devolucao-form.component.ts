@@ -23,6 +23,7 @@ import { ConfiguracaoDto } from '../configuracoes/configuracao.model';
 import { ConfiguracoesService } from '../configuracoes/configuracoes.service';
 import { DevolucaoDto, NIVEL_COMBUSTIVEL_OPTIONS } from './devolucao.model';
 import { DevolucoesService } from './devolucoes.service';
+import { PlacaPipe } from '../../shared/mascaras/placa.pipe';
 
 // Litros que o tanque tem quando está "cheio" para o cálculo do adicional de combustível.
 const TANQUE_REFERENCIA_LITROS = 50;
@@ -32,7 +33,7 @@ const PERCENTUAL_POR_NIVEL: Record<string, number> = { Cheio: 100, TresQuartos: 
   selector: 'app-devolucao-form',
   imports: [
     ReactiveFormsModule, HlmInputImports, HlmNativeSelectImports, PageComponent, PageHeaderComponent, FormSectionComponent,
-    FormFieldComponent, FormActionsComponent, FormErrorsComponent, FormSkeletonComponent
+    FormFieldComponent, FormActionsComponent, FormErrorsComponent, FormSkeletonComponent, PlacaPipe
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './devolucao-form.component.html'

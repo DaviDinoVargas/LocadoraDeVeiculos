@@ -3,6 +3,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { AluguelCompletoDto, SelecionarAlugueisDto } from '../alugueis/aluguel.model';
 import { DevolucaoCompletoDto, SelecionarDevolucoesDto } from '../devolucoes/devolucao.model';
+import { mascararPlaca } from '../../shared/mascaras/mascara.directive';
 
 @Injectable({
   providedIn: 'root'
@@ -34,7 +35,7 @@ export class PdfService {
     y += 8;
     doc.text(`Condutor: ${devolucao.condutorNome}`, 20, y);
     y += 8;
-    doc.text(`Veículo: ${devolucao.automovelPlaca}`, 20, y);
+    doc.text(`Veículo: ${mascararPlaca(devolucao.automovelPlaca)}`, 20, y);
     y += 8;
     doc.text(`Cliente: ${devolucao.clienteNome}`, 20, y);
     y += 8;
@@ -109,7 +110,7 @@ export class PdfService {
       startY: 36,
       head: [['Condutor', 'Veículo', 'Cliente', 'Saída', 'Retorno previsto', 'Valor previsto', 'Status']],
       body: alugueis.map(a => [
-        a.condutorNome, a.automovelPlaca, a.clienteNome,
+        a.condutorNome, mascararPlaca(a.automovelPlaca), a.clienteNome,
         this.formatarData(a.dataSaida), this.formatarData(a.dataRetornoPrevisto),
         this.formatarMoeda(a.valorPrevisto), this.statusAluguelTexto(a.status)
       ]),
@@ -141,7 +142,7 @@ export class PdfService {
       startY: 36,
       head: [['Condutor', 'Veículo', 'Cliente', 'Data da devolução', 'Km final', 'Valor total']],
       body: devolucoes.map(d => [
-        d.condutorNome, d.automovelPlaca, d.clienteNome,
+        d.condutorNome, mascararPlaca(d.automovelPlaca), d.clienteNome,
         this.formatarData(d.dataDevolucao), `${d.quilometragemFinal} km`, this.formatarMoeda(d.valorTotal)
       ]),
       foot: [[

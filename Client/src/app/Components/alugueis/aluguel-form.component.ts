@@ -36,6 +36,7 @@ import { VeiculoDto } from '../veiculos/veiculo.model';
 import { VeiculosService } from '../veiculos/veiculos.service';
 import { AluguelCompletoDto, AluguelDto, SimulacaoAluguelDto, SimularAluguelRequest } from './aluguel.model';
 import { AlugueisService } from './alugueis.service';
+import { PlacaPipe } from '../../shared/mascaras/placa.pipe';
 
 type StatusCupom = 'vazio' | 'aguardando' | 'validando' | 'valido' | 'invalido';
 
@@ -43,7 +44,7 @@ type StatusCupom = 'vazio' | 'aguardando' | 'validando' | 'valido' | 'invalido';
   selector: 'app-aluguel-form',
   imports: [
     ReactiveFormsModule, NgIcon, HlmButtonImports, HlmCheckboxImports, HlmInputImports, HlmLabel, HlmNativeSelectImports, PageComponent,
-    PageHeaderComponent, FormSectionComponent, FormFieldComponent, FormActionsComponent, FormErrorsComponent, FormSkeletonComponent
+    PageHeaderComponent, FormSectionComponent, FormFieldComponent, FormActionsComponent, FormErrorsComponent, FormSkeletonComponent, PlacaPipe
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './aluguel-form.component.html'
