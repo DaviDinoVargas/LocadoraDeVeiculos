@@ -81,7 +81,8 @@ export class HomeComponent implements OnInit {
       aria: { enabled: true },
       color: [t.series[0], t.series[1]],
       textStyle: { fontFamily: t.fonte },
-      grid: { left: 8, right: 8, top: 40, bottom: 8, containLabel: true },
+      // outerBounds* é o substituto do `containLabel` (obsoleto no ECharts 6): os rótulos dos eixos ficam dentro da grade
+      grid: { left: 8, right: 8, top: 40, bottom: 8, outerBoundsMode: 'same', outerBoundsContain: 'axisLabel' },
       legend: { top: 0, textStyle: { color: t.texto, fontFamily: t.fonte } },
       tooltip: {
         trigger: 'axis',
