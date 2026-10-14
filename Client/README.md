@@ -1,59 +1,44 @@
-# ClientApp
+# Client — front-end da Locadora de Veículos
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.3.2.
+Aplicação Angular 21 (componentes standalone, signals, `OnPush`) com Tailwind CSS 4 e componentes
+[Spartan UI](https://www.spartan.ng) (`src/app/shared/ui`, já ajustados ao tema do projeto). Fala com a Web API
+(.NET) e com o serviço de Machine Learning (FastAPI) pelo proxy de desenvolvimento.
 
-## Development server
+Requisitos: Node 20.19 ou superior. Para as telas funcionarem, a Web API (.NET) e o serviço de ML precisam estar no ar.
 
-To start a local development server, run:
-
-```bash
-ng serve
-```
-
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Rodar
 
 ```bash
-ng generate component component-name
+npm install
+npm start          # ng serve em http://localhost:4200
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+O `proxy.conf.json` encaminha `/api/**` para a Web API (`https://localhost:7064`) e `/api/cameras`,
+`/api/ml/chat` e `/stream` para o serviço de ML (`http://localhost:8000`). Da raiz do repositório,
+`npm start` sobe este front e o serviço de ML juntos; a Web API é iniciada à parte (`dotnet run --project Server/web-api`).
 
-```bash
-ng generate --help
-```
+## Comandos
 
-## Building
+| Comando | O que faz |
+|---|---|
+| `npm start` | servidor de desenvolvimento com recarga automática |
+| `npm run build` | build de produção em `dist/client-app` |
+| `npm run watch` | build de desenvolvimento que recompila ao salvar |
+| `npm test` | specs com Karma e Jasmine (`ng test`) |
 
-To build the project run:
+## Estrutura de `src/app`
 
-```bash
-ng build
-```
+- `auth/` — login, cadastro, recuperação de senha, 2FA, guardas e interceptadores.
+- `core/` — serviços e regras sem tela: erros da API, confirmação, navegação, permissões por cargo, tema, ícones.
+- `shared/layout` — casca do app (barra lateral, cabeçalho, paleta de comandos) e blocos de página.
+- `shared/form-fields` — campos, barra de ações e `crudForm` (cadastro e edição com um único componente).
+- `shared/data-table` — tabela com busca, filtros, colunas e densidade; `crudLista` cuida de listar e excluir.
+- `shared/charts`, `shared/mascaras`, `shared/validators`, `shared/ui` — gráficos, máscaras (CPF, CNPJ, telefone,
+  placa), validadores e os componentes base do Spartan.
+- `Components/` — uma pasta por módulo de negócio (clientes, veículos, aluguéis, devoluções, monitoramento...).
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+## Componentes do Spartan
 
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+Os componentes de `shared/ui` foram gerados pelo gerador do Spartan e depois personalizados (botão em pílula,
+tabela, diálogos, tema). O gerador (`@spartan-ng/cli`) não é dependência do projeto: para criar um componente novo,
+rode-o sob demanda com `npx` e confira o resultado antes de commitar, porque ele reescreve `tsconfig.json`.
