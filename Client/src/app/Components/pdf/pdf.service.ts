@@ -1,102 +1,89 @@
 import { Injectable } from '@angular/core';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { mascararPlaca } from '../../shared/mascaras/mascara.directive';
 import { AluguelCompletoDto, SelecionarAlugueisDto } from '../alugueis/aluguel.model';
 import { DevolucaoCompletoDto, SelecionarDevolucoesDto } from '../devolucoes/devolucao.model';
-import { mascararPlaca } from '../../shared/mascaras/mascara.directive';
+import {
+  COR, MARGEM, TomSelo, cabecalho, cartaoDeDados, cartoesResumo, estiloDeTabela, rodapeDePaginas, tituloDeSecao
+} from './pdf-tema';
+
+/** Mesmos tons de selo da tela de aluguéis (Reservado = info, Em andamento = alerta, Concluído = sucesso, Cancelado = erro). */
+const TOM_DO_STATUS: Record<string, TomSelo> = {
+  Reservado: 'info', 'Em andamento': 'warning', 'Concluído': 'success', Cancelado: 'error'
+};
 
 @Injectable({
   providedIn: 'root'
 })
 export class PdfService {
 
-  gerarReciboDevolucao(devolucao: DevolucaoCompletoDto, aluguel: AluguelCompletoDto): void {
+  /** Monta o recibo; separado de {@link gerarReciboDevolucao} para poder ser conferido sem baixar arquivo. */
+  montarReciboDevolucao(devolucao: DevolucaoCompletoDto, aluguel: AluguelCompletoDto): jsPDF {
     const doc = new jsPDF();
-    const dataAtual = new Date().toLocaleDateString('pt-BR');
-    const horaAtual = new Date().toLocaleTimeString('pt-BR');
+    const largura = doc.internal.pageSize.getWidth();
+    const altura = doc.internal.pageSize.getHeight();
 
-    // Cabeçalho
-    doc.setFontSize(20);
-    doc.text('RECIBO DE DEVOLUÇÃO', 105, 20, { align: 'center' });
+    let y = cabecalho(doc, 'Recibo de devolução', `Devolução realizada em ${this.formatarData(devolucao.dataDevolucao)}`);
 
-    doc.setFontSize(12);
-    doc.text('Locadora de Veículos', 105, 30, { align: 'center' });
-    doc.text(`Data: ${dataAtual} ${horaAtual}`, 105, 40, { align: 'center' });
-    doc.text('----------------------------------------------------', 105, 45, { align: 'center' });
+    y = cartaoDeDados(doc, y, 'Aluguel', [
+      ['Condutor', devolucao.condutorNome ?? ''],
+      ['Veículo', mascararPlaca(devolucao.automovelPlaca)],
+      ['Cliente', devolucao.clienteNome ?? ''],
+      ['Saída', this.formatarData(aluguel.dataSaida)],
+      ['Retorno previsto', this.formatarData(aluguel.dataRetornoPrevisto)],
+      ['Valor previsto', this.formatarMoeda(aluguel.valorPrevisto)]
+    ]);
 
-    // Informações do Aluguel
-    doc.setFontSize(14);
-    doc.text('Informações do Aluguel', 20, 60);
+    y = cartaoDeDados(doc, y, 'Devolução', [
+      ['Data da devolução', this.formatarData(devolucao.dataDevolucao)],
+      ['Quilometragem final', `${devolucao.quilometragemFinal} km`],
+      ['Combustível no tanque', `${devolucao.combustivelNoTanque} L`],
+      ['Nível do combustível', this.getNivelCombustivelText(devolucao.nivelCombustivel)]
+    ]);
 
-    doc.setFontSize(10);
-    let y = 70;
-
-    doc.text(`Devolução: ${devolucao.id}`, 20, y);
-    y += 8;
-    doc.text(`Condutor: ${devolucao.condutorNome}`, 20, y);
-    y += 8;
-    doc.text(`Veículo: ${mascararPlaca(devolucao.automovelPlaca)}`, 20, y);
-    y += 8;
-    doc.text(`Cliente: ${devolucao.clienteNome}`, 20, y);
-    y += 8;
-    doc.text(`Data Saída: ${this.formatarData(aluguel.dataSaida)}`, 20, y);
-    y += 8;
-    doc.text(`Data Retorno Previsto: ${this.formatarData(aluguel.dataRetornoPrevisto)}`, 20, y);
-    y += 8;
-    doc.text(`Valor Previsto: ${this.formatarMoeda(aluguel.valorPrevisto)}`, 20, y);
-
-    y += 12;
-
-    // Informações da Devolução
-    doc.setFontSize(14);
-    doc.text('Informações da Devolução', 20, y);
-
-    doc.setFontSize(10);
-    y += 10;
-    doc.text(`Data Devolução: ${this.formatarData(devolucao.dataDevolucao)}`, 20, y);
-    y += 8;
-    doc.text(`Quilometragem Final: ${devolucao.quilometragemFinal} km`, 20, y);
-    y += 8;
-    doc.text(`Combustível no Tanque: ${devolucao.combustivelNoTanque} L`, 20, y);
-    y += 8;
-    doc.text(`Nível Combustível: ${this.getNivelCombustivelText(devolucao.nivelCombustivel)}`, 20, y);
-
-    y += 12;
-
-    // Detalhes Financeiros
-    doc.setFontSize(14);
-    doc.text('Detalhes Financeiros', 20, y);
-
-    // Tabela de valores
-    const tableData = [
-      ['Valor do Aluguel', this.formatarMoeda(aluguel.valorPrevisto)],
-      ['Taxas e Serviços', this.formatarMoeda(this.calcularTaxas(aluguel))],
-      ['Multas', this.formatarMoeda(devolucao.valorMultas)],
-      ['Adicional Combustível', this.formatarMoeda(devolucao.valorAdicionalCombustivel)],
-      ['Valor da Caução', this.formatarMoeda(aluguel.valorCaucao)],
-      ['', ''],
-      ['TOTAL', this.formatarMoeda(devolucao.valorTotal + (aluguel.valorCaucao ?? 0))]
-    ];
-
+    y = tituloDeSecao(doc, y + 2, 'Detalhes financeiros');
     autoTable(doc, {
-      startY: y + 10,
+      ...estiloDeTabela({ direita: [1] }),
+      startY: y + 2,
       head: [['Descrição', 'Valor']],
-      body: tableData,
-      theme: 'grid',
-      headStyles: { fillColor: [41, 128, 185], textColor: 255 },
-      margin: { left: 20, right: 20 }
+      body: [
+        ['Valor do aluguel', this.formatarMoeda(aluguel.valorPrevisto)],
+        ['Taxas e serviços', this.formatarMoeda(this.calcularTaxas(aluguel))],
+        ['Multas', this.formatarMoeda(devolucao.valorMultas)],
+        ['Adicional de combustível', this.formatarMoeda(devolucao.valorAdicionalCombustivel)],
+        ['Valor da caução', this.formatarMoeda(aluguel.valorCaucao)]
+      ],
+      foot: [['Total', this.formatarMoeda(devolucao.valorTotal + (aluguel.valorCaucao ?? 0))]]
     });
 
-    // Rodapé
-    const finalY = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 20;
-    doc.text('----------------------------------------------------', 105, finalY, { align: 'center' });
-    doc.text('Assinatura do Funcionário', 105, finalY + 10, { align: 'center' });
-    doc.text('_________________________', 105, finalY + 25, { align: 'center' });
-    doc.text('Assinatura do Cliente', 105, finalY + 40, { align: 'center' });
-    doc.text('_________________________', 105, finalY + 55, { align: 'center' });
+    // Assinaturas lado a lado, sempre na mesma página do total (abre outra página só se faltar espaço)
+    let yAssinatura = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 30;
+    if (yAssinatura > altura - 30) {
+      doc.addPage();
+      yAssinatura = 50;
+    }
+    const metade = (largura - 2 * MARGEM - 16) / 2;
+    [['Assinatura do funcionário', MARGEM], ['Assinatura do cliente', MARGEM + metade + 16]].forEach(([rotulo, x]) => {
+      doc.setDrawColor(...COR.contorno);
+      doc.setLineWidth(0.3);
+      doc.line(x as number, yAssinatura, (x as number) + metade, yAssinatura);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(...COR.textoSecundario);
+      doc.text(rotulo as string, x as number, yAssinatura + 5);
+    });
 
-    // Salvar PDF
-    doc.save(`recibo-devolucao-${devolucao.id}-${dataAtual.replace(/\//g, '-')}.pdf`);
+    doc.setFontSize(7.5);
+    doc.text(`Código da devolução: ${devolucao.id}`, MARGEM, altura - 17);
+
+    rodapeDePaginas(doc);
+    return doc;
+  }
+
+  gerarReciboDevolucao(devolucao: DevolucaoCompletoDto, aluguel: AluguelCompletoDto): void {
+    const dataAtual = new Date().toLocaleDateString('pt-BR');
+    this.baixar(this.montarReciboDevolucao(devolucao, aluguel), `recibo-devolucao-${devolucao.id}-${dataAtual.replace(/\//g, '-')}.pdf`);
   }
 
   // ---- Relatórios em lista (exportam exatamente o que está na tela, já filtrado) ----------------
@@ -104,10 +91,18 @@ export class PdfService {
   /** Monta o relatório de aluguéis; separado de {@link gerarRelatorioAlugueis} para poder ser conferido sem baixar arquivo. */
   montarRelatorioAlugueis(alugueis: SelecionarAlugueisDto[], filtro: string): jsPDF {
     const doc = new jsPDF({ orientation: 'landscape' });
-    this.cabecalhoRelatorio(doc, 'Relatório de aluguéis', `Filtro: ${filtro}`);
+    let y = cabecalho(doc, 'Relatório de aluguéis', `Filtro: ${filtro}`);
+
+    const total = alugueis.reduce((s, a) => s + (a.valorPrevisto ?? 0), 0);
+    y = cartoesResumo(doc, y, [
+      { rotulo: 'Aluguéis na lista', valor: String(alugueis.length) },
+      { rotulo: 'Valor previsto total', valor: this.formatarMoeda(total) },
+      { rotulo: 'Em andamento', valor: String(alugueis.filter(a => a.status === 'EmAndamento').length) }
+    ]);
 
     autoTable(doc, {
-      startY: 36,
+      ...estiloDeTabela({ selo: { coluna: 6, tom: texto => TOM_DO_STATUS[texto] ?? 'neutral' }, direita: [5] }),
+      startY: y,
       head: [['Condutor', 'Veículo', 'Cliente', 'Saída', 'Retorno previsto', 'Valor previsto', 'Status']],
       body: alugueis.map(a => [
         a.condutorNome, mascararPlaca(a.automovelPlaca), a.clienteNome,
@@ -116,17 +111,12 @@ export class PdfService {
       ]),
       foot: [[
         { content: `${alugueis.length} aluguel(éis)`, colSpan: 5 },
-        { content: this.formatarMoeda(alugueis.reduce((s, a) => s + (a.valorPrevisto ?? 0), 0)), styles: { halign: 'right' } },
+        this.formatarMoeda(total),
         ''
-      ]],
-      theme: 'grid',
-      headStyles: { fillColor: [41, 128, 185], textColor: 255 },
-      footStyles: { fillColor: [235, 238, 243], textColor: 20, fontStyle: 'bold' },
-      columnStyles: { 5: { halign: 'right' } },
-      margin: { left: 14, right: 14 }
+      ]]
     });
 
-    this.rodapePaginas(doc);
+    rodapeDePaginas(doc);
     return doc;
   }
 
@@ -136,10 +126,18 @@ export class PdfService {
 
   montarRelatorioDevolucoes(devolucoes: SelecionarDevolucoesDto[]): jsPDF {
     const doc = new jsPDF({ orientation: 'landscape' });
-    this.cabecalhoRelatorio(doc, 'Relatório de devoluções', 'Todas as devoluções registradas');
+    let y = cabecalho(doc, 'Relatório de devoluções', 'Todas as devoluções registradas');
+
+    const total = devolucoes.reduce((s, d) => s + (d.valorTotal ?? 0), 0);
+    y = cartoesResumo(doc, y, [
+      { rotulo: 'Devoluções na lista', valor: String(devolucoes.length) },
+      { rotulo: 'Valor total', valor: this.formatarMoeda(total) },
+      { rotulo: 'Valor médio por devolução', valor: this.formatarMoeda(devolucoes.length ? total / devolucoes.length : 0) }
+    ]);
 
     autoTable(doc, {
-      startY: 36,
+      ...estiloDeTabela({ direita: [4, 5] }),
+      startY: y,
       head: [['Condutor', 'Veículo', 'Cliente', 'Data da devolução', 'Km final', 'Valor total']],
       body: devolucoes.map(d => [
         d.condutorNome, mascararPlaca(d.automovelPlaca), d.clienteNome,
@@ -147,42 +145,16 @@ export class PdfService {
       ]),
       foot: [[
         { content: `${devolucoes.length} devolução(ões)`, colSpan: 5 },
-        { content: this.formatarMoeda(devolucoes.reduce((s, d) => s + (d.valorTotal ?? 0), 0)), styles: { halign: 'right' } }
-      ]],
-      theme: 'grid',
-      headStyles: { fillColor: [41, 128, 185], textColor: 255 },
-      footStyles: { fillColor: [235, 238, 243], textColor: 20, fontStyle: 'bold' },
-      columnStyles: { 4: { halign: 'right' }, 5: { halign: 'right' } },
-      margin: { left: 14, right: 14 }
+        this.formatarMoeda(total)
+      ]]
     });
 
-    this.rodapePaginas(doc);
+    rodapeDePaginas(doc);
     return doc;
   }
 
   gerarRelatorioDevolucoes(devolucoes: SelecionarDevolucoesDto[]): void {
     this.baixar(this.montarRelatorioDevolucoes(devolucoes), `relatorio-devolucoes-${this.dataParaArquivo()}.pdf`);
-  }
-
-  private cabecalhoRelatorio(doc: jsPDF, titulo: string, subtitulo: string): void {
-    const agora = new Date();
-    doc.setFontSize(16);
-    doc.text(titulo, 14, 16);
-    doc.setFontSize(10);
-    doc.text('Locadora de Veículos', 14, 23);
-    doc.text(subtitulo, 14, 29);
-    doc.text(`Gerado em ${agora.toLocaleDateString('pt-BR')} às ${agora.toLocaleTimeString('pt-BR')}`,
-      doc.internal.pageSize.getWidth() - 14, 23, { align: 'right' });
-  }
-
-  private rodapePaginas(doc: jsPDF): void {
-    const total = doc.getNumberOfPages();
-    for (let pagina = 1; pagina <= total; pagina++) {
-      doc.setPage(pagina);
-      doc.setFontSize(9);
-      doc.text(`Página ${pagina} de ${total}`, doc.internal.pageSize.getWidth() / 2,
-        doc.internal.pageSize.getHeight() - 8, { align: 'center' });
-    }
   }
 
   // O jsPDF define save() dentro de cada instância; isolar a chamada permite testar sem baixar arquivo.
@@ -222,9 +194,9 @@ export class PdfService {
   private getNivelCombustivelText(nivel: string): string {
     const niveis: { [key: string]: string } = {
       'Cheio': 'Cheio',
-      'TresQuartos': 'Três Quartos',
+      'TresQuartos': 'Três quartos',
       'Metade': 'Metade',
-      'UmQuarto': 'Um Quarto',
+      'UmQuarto': 'Um quarto',
       'Vazio': 'Vazio'
     };
     return niveis[nivel] || nivel;
