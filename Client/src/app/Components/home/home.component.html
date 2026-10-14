@@ -19,6 +19,13 @@
             </div>
           }
         </div>
+        <!-- reserva o espaço do gráfico: sem isso ele entra depois e empurra o "Acesso rápido" para baixo (CLS 0,148 medido) -->
+        <app-chart-widget
+          titulo="Aluguéis e faturamento por mês"
+          descricao="Barras: aluguéis iniciados no mês. Linha: faturamento das devoluções."
+          [opcoes]="{}"
+          [carregando]="true"
+        />
       }
       @case ('erro') {
         <app-error-state titulo="Não foi possível carregar o resumo" descricao="O resumo da operação está indisponível agora. Os atalhos abaixo continuam funcionando." (repetir)="carregarResumo()" />

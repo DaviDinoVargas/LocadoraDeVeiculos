@@ -153,6 +153,16 @@ describe('HomeComponent — resumo da operação', () => {
     expect(fixture.nativeElement.querySelectorAll('.kpi-esqueleto').length).toBe(5);
   });
 
+  it('enquanto carrega reserva o espaço do gráfico, para o "Acesso rápido" não ser empurrado quando ele chegar (CLS)', () => {
+    dashboard.resumo.and.returnValue(new Observable<ResumoDashboardDto>(() => {}));
+    montar();
+
+    const widget = fixture.nativeElement.querySelector('app-chart-widget') as HTMLElement;
+    expect(widget).not.toBeNull();
+    expect(widget.querySelector('hlm-skeleton')).not.toBeNull();
+    expect(widget.querySelector('[echarts]')).toBeNull();
+  });
+
   it('o Funcionario também vê o resumo, mas só os atalhos que a API deixa', () => {
     montar('Funcionario');
 
