@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, Type } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { NotificacaoService } from '../core/notificacao.service';
@@ -43,6 +43,17 @@ describe('Acessibilidade (axe-core, WCAG 2.2 AA) — autenticação e casca do a
     configurar();
 
     expect(await auditar(LoginComponent)).toEqual([]);
+  });
+
+  it('as telas de autenticação têm o landmark main (regra de página inteira que o auditor de componentes não cobre)', async () => {
+    configurar();
+    for (const tipo of [LoginComponent, RegisterComponent, EsqueciSenhaComponent] as Type<unknown>[]) {
+      const fixture = TestBed.createComponent(tipo);
+      fixture.detectChanges();
+
+      expect((fixture.nativeElement as HTMLElement).querySelectorAll('main').length).withContext(tipo.name).toBe(1);
+      fixture.destroy();
+    }
   });
 
   it('cadastro: sem violações nos temas claro e escuro', async () => {

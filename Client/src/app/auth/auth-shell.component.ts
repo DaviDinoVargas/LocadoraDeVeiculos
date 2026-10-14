@@ -45,7 +45,8 @@ import { NgIcon } from '@ng-icons/core';
         <div class="bg-primary-foreground/5 absolute right-1/4 bottom-12 size-40 rounded-full" aria-hidden="true"></div>
       </section>
 
-      <section class="flex min-h-0 flex-col overflow-y-auto">
+      <!-- área do formulário: é o conteúdo principal da tela de autenticação (landmark main, que o Lighthouse cobrava) -->
+      <main class="flex min-h-0 flex-col overflow-y-auto">
         <div class="m-auto w-full max-w-[25rem] px-6 py-8">
           <div class="mb-8 flex items-center gap-3 lg:hidden">
             <span class="bg-primary text-primary-foreground flex size-10 items-center justify-center rounded-full">
@@ -55,7 +56,7 @@ import { NgIcon } from '@ng-icons/core';
           </div>
           <ng-content />
         </div>
-      </section>
+      </main>
     </div>
   `
 })
