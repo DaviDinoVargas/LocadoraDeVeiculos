@@ -3,6 +3,7 @@ import { montarFormCrud } from '../../core/testing/crud-form-harness.spec';
 import { ParceiroFormComponent } from './parceiro-form.component';
 import { ParceiroDto } from './parceiro.model';
 import { ParceirosService } from './parceiros.service';
+import { violacoesNosDoisTemas } from '../../core/testing/acessibilidade';
 
 describe('ParceiroFormComponent — cadastro e edição', () => {
   let svc: jasmine.SpyObj<ParceirosService>;
@@ -68,5 +69,10 @@ describe('ParceiroFormComponent — cadastro e edição', () => {
     expect(campo?.[0]).toBe('cnpj');
     expect(campo?.[1].errors?.['servidor']).toBe('CNPJ já cadastrado.');
     expect(component.erros()).toEqual([]);
+  });
+
+  it('acessibilidade (axe-core, WCAG 2.2 AA): sem violações nos temas claro e escuro', async () => {
+    const { fixture } = montar();
+    expect(await violacoesNosDoisTemas(fixture.nativeElement)).toEqual([]);
   });
 });

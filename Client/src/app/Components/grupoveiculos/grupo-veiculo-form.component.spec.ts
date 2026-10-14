@@ -3,6 +3,7 @@ import { montarFormCrud } from '../../core/testing/crud-form-harness.spec';
 import { GrupoVeiculoFormComponent } from './grupo-veiculo-form.component';
 import { GrupoVeiculoDto } from './grupo-veiculo.model';
 import { GruposVeiculoService } from './grupos-veiculo.service';
+import { violacoesNosDoisTemas } from '../../core/testing/acessibilidade';
 
 describe('GrupoVeiculoFormComponent — cadastro e edição', () => {
   let svc: jasmine.SpyObj<GruposVeiculoService>;
@@ -63,5 +64,10 @@ describe('GrupoVeiculoFormComponent — cadastro e edição', () => {
     expect(campo?.[0]).toBe('nome');
     expect(campo?.[1].errors?.['servidor']).toBe('Já existe um grupo com este nome.');
     expect(component.erros()).toEqual([]);
+  });
+
+  it('acessibilidade (axe-core, WCAG 2.2 AA): sem violações nos temas claro e escuro', async () => {
+    const { fixture } = montar();
+    expect(await violacoesNosDoisTemas(fixture.nativeElement)).toEqual([]);
   });
 });

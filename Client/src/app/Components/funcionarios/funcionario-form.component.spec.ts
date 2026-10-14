@@ -6,6 +6,7 @@ import { criarNotificacaoFalsa } from '../../core/testing/notificacao-fake.spec'
 import { FuncionarioFormComponent } from './funcionario-form.component';
 import { FuncionarioDto } from './funcionario.model';
 import { FuncionariosService } from './funcionarios.service';
+import { violacoesNosDoisTemas } from '../../core/testing/acessibilidade';
 
 describe('FuncionarioFormComponent — senha no cadastro e na edição', () => {
   let fixture: ComponentFixture<FuncionarioFormComponent>;
@@ -97,5 +98,13 @@ describe('FuncionarioFormComponent — senha no cadastro e na edição', () => {
     component.salvar();
 
     expect(svc.atualizar.calls.mostRecent().args[1].senha).toBe('NovaSenha9');
+  });
+
+  it('acessibilidade (axe-core, WCAG 2.2 AA): sem violações nos temas claro e escuro', async () => {
+    montar(null);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(await violacoesNosDoisTemas(fixture.nativeElement)).toEqual([]);
   });
 });

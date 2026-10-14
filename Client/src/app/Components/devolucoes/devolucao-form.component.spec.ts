@@ -9,6 +9,7 @@ import { ConfiguracoesService } from '../configuracoes/configuracoes.service';
 import { DevolucaoFormComponent } from './devolucao-form.component';
 import { DevolucaoDto } from './devolucao.model';
 import { DevolucoesService } from './devolucoes.service';
+import { violacoesNosDoisTemas } from '../../core/testing/acessibilidade';
 
 describe('DevolucaoFormComponent — cálculo da devolução e envio', () => {
   let fixture: ComponentFixture<DevolucaoFormComponent>;
@@ -152,5 +153,13 @@ describe('DevolucaoFormComponent — cálculo da devolução e envio', () => {
     component.cancelar();
 
     expect(router.navigate).toHaveBeenCalledWith(['/alugueis']);
+  });
+
+  it('acessibilidade (axe-core, WCAG 2.2 AA): sem violações nos temas claro e escuro', async () => {
+    montar();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(await violacoesNosDoisTemas(fixture.nativeElement)).toEqual([]);
   });
 });

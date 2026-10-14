@@ -4,6 +4,7 @@ import { CuponsService } from '../cupons/cupons.service';
 import { DesafioCupomFormComponent } from './desafio-cupom-form.component';
 import { DesafioCupomDto } from './desafio-cupom.model';
 import { DesafiosCupomService } from './desafios-cupom.service';
+import { violacoesNosDoisTemas } from '../../core/testing/acessibilidade';
 
 describe('DesafioCupomFormComponent — cadastro e edição', () => {
   let svc: jasmine.SpyObj<DesafiosCupomService>;
@@ -78,5 +79,10 @@ describe('DesafioCupomFormComponent — cadastro e edição', () => {
     expect(campo?.[0]).toBe('nome');
     expect(campo?.[1].errors?.['servidor']).toBe('Já existe um desafio com este nome.');
     expect(component.erros()).toEqual([]);
+  });
+
+  it('acessibilidade (axe-core, WCAG 2.2 AA): sem violações nos temas claro e escuro', async () => {
+    const { fixture } = montar();
+    expect(await violacoesNosDoisTemas(fixture.nativeElement)).toEqual([]);
   });
 });

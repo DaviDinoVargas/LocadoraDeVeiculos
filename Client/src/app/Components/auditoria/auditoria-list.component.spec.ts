@@ -4,6 +4,7 @@ import { of, throwError } from 'rxjs';
 import { AuditoriaListComponent } from './auditoria-list.component';
 import { RegistroAuditoria } from './auditoria.model';
 import { AuditoriaService } from './auditoria.service';
+import { violacoesNosDoisTemas } from '../../core/testing/acessibilidade';
 
 describe('AuditoriaListComponent (S14)', () => {
   let svc: jasmine.SpyObj<AuditoriaService>;
@@ -76,5 +77,14 @@ describe('AuditoriaListComponent (S14)', () => {
     const coluna = f.componentInstance.colunas.find(c => c.id === 'emUtc')!;
 
     expect(coluna.formatar!(f.componentInstance.registros()[0])).toBe(new Date('2026-10-13T15:30:00Z').toLocaleString('pt-BR'));
+  });
+
+  it('acessibilidade (axe-core, WCAG 2.2 AA): sem violações nos temas claro e escuro', async () => {
+    svc.listar.and.returnValue(of([registro({ acao: 'LoginFalhou' }), registro({ acao: 'Alterado', entidade: 'Cliente', camposAlterados: 'Nome,Telefone' })]));
+    const fixture = montar();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(await violacoesNosDoisTemas(fixture.nativeElement)).toEqual([]);
   });
 });

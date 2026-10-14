@@ -9,6 +9,7 @@ import { DevolucoesService } from '../devolucoes/devolucoes.service';
 import { SelecionarAlugueisDto } from './aluguel.model';
 import { DevolucaoCompletoDto } from '../devolucoes/devolucao.model';
 import { PdfService } from '../pdf/pdf.service';
+import { violacoesNosDoisTemas } from '../../core/testing/acessibilidade';
 
 describe('AlugueisListComponent — filtro de status no servidor e devolução', () => {
   let fixture: ComponentFixture<AlugueisListComponent>;
@@ -127,5 +128,12 @@ describe('AlugueisListComponent — filtro de status no servidor e devolução',
       component.exportarPdf();
       expect(gerar).not.toHaveBeenCalled();
     });
+  });
+
+  it('acessibilidade (axe-core, WCAG 2.2 AA): sem violações nos temas claro e escuro', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(await violacoesNosDoisTemas(fixture.nativeElement)).toEqual([]);
   });
 });

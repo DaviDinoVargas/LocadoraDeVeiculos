@@ -4,6 +4,7 @@ import { Observable, of, throwError } from 'rxjs';
 import { HomeComponent } from './home.component';
 import { DashboardService, ResumoDashboardDto } from './dashboard.service';
 import { AuthService } from '../../auth/auth.service';
+import { violacoesNosDoisTemas } from '../../core/testing/acessibilidade';
 
 describe('HomeComponent — resumo da operação', () => {
   let fixture: ComponentFixture<HomeComponent>;
@@ -159,5 +160,13 @@ describe('HomeComponent — resumo da operação', () => {
     const rotas = component.atalhos().map(a => a.rota);
     expect(rotas).toContain('/clientes');
     expect(rotas).not.toContain('/funcionarios');
+  });
+
+  it('acessibilidade (axe-core, WCAG 2.2 AA): sem violações nos temas claro e escuro', async () => {
+    montar();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(await violacoesNosDoisTemas(fixture.nativeElement)).toEqual([]);
   });
 });

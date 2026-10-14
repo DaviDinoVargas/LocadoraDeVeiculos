@@ -4,6 +4,7 @@ import { ParceirosService } from '../parceiros/parceiros.service';
 import { CupomFormComponent } from './cupom-form.component';
 import { CupomDto } from './cupom.model';
 import { CuponsService } from './cupons.service';
+import { violacoesNosDoisTemas } from '../../core/testing/acessibilidade';
 
 describe('CupomFormComponent — cadastro e edição', () => {
   let svc: jasmine.SpyObj<CuponsService>;
@@ -98,5 +99,10 @@ describe('CupomFormComponent — cadastro e edição', () => {
     });
 
     expect(router.navigate).toHaveBeenCalledWith(['/cupons']);
+  });
+
+  it('acessibilidade (axe-core, WCAG 2.2 AA): sem violações nos temas claro e escuro', async () => {
+    const { fixture } = montar();
+    expect(await violacoesNosDoisTemas(fixture.nativeElement)).toEqual([]);
   });
 });

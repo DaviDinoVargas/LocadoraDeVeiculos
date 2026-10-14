@@ -5,6 +5,7 @@ import { criarNotificacaoFalsa } from '../../core/testing/notificacao-fake.spec'
 import { of } from 'rxjs';
 import { ConfiguracaoFormComponent } from './configuracao-form.component';
 import { ConfiguracoesService } from './configuracoes.service';
+import { violacoesNosDoisTemas } from '../../core/testing/acessibilidade';
 
 describe('ConfiguracaoFormComponent — caução configurável', () => {
   let fixture: ComponentFixture<ConfiguracaoFormComponent>;
@@ -62,5 +63,12 @@ describe('ConfiguracaoFormComponent — caução configurável', () => {
     expect(campo.valid).toBeFalse();
     campo.setValue(0);
     expect(campo.valid).toBeTrue();
+  });
+
+  it('acessibilidade (axe-core, WCAG 2.2 AA): sem violações nos temas claro e escuro', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(await violacoesNosDoisTemas(fixture.nativeElement)).toEqual([]);
   });
 });

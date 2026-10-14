@@ -4,6 +4,7 @@ import { GruposVeiculoService } from '../grupoveiculos/grupos-veiculo.service';
 import { PlanoCobrancaFormComponent } from './plano-cobranca-form.component';
 import { PlanoCobrancaDto } from './plano-cobranca.model';
 import { PlanosCobrancaService } from './planos-cobranca.service';
+import { violacoesNosDoisTemas } from '../../core/testing/acessibilidade';
 
 describe('PlanoCobrancaFormComponent — cadastro e edição', () => {
   let svc: jasmine.SpyObj<PlanosCobrancaService>;
@@ -78,5 +79,10 @@ describe('PlanoCobrancaFormComponent — cadastro e edição', () => {
     expect(campo?.[0]).toBe('grupoAutomovelId');
     expect(campo?.[1].errors?.['servidor']).toBe('Já existe plano para este grupo.');
     expect(component.erros()).toEqual([]);
+  });
+
+  it('acessibilidade (axe-core, WCAG 2.2 AA): sem violações nos temas claro e escuro', async () => {
+    const { fixture } = montar();
+    expect(await violacoesNosDoisTemas(fixture.nativeElement)).toEqual([]);
   });
 });

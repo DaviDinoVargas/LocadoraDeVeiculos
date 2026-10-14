@@ -16,6 +16,7 @@ import { CondutorDto } from '../condutor/condutor.model';
 import { CuponsService } from '../cupons/cupons.service';
 import { DesafiosCupomService } from '../desafios-cupom/desafios-cupom.service';
 import { ProgressoDesafioDto } from '../desafios-cupom/desafio-cupom.model';
+import { violacoesNosDoisTemas } from '../../core/testing/acessibilidade';
 
 describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
   let fixture: ComponentFixture<AluguelFormComponent>;
@@ -388,5 +389,12 @@ describe('AluguelFormComponent — resumo de valor vindo do servidor', () => {
       expect(fixture.nativeElement.querySelector('hlm-native-select[formControlName="condutorId"] option').textContent)
         .toContain('Selecione um cliente primeiro');
     });
+  });
+
+  it('acessibilidade (axe-core, WCAG 2.2 AA): sem violações nos temas claro e escuro', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(await violacoesNosDoisTemas(fixture.nativeElement)).toEqual([]);
   });
 });

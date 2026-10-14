@@ -5,6 +5,7 @@ import { criarNotificacaoFalsa } from '../../core/testing/notificacao-fake.spec'
 import { of } from 'rxjs';
 import { ClientesListComponent } from './clientes-list.component';
 import { ClientesService } from './clientes.service';
+import { violacoesNosDoisTemas } from '../../core/testing/acessibilidade';
 
 describe('ClientesListComponent — menu "Novo Cliente"', () => {
   let fixture: ComponentFixture<ClientesListComponent>;
@@ -86,5 +87,12 @@ describe('ClientesListComponent — menu "Novo Cliente"', () => {
       expect(c.obterDocumentoPrincipal({ documentoPrincipal: '123.456.789-00' })).toBe('123.456.789-00');
       expect(c.obterDocumentoPrincipal({})).toBe('—');
     });
+  });
+
+  it('acessibilidade (axe-core, WCAG 2.2 AA): sem violações nos temas claro e escuro', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(await violacoesNosDoisTemas(fixture.nativeElement)).toEqual([]);
   });
 });

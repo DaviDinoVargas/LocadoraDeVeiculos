@@ -37,6 +37,8 @@ export const HLM_NATIVE_SELECT_VALUE_ACCESSOR = {
 	host: {
 		'data-slot': 'native-select-wrapper',
 		'[attr.data-size]': 'size()',
+		// o nome acessível vai para o <select> (abaixo); no wrapper o aria-label não nomeia nada e o axe o acusa
+		'[attr.aria-label]': 'null',
 	},
 	template: `
 		<select
@@ -44,6 +46,7 @@ export const HLM_NATIVE_SELECT_VALUE_ACCESSOR = {
 			[id]="selectId()"
 			[class]="_computedSelectClass()"
 			[attr.data-size]="size()"
+			[attr.aria-label]="ariaLabel()"
 			[attr.aria-invalid]="_ariaInvalid() ? 'true' : null"
 			[attr.data-invalid]="_ariaInvalid() ? 'true' : null"
 			[attr.data-dirty]="_dirty?.() ? 'true' : null"
@@ -71,6 +74,9 @@ export class HlmNativeSelect implements ControlValueAccessor {
 	private static _id = 0;
 
 	public readonly selectId = input<string>(`hlm-native-select-${HlmNativeSelect._id++}`);
+
+	/** Nome acessível do select quando não há `<label>`: `<hlm-native-select aria-label="Filtrar por grupo">`. */
+	public readonly ariaLabel = input<string | null>(null, { alias: 'aria-label' });
 
 	public readonly selectClass = input<ClassValue>('');
 

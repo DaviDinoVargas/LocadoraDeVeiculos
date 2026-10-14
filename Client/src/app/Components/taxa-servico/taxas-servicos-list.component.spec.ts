@@ -7,6 +7,7 @@ import { of, throwError } from 'rxjs';
 import { TaxasServicosListComponent } from './taxas-servicos-list.component';
 import { TaxasServicosService } from './taxas-servicos.service';
 import { TaxaServicoDto } from './taxa-servico.model';
+import { violacoesNosDoisTemas } from '../../core/testing/acessibilidade';
 
 describe('TaxasServicosListComponent — filtro por tipo no servidor', () => {
   let fixture: ComponentFixture<TaxasServicosListComponent>;
@@ -82,5 +83,14 @@ describe('TaxasServicosListComponent — filtro por tipo no servidor', () => {
       expect(fixture.nativeElement.textContent).not.toContain('Nova taxa ou serviço');
       expect(fixture.nativeElement.querySelectorAll('tbody tr').length).toBe(2);
     });
+  });
+
+  it('acessibilidade (axe-core, WCAG 2.2 AA): sem violações nos temas claro e escuro', async () => {
+    TestBed.resetTestingModule();
+    montar('Empresa');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(await violacoesNosDoisTemas(fixture.nativeElement)).toEqual([]);
   });
 });

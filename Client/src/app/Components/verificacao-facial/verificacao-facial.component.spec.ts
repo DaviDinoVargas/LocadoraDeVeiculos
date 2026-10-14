@@ -4,6 +4,7 @@ import { AuthService } from '../../auth/auth.service';
 import { ConfirmacaoService } from '../../core/confirmacao.service';
 import { WebcamCaptureService } from '../../shared/webcam-capture.service';
 import { VerificacaoFacialComponent } from './verificacao-facial.component';
+import { violacoesNosDoisTemas } from '../../core/testing/acessibilidade';
 
 describe('VerificacaoFacialComponent', () => {
   let fixture: ComponentFixture<VerificacaoFacialComponent>;
@@ -146,5 +147,12 @@ describe('VerificacaoFacialComponent', () => {
       expect(auth.cadastrarRosto).not.toHaveBeenCalled();
       expect(fixture.componentInstance.mensagemTipo()).toBe('erro');
     });
+  });
+
+  it('acessibilidade (axe-core, WCAG 2.2 AA): sem violações nos temas claro e escuro', async () => {
+    criar(true);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(await violacoesNosDoisTemas(fixture.nativeElement)).toEqual([]);
   });
 });

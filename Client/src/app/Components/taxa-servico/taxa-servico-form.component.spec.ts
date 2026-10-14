@@ -3,6 +3,7 @@ import { montarFormCrud } from '../../core/testing/crud-form-harness.spec';
 import { TaxaServicoFormComponent } from './taxa-servico-form.component';
 import { TaxaServicoDto } from './taxa-servico.model';
 import { TaxasServicosService } from './taxas-servicos.service';
+import { violacoesNosDoisTemas } from '../../core/testing/acessibilidade';
 
 describe('TaxaServicoFormComponent — cadastro e edição', () => {
   let svc: jasmine.SpyObj<TaxasServicosService>;
@@ -64,5 +65,10 @@ describe('TaxaServicoFormComponent — cadastro e edição', () => {
     expect(campo?.[0]).toBe('tipoCalculo');
     expect(campo?.[1].errors?.['servidor']).toBe('Tipo de cálculo inválido.');
     expect(component.erros()).toEqual([]);
+  });
+
+  it('acessibilidade (axe-core, WCAG 2.2 AA): sem violações nos temas claro e escuro', async () => {
+    const { fixture } = montar();
+    expect(await violacoesNosDoisTemas(fixture.nativeElement)).toEqual([]);
   });
 });

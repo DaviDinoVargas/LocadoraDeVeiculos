@@ -4,6 +4,7 @@ import { ClientesService } from '../clientes/clientes.service';
 import { CondutorFormComponent } from './condutor-form.component';
 import { CondutorDto } from './condutor.model';
 import { CondutoresService } from './condutores.service';
+import { violacoesNosDoisTemas } from '../../core/testing/acessibilidade';
 
 describe('CondutorFormComponent — cadastro e edição', () => {
   let svc: jasmine.SpyObj<CondutoresService>;
@@ -88,5 +89,10 @@ describe('CondutorFormComponent — cadastro e edição', () => {
     expect(campo?.[0]).toBe('cpf');
     expect(campo?.[1].errors?.['servidor']).toBe('CPF já cadastrado.');
     expect(component.erros()).toEqual([]);
+  });
+
+  it('acessibilidade (axe-core, WCAG 2.2 AA): sem violações nos temas claro e escuro', async () => {
+    const { fixture } = montar();
+    expect(await violacoesNosDoisTemas(fixture.nativeElement)).toEqual([]);
   });
 });

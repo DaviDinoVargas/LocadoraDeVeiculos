@@ -7,6 +7,7 @@ import { SelecionarAlugueisDto } from '../alugueis/aluguel.model';
 import { AlugueisService } from '../alugueis/alugueis.service';
 import { CameraMonitorComponent } from './camera-monitor.component';
 import { CameraService, DeteccaoPlaca } from './camera.service';
+import { violacoesNosDoisTemas } from '../../core/testing/acessibilidade';
 
 describe('CameraMonitorComponent — câmeras, placas e devolução', () => {
   let fixture: ComponentFixture<CameraMonitorComponent>;
@@ -355,5 +356,14 @@ describe('CameraMonitorComponent — câmeras, placas e devolução', () => {
       expect(component.rotuloEstado('sem-permissao')).toBe('Sem permissão');
       expect(component.rotuloEstado('parada')).toBe('Parada');
     });
+  });
+
+  it('acessibilidade (axe-core, WCAG 2.2 AA): sem violações nos temas claro e escuro', async () => {
+    montar();
+    fixture.detectChanges();
+    // a tela tem um ciclo de 30 s: whenStable() nunca resolveria, então basta um turno do navegador
+    await new Promise(resolver => setTimeout(resolver));
+    fixture.detectChanges();
+    expect(await violacoesNosDoisTemas(fixture.nativeElement)).toEqual([]);
   });
 });

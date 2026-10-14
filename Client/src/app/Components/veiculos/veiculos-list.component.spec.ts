@@ -9,6 +9,7 @@ import { GruposVeiculoService } from '../grupoveiculos/grupos-veiculo.service';
 import { AuthService } from '../../auth/auth.service';
 import { ConfirmacaoService } from '../../core/confirmacao.service';
 import { VeiculoDto } from './veiculo.model';
+import { violacoesNosDoisTemas } from '../../core/testing/acessibilidade';
 
 describe('VeiculosListComponent', () => {
   let fixture: ComponentFixture<VeiculosListComponent>;
@@ -91,5 +92,13 @@ describe('VeiculosListComponent', () => {
     montar('Funcionario');
 
     expect(component.obterNomeGrupo({ ...uno, grupoAutomovelNome: undefined })).toBe('—');
+  });
+
+  it('acessibilidade (axe-core, WCAG 2.2 AA): sem violações nos temas claro e escuro', async () => {
+    montar('Empresa');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(await violacoesNosDoisTemas(fixture.nativeElement)).toEqual([]);
   });
 });

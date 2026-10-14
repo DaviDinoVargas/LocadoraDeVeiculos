@@ -7,6 +7,7 @@ import { GruposVeiculoService } from '../grupoveiculos/grupos-veiculo.service';
 import { VeiculoFormComponent } from './veiculo-form.component';
 import { VeiculosService } from './veiculos.service';
 import { VeiculoDto } from './veiculo.model';
+import { violacoesNosDoisTemas } from '../../core/testing/acessibilidade';
 
 describe('VeiculoFormComponent — placa e contrato com a API', () => {
   let fixture: ComponentFixture<VeiculoFormComponent>;
@@ -89,5 +90,13 @@ describe('VeiculoFormComponent — placa e contrato com a API', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Placa inválida. Use o formato AAA-0000 ou AAA-0A00.');
+  });
+
+  it('acessibilidade (axe-core, WCAG 2.2 AA): sem violações nos temas claro e escuro', async () => {
+    montar(null);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(await violacoesNosDoisTemas(fixture.nativeElement)).toEqual([]);
   });
 });

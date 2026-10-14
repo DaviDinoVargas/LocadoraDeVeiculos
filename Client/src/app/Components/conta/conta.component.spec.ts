@@ -6,6 +6,7 @@ import { ConfirmacaoService } from '../../core/confirmacao.service';
 import { NotificacaoService } from '../../core/notificacao.service';
 import { criarNotificacaoFalsa } from '../../core/testing/notificacao-fake.spec';
 import { ContaComponent } from './conta.component';
+import { violacoesNosDoisTemas } from '../../core/testing/acessibilidade';
 
 describe('ContaComponent — senha, verificação em duas etapas e encerrar conta', () => {
   let auth: jasmine.SpyObj<AuthService>;
@@ -168,5 +169,13 @@ describe('ContaComponent — senha, verificação em duas etapas e encerrar cont
 
       expect(confirmacao.confirmar).not.toHaveBeenCalled();
     });
+  });
+
+  it('acessibilidade (axe-core, WCAG 2.2 AA): sem violações nos temas claro e escuro', async () => {
+    const fixture = montar('Empresa');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(await violacoesNosDoisTemas(fixture.nativeElement)).toEqual([]);
   });
 });
