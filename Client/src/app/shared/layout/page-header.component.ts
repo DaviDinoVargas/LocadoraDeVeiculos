@@ -16,7 +16,7 @@ import { RouterLink } from '@angular/router';
         @if (voltarPara()) {
           <a
             [routerLink]="voltarPara()"
-            class="text-label-l text-muted-foreground hover:text-foreground mb-1 inline-flex min-h-8 items-center gap-1"
+            class="text-label-l text-muted-foreground hover:text-foreground mb-1 inline-flex min-h-8 pointer-coarse:min-h-12 items-center gap-1"
           >
             <ng-icon name="lucideArrowLeft" class="text-base" aria-hidden="true" />
             {{ rotuloVoltar() }}

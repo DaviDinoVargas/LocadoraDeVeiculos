@@ -32,7 +32,7 @@ import { AuthService } from './auth.service';
           </p>
         </div>
         <p class="text-body-m mt-6 text-center">
-          <a routerLink="/login" class="text-primary font-medium underline-offset-4 hover:underline">Voltar para o login</a>
+          <a routerLink="/login" class="text-primary inline-flex items-center font-medium underline-offset-4 hover:underline pointer-coarse:min-h-12">Voltar para o login</a>
         </p>
       } @else {
         <form [formGroup]="form" (ngSubmit)="enviar()" class="flex flex-col gap-4" novalidate>
@@ -59,7 +59,7 @@ import { AuthService } from './auth.service';
 
         <p class="text-body-m text-muted-foreground mt-6 text-center">
           Lembrou a senha?
-          <a routerLink="/login" class="text-primary font-medium underline-offset-4 hover:underline">Entrar</a>
+          <a routerLink="/login" class="text-primary inline-flex items-center font-medium underline-offset-4 hover:underline pointer-coarse:min-h-12">Entrar</a>
         </p>
       }
     </app-auth-shell>

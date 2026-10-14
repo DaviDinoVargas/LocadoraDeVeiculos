@@ -81,7 +81,7 @@
       @if (busca()) {
         <span class="bg-secondary text-secondary-foreground text-label-m inline-flex items-center gap-1 rounded-lg py-1 pr-1 pl-3">
           Busca: “{{ busca() }}”
-          <button type="button" class="hover:bg-foreground/10 flex size-6 items-center justify-center rounded-full" aria-label="Remover busca" (click)="limparBusca()">
+          <button type="button" class="relative before:absolute before:-inset-3 before:content-[''] hover:bg-foreground/10 flex size-6 items-center justify-center rounded-full" aria-label="Remover busca" (click)="limparBusca()">
             <ng-icon name="lucideX" class="text-sm" aria-hidden="true" />
           </button>
         </span>
@@ -91,7 +91,7 @@
           {{ chip.texto }}
           <button
             type="button"
-            class="hover:bg-foreground/10 flex size-6 items-center justify-center rounded-full"
+            class="relative before:absolute before:-inset-3 before:content-[''] hover:bg-foreground/10 flex size-6 items-center justify-center rounded-full"
             [attr.aria-label]="'Remover filtro ' + chip.texto"
             (click)="removerFiltro(chip.colunaId, chip.valor)"
           >
@@ -140,7 +140,7 @@
                   } @else {
                     <button
                       type="button"
-                      class="hover:text-foreground focus-visible:ring-ring inline-flex min-h-8 items-center gap-1 rounded-md"
+                      class="hover:text-foreground focus-visible:ring-ring inline-flex min-h-8 pointer-coarse:min-h-12 items-center gap-1 rounded-md"
                       [class.flex-row-reverse]="classeAlinhamento(coluna).includes('text-right')"
                       (click)="alternarOrdenacao(coluna)"
                     >

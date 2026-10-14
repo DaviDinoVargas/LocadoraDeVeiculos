@@ -44,7 +44,7 @@ function senhasIguais(grupo: AbstractControl): ValidationErrors | null {
           <p hlmAlertDescription>Link incompleto ou inválido. Peça uma nova redefinição de senha.</p>
         </div>
         <p class="text-body-m mt-6 text-center">
-          <a routerLink="/esqueci-senha" class="text-primary font-medium underline-offset-4 hover:underline">Pedir um novo link</a>
+          <a routerLink="/esqueci-senha" class="text-primary inline-flex items-center font-medium underline-offset-4 hover:underline pointer-coarse:min-h-12">Pedir um novo link</a>
         </p>
       } @else {
         <form [formGroup]="form" (ngSubmit)="salvar()" class="flex flex-col gap-4" novalidate>
