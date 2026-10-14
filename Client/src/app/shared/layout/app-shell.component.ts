@@ -95,7 +95,6 @@ function lerRecolhido(): boolean {
             <button
               type="button"
               class="border-input bg-surface-lowest text-body-m text-muted-foreground hover:bg-accent/40 flex h-10 min-w-0 flex-1 items-center gap-2 rounded-full border px-4 sm:max-w-md"
-              aria-label="Buscar tela (Ctrl+K)"
               (click)="abrirPaleta()"
             >
               <ng-icon name="lucideSearch" aria-hidden="true" />
@@ -132,12 +131,13 @@ function lerRecolhido(): boolean {
                 class="hover:bg-accent/60 flex min-h-11 items-center gap-2 rounded-full py-1 pr-2 pl-1"
                 [hlmDropdownMenuTrigger]="menuUsuario"
                 align="end"
-                aria-label="Menu do usuário"
               >
-                <span class="bg-primary-container text-on-primary-container text-label-m flex size-9 items-center justify-center rounded-full">
+                <span class="bg-primary-container text-on-primary-container text-label-m flex size-9 items-center justify-center rounded-full" aria-hidden="true">
                   {{ iniciais() }}
                 </span>
-                <span class="text-label-l text-foreground hidden max-w-40 truncate sm:inline">{{ nome() }}</span>
+                <span class="sr-only">Menu do usuário:</span>
+                <!-- no celular o nome fica só para leitor de tela (sr-only), assim o botão nunca fica sem nome -->
+                <span class="text-label-l text-foreground max-w-40 truncate max-sm:sr-only sm:inline">{{ nome() }}</span>
                 <ng-icon name="lucideChevronDown" class="text-muted-foreground hidden sm:block" aria-hidden="true" />
               </button>
             </div>
