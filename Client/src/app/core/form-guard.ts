@@ -19,6 +19,8 @@ export const formularioSemPerdaGuard: CanDeactivateFn<FormProtegido> = component
     mensagem: 'Você tem alterações não salvas neste formulário. Se sair agora, elas serão perdidas.',
     confirmar: 'Descartar e sair',
     cancelar: 'Continuar editando',
-    destrutivo: true
+    destrutivo: true,
+    // a mensagem já diz que as alterações serão perdidas; repetir "não pode ser desfeita" seria ruído
+    avisoIrreversivel: false
   });
 };

@@ -31,7 +31,7 @@ describe('formularioSemPerdaGuard — alterações não salvas', () => {
     let resposta: boolean | undefined;
     (executar(form) as Observable<boolean>).subscribe(r => (resposta = r));
 
-    expect(confirmar).toHaveBeenCalledWith(jasmine.objectContaining({ destrutivo: true, confirmar: 'Descartar e sair' }));
+    expect(confirmar).toHaveBeenCalledWith(jasmine.objectContaining({ destrutivo: true, avisoIrreversivel: false, confirmar: 'Descartar e sair' }));
     expect(resposta).toBeFalse();
   });
 

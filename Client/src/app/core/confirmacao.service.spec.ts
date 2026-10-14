@@ -46,6 +46,13 @@ describe('ConfirmacaoService — substitui o confirm() nativo', () => {
     expect(overlay().textContent).toContain('Esta ação não pode ser desfeita.');
   });
 
+  it('ação destrutiva com avisoIrreversivel desligado mantém o botão destrutivo e some com o aviso', () => {
+    abrir({ mensagem: 'Descartar?', confirmar: 'Descartar', destrutivo: true, avisoIrreversivel: false });
+
+    expect(botao('Descartar').className).toContain('bg-destructive');
+    expect(overlay().textContent).not.toContain('não pode ser desfeita');
+  });
+
   it('ação comum não é destrutiva nem avisa de irreversibilidade', () => {
     abrir({ mensagem: 'Iniciar?', confirmar: 'Iniciar aluguel' });
 

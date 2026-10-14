@@ -14,6 +14,8 @@ export interface OpcoesConfirmacao {
   cancelar?: string;
   /** Ação irreversível: botão destrutivo e aviso de que não dá para desfazer. */
   destrutivo?: boolean;
+  /** Com `destrutivo`, mostra "Esta ação não pode ser desfeita." (padrão: true). Desligue quando a mensagem já diz isso ou a perda é só de edição. */
+  avisoIrreversivel?: boolean;
 }
 
 type DadosConfirmacao = Required<OpcoesConfirmacao>;
@@ -31,7 +33,7 @@ type DadosConfirmacao = Required<OpcoesConfirmacao>;
         {{ dados.titulo }}
       </h2>
       <p hlmDialogDescription class="text-body-m text-muted-foreground">{{ dados.mensagem }}</p>
-      @if (dados.destrutivo) {
+      @if (dados.destrutivo && dados.avisoIrreversivel) {
         <p class="text-body-s text-muted-foreground">Esta ação não pode ser desfeita.</p>
       }
     </hlm-dialog-header>
@@ -76,6 +78,7 @@ export class ConfirmacaoService {
       confirmar: 'Confirmar',
       cancelar: 'Cancelar',
       destrutivo: false,
+      avisoIrreversivel: true,
       ...base
     };
 
