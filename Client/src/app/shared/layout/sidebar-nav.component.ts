@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, output, si
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { NgIcon } from '@ng-icons/core';
+import { HlmDropdownMenuImports } from '@spartan-ng/helm/dropdown-menu';
 import { HlmTooltipImports } from '@spartan-ng/helm/tooltip';
 import { filter, map, startWith } from 'rxjs';
 import { GrupoMenu, ItemMenu } from '../../core/navegacao';
@@ -12,7 +13,7 @@ import { GrupoMenu, ItemMenu } from '../../core/navegacao';
  */
 @Component({
   selector: 'app-sidebar-nav',
-  imports: [RouterLink, NgIcon, HlmTooltipImports],
+  imports: [RouterLink, NgIcon, HlmDropdownMenuImports, HlmTooltipImports],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <nav aria-label="Navegação principal" class="flex flex-col gap-4">
@@ -65,6 +66,34 @@ import { GrupoMenu, ItemMenu } from '../../core/navegacao';
                       }
                     </ul>
                   }
+                } @else if (item.filhos && recolhido()) {
+                  <!-- trilho só de ícones: os subitens abrem num menu ao lado, senão ficariam inalcançáveis -->
+                  <button
+                    type="button"
+                    class="text-label-l hover:bg-accent/60 flex min-h-11 w-full items-center justify-center gap-3 rounded-full px-3 transition-colors"
+                    [class.bg-secondary]="itemAtivo(item)"
+                    [class.text-secondary-foreground]="itemAtivo(item)"
+                    [class.text-muted-foreground]="!itemAtivo(item)"
+                    [attr.aria-label]="item.rotulo + ' (abrir subitens)'"
+                    [hlmDropdownMenuTrigger]="submenu"
+                    side="right"
+                    align="start"
+                  >
+                    <ng-icon [name]="item.icone" class="text-lg" aria-hidden="true" />
+                  </button>
+                  <ng-template #submenu>
+                    <hlm-dropdown-menu class="w-56">
+                      <hlm-dropdown-menu-label>{{ item.rotulo }}</hlm-dropdown-menu-label>
+                      <hlm-dropdown-menu-group>
+                        @for (filho of item.filhos; track filho.caminho) {
+                          <button hlmDropdownMenuItem type="button" (triggered)="irPara(filho.caminho)">
+                            <ng-icon [name]="filho.icone" aria-hidden="true" />
+                            {{ filho.rotulo }}
+                          </button>
+                        }
+                      </hlm-dropdown-menu-group>
+                    </hlm-dropdown-menu>
+                  </ng-template>
                 } @else {
                   <a
                     [routerLink]="comoRota(item.caminho)"
@@ -124,6 +153,11 @@ export class SidebarNavComponent {
   protected consulta(caminho: string): Record<string, string> | undefined {
     const consulta = caminho.split('?')[1];
     return consulta ? Object.fromEntries(new URLSearchParams(consulta)) : undefined;
+  }
+
+  protected irPara(caminho: string): void {
+    void this.router.navigate([this.comoRota(caminho)], { queryParams: this.consulta(caminho) });
+    this.navegou.emit();
   }
 
   protected expandido(item: ItemMenu): boolean {
