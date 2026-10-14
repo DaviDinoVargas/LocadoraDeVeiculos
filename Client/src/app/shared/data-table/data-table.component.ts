@@ -42,7 +42,11 @@ const features = tableFeatures({
   columnVisibilityFeature
 });
 
+/** Sobe quando o formato salvo mudar: preferências de outra versão são descartadas em vez de interpretadas errado. */
+const VERSAO_PREFERENCIAS = 1;
+
 interface Preferencias {
+  versao?: number;
   ocultas?: string[];
   densidade?: Densidade;
   tamanho?: number;
@@ -434,7 +438,12 @@ export class DataTableComponent<T extends object> {
   private lerPreferencias(): Preferencias {
     try {
       const bruto = localStorage.getItem(`tabela:${this.tableId()}`);
-      return bruto ? (JSON.parse(bruto) as Preferencias) : {};
+      if (!bruto) return {};
+      const salvas = JSON.parse(bruto) as Preferencias;
+      if (salvas.versao !== VERSAO_PREFERENCIAS) return {};
+      // colunas que deixaram de existir não ficam guardadas para sempre
+      const existentes = new Set(this.colunas().map(c => c.id));
+      return { ...salvas, ocultas: salvas.ocultas?.filter(id => existentes.has(id)) };
     } catch {
       return {};
     }
@@ -447,7 +456,7 @@ export class DataTableComponent<T extends object> {
 
   private persistir(): void {
     try {
-      localStorage.setItem(`tabela:${this.tableId()}`, JSON.stringify(this.prefs()));
+      localStorage.setItem(`tabela:${this.tableId()}`, JSON.stringify({ ...this.prefs(), versao: VERSAO_PREFERENCIAS }));
     } catch {
       // armazenamento indisponível: preferências valem só nesta visita
     }

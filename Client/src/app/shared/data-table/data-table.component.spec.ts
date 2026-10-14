@@ -231,3 +231,51 @@ describe('DataTableComponent — tabela compartilhada', () => {
     expect(cartoes[0].textContent).toContain('AAA1A11');
   });
 });
+
+describe('DataTableComponent — preferências salvas no navegador', () => {
+  const CHAVE = 'tabela:teste-frota';
+
+  const criar = async () => {
+    TestBed.configureTestingModule({ imports: [HostComponent], providers: [provideRouter([])] });
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return fixture;
+  };
+  const cabecalhos = (f: ComponentFixture<HostComponent>) =>
+    Array.from((f.nativeElement as HTMLElement).querySelectorAll('thead th')).map(th => th.textContent?.trim());
+
+  afterEach(() => localStorage.removeItem(CHAVE));
+
+  it('preferências de uma versão antiga do formato (sem versão) são ignoradas', async () => {
+    localStorage.setItem(CHAVE, JSON.stringify({ ocultas: ['ano'] }));
+
+    const fixture = await criar();
+
+    expect(cabecalhos(fixture)).toContain('Ano');
+  });
+
+  it('preferências da versão atual valem, e ids de colunas que não existem mais são descartados ao salvar', async () => {
+    localStorage.setItem(CHAVE, JSON.stringify({ versao: 1, ocultas: ['ano', 'coluna-removida'] }));
+
+    const fixture = await criar();
+    expect(cabecalhos(fixture)).not.toContain('Ano');
+
+    const tabela = fixture.debugElement.children[0].componentInstance as { alternarColuna(id: string): void };
+    tabela.alternarColuna('modelo');
+    fixture.detectChanges();
+
+    const salvo = JSON.parse(localStorage.getItem(CHAVE) ?? '{}') as { versao?: number; ocultas?: string[] };
+    expect(salvo.versao).toBe(1);
+    expect(salvo.ocultas).toEqual(jasmine.arrayWithExactContents(['ano', 'modelo']));
+  });
+
+  it('JSON corrompido não derruba a tabela: volta ao padrão', async () => {
+    localStorage.setItem(CHAVE, '{isto não é json');
+
+    const fixture = await criar();
+
+    expect(cabecalhos(fixture)).toContain('Ano');
+  });
+});
