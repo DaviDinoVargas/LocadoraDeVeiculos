@@ -1,6 +1,6 @@
-import { Injectable } from '@angular/core';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { Injectable, inject } from '@angular/core';
+import type { jsPDF } from 'jspdf';
+import { NotificacaoService } from '../../core/notificacao.service';
 import { mascararPlaca } from '../../shared/mascaras/mascara.directive';
 import { AluguelCompletoDto, SelecionarAlugueisDto } from '../alugueis/aluguel.model';
 import { DevolucaoCompletoDto, SelecionarDevolucoesDto } from '../devolucoes/devolucao.model';
@@ -17,9 +17,29 @@ const TOM_DO_STATUS: Record<string, TomSelo> = {
   providedIn: 'root'
 })
 export class PdfService {
+  private readonly notificacao = inject(NotificacaoService);
+
+  /**
+   * jsPDF e o autotable pesam ~450 kB e só servem na hora de exportar. Importar sob demanda tira esse peso das telas de
+   * aluguéis e devoluções (o Lighthouse apontava `unused-javascript`); o navegador baixa o pacote no primeiro PDF.
+   */
+  private async bibliotecas() {
+    const [{ jsPDF }, { default: autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
+    return { jsPDF, autoTable };
+  }
+
+  /** Gera e baixa; se o pacote não puder ser baixado (sem rede) ou o PDF falhar, avisa em vez de falhar em silêncio. */
+  private async gerarEBaixar(montar: () => Promise<jsPDF>, nomeDoArquivo: string): Promise<void> {
+    try {
+      this.baixar(await montar(), nomeDoArquivo);
+    } catch {
+      this.notificacao.erro('Não foi possível gerar o PDF. Verifique a conexão e tente de novo.');
+    }
+  }
 
   /** Monta o recibo; separado de {@link gerarReciboDevolucao} para poder ser conferido sem baixar arquivo. */
-  montarReciboDevolucao(devolucao: DevolucaoCompletoDto, aluguel: AluguelCompletoDto): jsPDF {
+  async montarReciboDevolucao(devolucao: DevolucaoCompletoDto, aluguel: AluguelCompletoDto): Promise<jsPDF> {
+    const { jsPDF, autoTable } = await this.bibliotecas();
     const doc = new jsPDF();
     const largura = doc.internal.pageSize.getWidth();
     const altura = doc.internal.pageSize.getHeight();
@@ -81,15 +101,16 @@ export class PdfService {
     return doc;
   }
 
-  gerarReciboDevolucao(devolucao: DevolucaoCompletoDto, aluguel: AluguelCompletoDto): void {
+  async gerarReciboDevolucao(devolucao: DevolucaoCompletoDto, aluguel: AluguelCompletoDto): Promise<void> {
     const dataAtual = new Date().toLocaleDateString('pt-BR');
-    this.baixar(this.montarReciboDevolucao(devolucao, aluguel), `recibo-devolucao-${devolucao.id}-${dataAtual.replace(/\//g, '-')}.pdf`);
+    await this.gerarEBaixar(() => this.montarReciboDevolucao(devolucao, aluguel), `recibo-devolucao-${devolucao.id}-${dataAtual.replace(/\//g, '-')}.pdf`);
   }
 
   // ---- Relatórios em lista (exportam exatamente o que está na tela, já filtrado) ----------------
 
   /** Monta o relatório de aluguéis; separado de {@link gerarRelatorioAlugueis} para poder ser conferido sem baixar arquivo. */
-  montarRelatorioAlugueis(alugueis: SelecionarAlugueisDto[], filtro: string): jsPDF {
+  async montarRelatorioAlugueis(alugueis: SelecionarAlugueisDto[], filtro: string): Promise<jsPDF> {
+    const { jsPDF, autoTable } = await this.bibliotecas();
     const doc = new jsPDF({ orientation: 'landscape' });
     let y = cabecalho(doc, 'Relatório de aluguéis', `Filtro: ${filtro}`);
 
@@ -120,11 +141,12 @@ export class PdfService {
     return doc;
   }
 
-  gerarRelatorioAlugueis(alugueis: SelecionarAlugueisDto[], filtro: string): void {
-    this.baixar(this.montarRelatorioAlugueis(alugueis, filtro), `relatorio-alugueis-${this.dataParaArquivo()}.pdf`);
+  async gerarRelatorioAlugueis(alugueis: SelecionarAlugueisDto[], filtro: string): Promise<void> {
+    await this.gerarEBaixar(() => this.montarRelatorioAlugueis(alugueis, filtro), `relatorio-alugueis-${this.dataParaArquivo()}.pdf`);
   }
 
-  montarRelatorioDevolucoes(devolucoes: SelecionarDevolucoesDto[]): jsPDF {
+  async montarRelatorioDevolucoes(devolucoes: SelecionarDevolucoesDto[]): Promise<jsPDF> {
+    const { jsPDF, autoTable } = await this.bibliotecas();
     const doc = new jsPDF({ orientation: 'landscape' });
     let y = cabecalho(doc, 'Relatório de devoluções', 'Todas as devoluções registradas');
 
@@ -153,8 +175,8 @@ export class PdfService {
     return doc;
   }
 
-  gerarRelatorioDevolucoes(devolucoes: SelecionarDevolucoesDto[]): void {
-    this.baixar(this.montarRelatorioDevolucoes(devolucoes), `relatorio-devolucoes-${this.dataParaArquivo()}.pdf`);
+  async gerarRelatorioDevolucoes(devolucoes: SelecionarDevolucoesDto[]): Promise<void> {
+    await this.gerarEBaixar(() => this.montarRelatorioDevolucoes(devolucoes), `relatorio-devolucoes-${this.dataParaArquivo()}.pdf`);
   }
 
   // O jsPDF define save() dentro de cada instância; isolar a chamada permite testar sem baixar arquivo.

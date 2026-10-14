@@ -52,9 +52,9 @@ export class DevolucoesListComponent {
 
   readonly tituloLinha = (d: SelecionarDevolucoesDto) => `${d.clienteNome} — ${mascararPlaca(d.automovelPlaca)}`;
 
-  exportarPdf(): void {
+  async exportarPdf(): Promise<void> {
     if (this.devolucoes().length === 0) return;
-    this.pdf.gerarRelatorioDevolucoes(this.devolucoes());
+    await this.pdf.gerarRelatorioDevolucoes(this.devolucoes());
   }
 
   formatarData(dataString: string): string {

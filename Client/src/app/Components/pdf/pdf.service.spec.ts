@@ -1,5 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { jsPDF } from 'jspdf';
+import { NotificacaoService } from '../../core/notificacao.service';
+import { criarNotificacaoFalsa } from '../../core/testing/notificacao-fake.spec';
 import { PdfService } from './pdf.service';
 import { AluguelCompletoDto, SelecionarAlugueisDto } from '../alugueis/aluguel.model';
 import { DevolucaoCompletoDto, SelecionarDevolucoesDto } from '../devolucoes/devolucao.model';
@@ -27,8 +29,8 @@ describe('PdfService — relatórios em lista', () => {
     service = TestBed.inject(PdfService);
   });
 
-  it('relatório de aluguéis: título, filtro, uma linha por aluguel e totais', () => {
-    const doc = service.montarRelatorioAlugueis(
+  it('relatório de aluguéis: título, filtro, uma linha por aluguel e totais', async () => {
+    const doc = await service.montarRelatorioAlugueis(
       [aluguel('ABC1D23', 'EmAndamento', 300), aluguel('XYZ9Z99', 'Reservado', 450.5)], 'Em andamento');
 
     const texto = conteudo(doc);
@@ -42,23 +44,23 @@ describe('PdfService — relatórios em lista', () => {
     expect(texto).toContain('Página 1 de 1');
   });
 
-  it('relatório de aluguéis é paisagem (7 colunas cabem)', () => {
-    const doc = service.montarRelatorioAlugueis([aluguel('ABC1D23', 'Reservado', 100)], 'Todos');
+  it('relatório de aluguéis é paisagem (7 colunas cabem)', async () => {
+    const doc = await service.montarRelatorioAlugueis([aluguel('ABC1D23', 'Reservado', 100)], 'Todos');
 
     expect(doc.internal.pageSize.getWidth()).toBeGreaterThan(doc.internal.pageSize.getHeight());
   });
 
-  it('lista vazia gera o relatório com total zero em vez de falhar', () => {
-    const doc = service.montarRelatorioAlugueis([], 'Cancelados');
+  it('lista vazia gera o relatório com total zero em vez de falhar', async () => {
+    const doc = await service.montarRelatorioAlugueis([], 'Cancelados');
 
     expect(conteudo(doc)).toContain('0 aluguel(éis)');
     expect(doc.getNumberOfPages()).toBe(1);
   });
 
-  it('muitos registros viram várias páginas, todas numeradas "Página x de y"', () => {
+  it('muitos registros viram várias páginas, todas numeradas "Página x de y"', async () => {
     const muitos = Array.from({ length: 80 }, (_, i) => aluguel(`AAA${String(i).padStart(4, '0')}`, 'Concluido', 100));
 
-    const doc = service.montarRelatorioAlugueis(muitos, 'Todos');
+    const doc = await service.montarRelatorioAlugueis(muitos, 'Todos');
     const total = doc.getNumberOfPages();
 
     expect(total).toBeGreaterThan(1);
@@ -66,8 +68,8 @@ describe('PdfService — relatórios em lista', () => {
     expect(conteudo(doc)).toContain(`Página ${total} de ${total}`);
   });
 
-  it('relatório de devoluções: linhas, quilometragem e total', () => {
-    const doc = service.montarRelatorioDevolucoes([devolucao('ABC1D23', 1200), devolucao('XYZ9Z99', 800.25)]);
+  it('relatório de devoluções: linhas, quilometragem e total', async () => {
+    const doc = await service.montarRelatorioDevolucoes([devolucao('ABC1D23', 1200), devolucao('XYZ9Z99', 800.25)]);
 
     const texto = conteudo(doc);
     expect(texto).toContain('Relatório de devoluções');
@@ -77,11 +79,11 @@ describe('PdfService — relatórios em lista', () => {
     expect(texto).toContain('2.000,25');
   });
 
-  it('gerarRelatorioAlugueis/Devolucoes baixam o arquivo com a data no nome', () => {
+  it('gerarRelatorioAlugueis/Devolucoes baixam o arquivo com a data no nome', async () => {
     const salvar = spyOn(service as unknown as { baixar: (doc: jsPDF, nome: string) => void }, 'baixar').and.stub();
 
-    service.gerarRelatorioAlugueis([aluguel('ABC1D23', 'Reservado', 100)], 'Todos');
-    service.gerarRelatorioDevolucoes([devolucao('ABC1D23', 100)]);
+    await service.gerarRelatorioAlugueis([aluguel('ABC1D23', 'Reservado', 100)], 'Todos');
+    await service.gerarRelatorioDevolucoes([devolucao('ABC1D23', 100)]);
 
     const hoje = new Date().toISOString().slice(0, 10);
     expect(salvar.calls.argsFor(0)[1]).toBe(`relatorio-alugueis-${hoje}.pdf`);
@@ -91,16 +93,16 @@ describe('PdfService — relatórios em lista', () => {
 
   // ---- Identidade visual: os PDFs seguem o tema do app (cores, selo de status, cartões, rodapé) ----
 
-  it('usa as cores do tema claro do app: primária no marca/títulos e container primário nos totais', () => {
-    const texto = conteudo(service.montarRelatorioAlugueis([aluguel('ABC1D23', 'Reservado', 100)], 'Todos'));
+  it('usa as cores do tema claro do app: primária no marca/títulos e container primário nos totais', async () => {
+    const texto = conteudo(await service.montarRelatorioAlugueis([aluguel('ABC1D23', 'Reservado', 100)], 'Todos'));
 
     // operadores de cor do PDF em 0..1, com 2 casas: #6750a4 (primária) e #eaddff (container da primária)
     expect(texto).toContain('0.4 0.31 0.64 rg');
     expect(texto).toMatch(/0\.92 0\.87 1\.? rg/);
   });
 
-  it('o status ganha o selo da cor correspondente (como na tela): andamento = alerta, concluído = sucesso, cancelado = erro', () => {
-    const doc = service.montarRelatorioAlugueis([
+  it('o status ganha o selo da cor correspondente (como na tela): andamento = alerta, concluído = sucesso, cancelado = erro', async () => {
+    const doc = await service.montarRelatorioAlugueis([
       aluguel('AAA1A11', 'EmAndamento', 100), aluguel('BBB2B22', 'Concluido', 100), aluguel('CCC3C33', 'Cancelado', 100)
     ], 'Todos');
     const texto = conteudo(doc);
@@ -110,9 +112,9 @@ describe('PdfService — relatórios em lista', () => {
     expect(texto).toMatch(/0\.98 0\.87 0\.86 rg/); // #f9dedc container de erro
   });
 
-  it('os relatórios têm cartões de resumo antes da tabela', () => {
-    const alugueis = service.montarRelatorioAlugueis([aluguel('ABC1D23', 'EmAndamento', 300)], 'Todos');
-    const devolucoes = service.montarRelatorioDevolucoes([devolucao('ABC1D23', 1200), devolucao('XYZ9Z99', 800)]);
+  it('os relatórios têm cartões de resumo antes da tabela', async () => {
+    const alugueis = await service.montarRelatorioAlugueis([aluguel('ABC1D23', 'EmAndamento', 300)], 'Todos');
+    const devolucoes = await service.montarRelatorioDevolucoes([devolucao('ABC1D23', 1200), devolucao('XYZ9Z99', 800)]);
 
     expect(conteudo(alugueis)).toContain('Aluguéis na lista');
     expect(conteudo(alugueis)).toContain('Valor previsto total');
@@ -121,11 +123,26 @@ describe('PdfService — relatórios em lista', () => {
     expect(conteudo(devolucoes)).toContain('1.000,00'); // média de 1.200 e 800
   });
 
-  it('o rodapé identifica a locadora e numera as páginas à direita', () => {
-    const texto = conteudo(service.montarRelatorioDevolucoes([devolucao('ABC1D23', 100)]));
+  it('o rodapé identifica a locadora e numera as páginas à direita', async () => {
+    const texto = conteudo(await service.montarRelatorioDevolucoes([devolucao('ABC1D23', 100)]));
 
     expect(texto).toContain('Locadora de Veículos');
     expect(texto).toContain('Página 1 de 1');
+  });
+});
+
+describe('PdfService — falha ao gerar o PDF', () => {
+  it('se o pacote do PDF não puder ser baixado (sem rede), avisa em vez de falhar em silêncio', async () => {
+    TestBed.configureTestingModule({ providers: [{ provide: NotificacaoService, useValue: criarNotificacaoFalsa() }] });
+    const service = TestBed.inject(PdfService);
+    const notificacao = TestBed.inject(NotificacaoService) as jasmine.SpyObj<NotificacaoService>;
+    spyOn(service as unknown as { bibliotecas: () => Promise<unknown> }, 'bibliotecas').and.rejectWith(new Error('Failed to fetch chunk'));
+    const salvar = spyOn(service as unknown as { baixar: (doc: jsPDF, nome: string) => void }, 'baixar').and.stub();
+
+    await service.gerarRelatorioDevolucoes([]);
+
+    expect(notificacao.erro).toHaveBeenCalledWith(jasmine.stringContaining('Não foi possível gerar o PDF'));
+    expect(salvar).not.toHaveBeenCalled();
   });
 });
 
@@ -151,8 +168,8 @@ describe('PdfService — recibo de devolução', () => {
     service = TestBed.inject(PdfService);
   });
 
-  it('traz título, dados do aluguel e da devolução, placa formatada e valores em reais', () => {
-    const texto = conteudo(service.montarReciboDevolucao(devolucao, aluguel));
+  it('traz título, dados do aluguel e da devolução, placa formatada e valores em reais', async () => {
+    const texto = conteudo(await service.montarReciboDevolucao(devolucao, aluguel));
 
     for (const esperado of [
       'Recibo de devolução', 'Joana Condutora', 'ABC-1D23', 'Cliente Teste', '15000 km', '40 L', 'Três quartos',
@@ -164,8 +181,8 @@ describe('PdfService — recibo de devolução', () => {
     expect(texto).toContain('875,00'); // total = valor total da devolução (375) + caução (500)
   });
 
-  it('cabe numa página retrato A4 e tem as duas assinaturas e o código da devolução', () => {
-    const doc = service.montarReciboDevolucao(devolucao, aluguel);
+  it('cabe numa página retrato A4 e tem as duas assinaturas e o código da devolução', async () => {
+    const doc = await service.montarReciboDevolucao(devolucao, aluguel);
     const texto = conteudo(doc);
 
     expect(doc.getNumberOfPages()).toBe(1);
@@ -176,10 +193,10 @@ describe('PdfService — recibo de devolução', () => {
     expect(texto).toContain('Página 1 de 1');
   });
 
-  it('gerarReciboDevolucao baixa o arquivo com o código e a data no nome', () => {
+  it('gerarReciboDevolucao baixa o arquivo com o código e a data no nome', async () => {
     const salvar = spyOn(service as unknown as { baixar: (doc: jsPDF, nome: string) => void }, 'baixar').and.stub();
 
-    service.gerarReciboDevolucao(devolucao, aluguel);
+    await service.gerarReciboDevolucao(devolucao, aluguel);
 
     expect(salvar.calls.argsFor(0)[1]).toMatch(/^recibo-devolucao-dev-123-\d{2}-\d{2}-\d{4}\.pdf$/);
   });

@@ -61,13 +61,13 @@ export class DevolucaoViewComponent implements OnInit {
     });
   }
 
-  baixarRecibo(): void {
+  async baixarRecibo(): Promise<void> {
     const devolucao = this.devolucao();
     const aluguel = this.aluguel();
     if (!devolucao || !aluguel) return;
     this.gerandoPdf.set(true);
     try {
-      this.pdfSvc.gerarReciboDevolucao(devolucao, aluguel);
+      await this.pdfSvc.gerarReciboDevolucao(devolucao, aluguel);
     } finally {
       this.gerandoPdf.set(false);
     }

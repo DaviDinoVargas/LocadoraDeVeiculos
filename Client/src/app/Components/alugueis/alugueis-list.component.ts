@@ -137,9 +137,9 @@ export class AlugueisListComponent implements OnInit {
   }
 
   /** Exporta em PDF exatamente a lista que está na tela (já filtrada por status). */
-  exportarPdf(): void {
+  async exportarPdf(): Promise<void> {
     if (this.alugueisFiltrados().length === 0) return;
-    this.pdf.gerarRelatorioAlugueis(this.alugueisFiltrados(), this.nomesDosFiltros[this.filtroStatus()] ?? this.filtroStatus());
+    await this.pdf.gerarRelatorioAlugueis(this.alugueisFiltrados(), this.nomesDosFiltros[this.filtroStatus()] ?? this.filtroStatus());
   }
 
   // Aluguel concluído: leva à devolução registrada (GET /devolucoes/aluguel/{id}).
