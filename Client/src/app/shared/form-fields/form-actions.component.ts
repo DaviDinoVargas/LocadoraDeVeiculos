@@ -3,7 +3,7 @@ import { NgIcon } from '@ng-icons/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 
 /**
- * Barra de ações do formulário (SKILL §17.3), fixa na base da área de conteúdo: "Cancelar" (outline)
+ * Barra de ações do formulário (SKILL §17.3), fixa na base da área de conteúdo (mt-auto a empurra para o rodapé em formulário curto; -bottom-6 cancela o py-6 do <main>, de onde o sticky mede; ver #conteudo em styles.css): "Cancelar" (outline)
  * à esquerda do botão principal "Salvar" (filled, tipo submit), mais o aviso "Alterações não salvas".
  * Deve ficar DENTRO do <form> para o botão de envio funcionar. Também avisa ao fechar a aba com
  * alterações pendentes.
@@ -12,7 +12,7 @@ import { HlmButtonImports } from '@spartan-ng/helm/button';
   selector: 'app-form-actions',
   imports: [HlmButtonImports, NgIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'sticky bottom-0 z-10 -mx-4 -mb-6 mt-2 block sm:-mx-6 lg:-mx-8' },
+  host: { class: 'sticky -bottom-6 z-10 -mx-4 mt-auto block sm:-mx-6 lg:-mx-8' },
   template: `
     <div class="border-border bg-surface-container flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 sm:px-6 lg:px-8">
       <p class="text-body-s text-muted-foreground flex items-center gap-1.5" role="status">

@@ -221,6 +221,15 @@
   }
 }
 
+/* Formulários: a página ocupa a altura útil do <main> para que a barra de ações (mt-auto) fique na base da tela,
+   mesmo quando o formulário é curto. Só vale para telas cuja raiz é um <form>; listas e painéis não mudam. */
+@layer components {
+  #conteudo { display: flex; flex-direction: column; }
+  #conteudo > :not(router-outlet):has(> form) { display: flex; flex-direction: column; flex: 1 0 auto; margin-bottom: -1.5rem; }
+  #conteudo > :not(router-outlet) > form { display: flex; flex-direction: column; flex: 1 0 auto; }
+  #conteudo > :not(router-outlet) > form > app-page { flex: 1 0 auto; }
+}
+
 /* ===== Escala tipográfica M3 (§5): só estas classes nos componentes ===== */
 @utility text-headline-l { font-size: 2rem; line-height: 2.5rem; font-weight: 400; letter-spacing: 0; }
 @utility text-headline-m { font-size: 1.75rem; line-height: 2.25rem; font-weight: 500; letter-spacing: 0; }
