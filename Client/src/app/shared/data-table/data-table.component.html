@@ -176,6 +176,7 @@
               @for (linha of linhasPagina(); track idDe(linha)) {
                 <tr
                   hlmTr
+                  class="group/linha"
                   [class.cursor-pointer]="linhasClicaveis()"
                   (click)="linhasClicaveis() && linhaClique.emit(linha)"
                 >
@@ -188,7 +189,7 @@
                     </td>
                   }
                   @if (acoesLinha().length) {
-                    <td hlmTd [class]="classeLinha() + ' bg-card sticky right-0 text-right'" (click)="$event.stopPropagation()">
+                    <td hlmTd [class]="classeLinha() + ' bg-card sticky right-0 text-right group-hover/linha:bg-[color-mix(in_oklch,var(--card),var(--accent)_30%)] group-has-aria-expanded/linha:bg-[color-mix(in_oklch,var(--card),var(--muted)_50%)]'" (click)="$event.stopPropagation()">
                       @if (acoesDe(linha).length) {
                         <button
                           hlmBtn
