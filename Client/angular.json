@@ -50,7 +50,8 @@
             ],
             "styles": [
               "src/styles.css"
-            ]
+            ],
+            "allowedCommonJsDependencies": ["canvg", "html2canvas", "core-js", "raf", "rgbcolor"]
           },
           "configurations": {
             "production": {
