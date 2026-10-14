@@ -74,6 +74,9 @@ describe('PlanoCobrancaFormComponent — cadastro e edição', () => {
 
     component.salvar();
 
-    expect(component.erros()).toEqual(['Já existe plano para este grupo.']);
+    const campo = Object.entries(component.form.controls).find(([, c]) => c.errors?.['servidor']);
+    expect(campo?.[0]).toBe('grupoAutomovelId');
+    expect(campo?.[1].errors?.['servidor']).toBe('Já existe plano para este grupo.');
+    expect(component.erros()).toEqual([]);
   });
 });

@@ -64,6 +64,9 @@ describe('ParceiroFormComponent — cadastro e edição', () => {
 
     component.salvar();
 
-    expect(component.erros()).toEqual(['CNPJ já cadastrado.']);
+    const campo = Object.entries(component.form.controls).find(([, c]) => c.errors?.['servidor']);
+    expect(campo?.[0]).toBe('cnpj');
+    expect(campo?.[1].errors?.['servidor']).toBe('CNPJ já cadastrado.');
+    expect(component.erros()).toEqual([]);
   });
 });

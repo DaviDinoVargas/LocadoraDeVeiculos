@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Observable } from 'rxjs';
 import { mensagensDeErro } from '../../core/api-error';
 import { NotificacaoService } from '../../core/notificacao.service';
+import { distribuirErrosNosCampos } from './erros-de-campo';
 
 export interface OpcoesCrudForm<TDto, TForm extends { [K in keyof TForm]: AbstractControl }, TCarga = TDto> {
   form: FormGroup<TForm>;
@@ -20,6 +21,8 @@ export interface OpcoesCrudForm<TDto, TForm extends { [K in keyof TForm]: Abstra
   aoCarregar?: (dto: TCarga) => void;
   /** Monta o payload a partir do formulário (padrão: `form.getRawValue()`). */
   montarPayload?: () => TDto;
+  /** Palavras extras por campo para ligar as mensagens da API ao campo certo (ver `distribuirErrosNosCampos`). */
+  apelidosDeErro?: Record<string, string[]>;
 }
 
 /** Foca o primeiro campo inválido (o foco vai para o erro ao enviar, SKILL §17.3). */
@@ -97,7 +100,14 @@ export function crudForm<TDto, TForm extends { [K in keyof TForm]: AbstractContr
       },
       error: err => {
         salvando.set(false);
-        erros.set(mensagensDeErro(err));
+        const mensagens = mensagensDeErro(err);
+        // o que a API diz sobre um campo vai para o próprio campo (com foco); o resto fica no alerta do topo
+        const restantes = distribuirErrosNosCampos(opcoes.form, mensagens, opcoes.apelidosDeErro);
+        erros.set(restantes);
+        if (restantes.length < mensagens.length) {
+          notificacao.aviso('Verifique os campos destacados.');
+          queueMicrotask(focarPrimeiroInvalido);
+        }
       }
     });
   }

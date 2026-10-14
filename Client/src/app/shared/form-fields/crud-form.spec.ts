@@ -89,16 +89,34 @@ describe('crudForm — cadastro e edição com um único componente', () => {
     expect(notificacao.aviso).toHaveBeenCalled();
   });
 
-  it('erro do servidor mostra as mensagens reais e mantém a tela', () => {
+  it('erro do servidor sem campo definido mostra a mensagem real no alerta e mantém a tela', () => {
     const host = criar();
-    host.criar.and.returnValue(throwError(() => ({ status: 409, error: ['Já existe um grupo com esse nome.'] })));
+    host.criar.and.returnValue(throwError(() => ({ status: 409, error: ['O limite de grupos da empresa foi atingido.'] })));
     host.form.setValue({ nome: 'Repetido' });
 
     host.crud.salvar();
 
-    expect(host.crud.erros()).toEqual(['Já existe um grupo com esse nome.']);
+    expect(host.crud.erros()).toEqual(['O limite de grupos da empresa foi atingido.']);
+    expect(host.form.controls.nome.errors).toBeNull();
     expect(host.crud.salvando()).toBeFalse();
     expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('erro do servidor que cita um campo vai para o próprio campo, com aviso, e some ao editar', () => {
+    const host = criar();
+    host.criar.and.returnValue(throwError(() => ({ status: 409, error: ['Já existe um grupo com esse nome.', 'Outro problema qualquer.'] })));
+    host.form.setValue({ nome: 'Repetido' });
+
+    host.crud.salvar();
+
+    expect(host.form.controls.nome.errors).toEqual({ servidor: 'Já existe um grupo com esse nome.' });
+    expect(host.form.controls.nome.touched).toBeTrue();
+    expect(host.crud.erros()).toEqual(['Outro problema qualquer.']);
+    expect(notificacao.aviso).toHaveBeenCalledWith('Verifique os campos destacados.');
+
+    host.form.controls.nome.setValue('Outro nome');
+
+    expect(host.form.controls.nome.errors).toBeNull();
   });
 
   it('falha ao carregar a edição volta para a lista', () => {

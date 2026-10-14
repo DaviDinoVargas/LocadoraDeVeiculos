@@ -60,6 +60,9 @@ describe('TaxaServicoFormComponent — cadastro e edição', () => {
 
     component.salvar();
 
-    expect(component.erros()).toEqual(['Tipo de cálculo inválido.']);
+    const campo = Object.entries(component.form.controls).find(([, c]) => c.errors?.['servidor']);
+    expect(campo?.[0]).toBe('tipoCalculo');
+    expect(campo?.[1].errors?.['servidor']).toBe('Tipo de cálculo inválido.');
+    expect(component.erros()).toEqual([]);
   });
 });

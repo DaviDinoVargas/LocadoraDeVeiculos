@@ -59,6 +59,9 @@ describe('GrupoVeiculoFormComponent — cadastro e edição', () => {
 
     component.salvar();
 
-    expect(component.erros()).toEqual(['Já existe um grupo com este nome.']);
+    const campo = Object.entries(component.form.controls).find(([, c]) => c.errors?.['servidor']);
+    expect(campo?.[0]).toBe('nome');
+    expect(campo?.[1].errors?.['servidor']).toBe('Já existe um grupo com este nome.');
+    expect(component.erros()).toEqual([]);
   });
 });

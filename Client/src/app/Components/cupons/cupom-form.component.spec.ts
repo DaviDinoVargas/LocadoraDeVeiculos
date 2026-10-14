@@ -81,7 +81,10 @@ describe('CupomFormComponent — cadastro e edição', () => {
 
     component.salvar();
 
-    expect(component.erros()).toEqual(['Já existe um cupom com este código.']);
+    const campo = Object.entries(component.form.controls).find(([, c]) => c.errors?.['servidor']);
+    expect(campo?.[0]).toBe('codigo');
+    expect(campo?.[1].errors?.['servidor']).toBe('Já existe um cupom com este código.');
+    expect(component.erros()).toEqual([]);
     expect(router.navigate).not.toHaveBeenCalled();
     expect(component.salvando()).toBeFalse();
   });
