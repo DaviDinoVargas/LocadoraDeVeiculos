@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.IdentityModel.Tokens.Jwt;
 using LocadoraDeVeiculos.Infraestrutura.Orm.jwt;
 using LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
+using LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloAutenticacao;
 using System.Security.Claims;
 
 namespace LocadoraDeVeiculos.WebApi.Config.Identify;
@@ -36,6 +37,8 @@ public static class IdentityConfig
             options.Lockout.AllowedForNewUsers = true;
         })
         .AddEntityFrameworkStores<LocadoraDeVeiculosDbContext>()
+        // Chave do autenticador e códigos de recuperação do 2FA ficam cifrados no banco (uma cópia do banco não entrega as sementes).
+        .AddUserStore<UsuarioStoreComSegredosCifrados>()
         .AddPasswordValidator<LimiteDeTamanhoDeSenha>()
         .AddDefaultTokenProviders();
 
