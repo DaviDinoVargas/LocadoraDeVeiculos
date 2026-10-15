@@ -19,7 +19,7 @@ from lib.contexto import Contexto  # noqa: E402
 from lib.registro import Registro  # noqa: E402
 
 MODULOS_ATAQUE = ['a_autenticacao', 'b_autorizacao', 'c_entradas', 'd_configuracao', 'e_ml', 'f_conta_e_privacidade', 'g_robustez', 'h_negocio',
-                  'j_concorrencia', 'k_ml_fuzz', 'l_ssrf', 'm_sessoes_e_https', 'n_duas_instancias']
+                  'j_concorrencia', 'k_ml_fuzz', 'l_ssrf', 'm_sessoes_e_https', 'n_duas_instancias', 'o_unicidade_por_empresa']
 
 
 def verificar_logs(ctx, pastas_logs):
