@@ -66,6 +66,7 @@ public sealed class FrotaHttpTests
         Assert.IsTrue(mesmoNome.Ok, mesmoNome.TextoDosErros);
         Assert.AreEqual("nova descrição", (await empresa.GetAsync($"/api/grupos-automovel/{a}")).Propriedade("descricao").GetString());
         Assert.AreEqual(HttpStatusCode.Conflict, nomeDeOutro.Status);
+        StringAssert.Contains(nomeDeOutro.TextoDosErros, "com este nome já está cadastrado");
         Assert.AreEqual("Grupo A", (await empresa.GetAsync($"/api/grupos-automovel/{a}")).Propriedade("nome").GetString(), "a edição recusada não pode alterar nada");
     }
 
@@ -139,6 +140,19 @@ public sealed class FrotaHttpTests
     }
 
     [TestMethod]
+    public async Task Planos_NaLista_MostramONomeDoGrupoAoQualPertencem()
+    {
+        using var empresa = await NovaEmpresa();
+        var grupo = (await empresa.CriarGrupoAsync("Executivo")).Id;
+        await empresa.CriarPlanoAsync(grupo);
+
+        var lista = await empresa.GetAsync("/api/planos-cobranca");
+
+        Assert.AreEqual(1, lista.Registros.Count);
+        Assert.AreEqual("Executivo", lista.Registros[0].GetProperty("grupoAutomovelNome").GetString());
+    }
+
+    [TestMethod]
     [DataRow(0, 2, 100, "diária zero")]
     [DataRow(-5, 2, 100, "diária negativa")]
     [DataRow(100, -1, 100, "preço por km negativo")]
@@ -199,9 +213,13 @@ public sealed class FrotaHttpTests
         Assert.AreEqual(HttpStatusCode.Created, criado.Status);
         var porId = await empresa.GetAsync($"/api/automoveis/{criado.Id}");
         Assert.AreEqual("ABC1D23", porId.Propriedade("placa").GetString());
+        var nomeDoGrupo = (await empresa.GetAsync($"/api/grupos-automovel/{grupo}")).Propriedade("nome").GetString();
+        Assert.AreEqual(nomeDoGrupo, porId.Propriedade("grupoAutomovelNome").GetString(), "o carro mostra o nome do grupo, não só o id");
+        Assert.AreEqual(nomeDoGrupo, (await empresa.GetAsync("/api/automoveis")).Registros.Single(c => c.GetProperty("placa").GetString() == "ABC1D23").GetProperty("grupoAutomovelNome").GetString());
         Assert.AreEqual(2, (await empresa.GetAsync("/api/automoveis")).Registros.Count);
         var doGrupo = await empresa.GetAsync($"/api/automoveis/grupo/{grupo}");
         CollectionAssert.AreEqual(new[] { "ABC1D23" }, doGrupo.Registros.Select(r => r.GetProperty("placa").GetString()).ToArray());
+        Assert.AreEqual(nomeDoGrupo, doGrupo.Registros[0].GetProperty("grupoAutomovelNome").GetString());
     }
 
     [TestMethod]
@@ -278,6 +296,7 @@ public sealed class FrotaHttpTests
         Assert.IsTrue(mesmaPlaca.Ok, mesmaPlaca.TextoDosErros);
         Assert.AreEqual("Vermelho", (await empresa.GetAsync($"/api/automoveis/{carro}")).Propriedade("cor").GetString());
         Assert.AreEqual(HttpStatusCode.Conflict, placaDeOutro.Status);
+        StringAssert.Contains(placaDeOutro.TextoDosErros, "Já existe um automóvel com esta placa");
         Assert.AreEqual("ABC1D23", (await empresa.GetAsync($"/api/automoveis/{carro}")).Propriedade("placa").GetString());
     }
 
@@ -300,6 +319,7 @@ public sealed class FrotaHttpTests
         Assert.AreEqual(HttpStatusCode.UnprocessableEntity, edicao.Status);
         StringAssert.Contains(edicao.TextoDosErros, "aluguel em aberto");
         Assert.AreEqual(HttpStatusCode.UnprocessableEntity, exclusao.Status);
+        StringAssert.Contains(exclusao.TextoDosErros, "excluir um automóvel com aluguel em aberto");
         Assert.AreEqual(HttpStatusCode.OK, (await empresa.GetAsync($"/api/automoveis/{carro}")).Status, "o carro continua cadastrado");
     }
 
@@ -407,6 +427,7 @@ public sealed class FrotaHttpTests
 
         var idsNoPeriodo = noPeriodo.Registros.Select(r => r.GetProperty("id").GetGuid()).ToList();
         CollectionAssert.AreEqual(new[] { cenario.Automoveis[1] }, idsNoPeriodo, "só o carro livre aparece enquanto o outro está reservado");
+        Assert.IsFalse(string.IsNullOrEmpty(noPeriodo.Registros[0].GetProperty("grupoAutomovelNome").GetString()), "o carro disponível mostra o nome do grupo");
         Assert.AreEqual(2, depois.Registros.Count, "fora do período reservado os dois estão livres");
     }
 
