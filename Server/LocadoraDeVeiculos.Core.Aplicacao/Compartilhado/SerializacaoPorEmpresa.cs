@@ -1,4 +1,5 @@
 using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
+using LocadoraDeVeiculos.Infraestrutura.Orm.orm.Compartilhado;
 using MediatR;
 using System;
 using System.Collections.Concurrent;
@@ -25,10 +26,12 @@ internal static class TravasPorEmpresa
 }
 
 /// <summary>
-/// Trava em memória por empresa ao redor dos comandos <see cref="ISerializadoPorEmpresa"/>. Vale para UMA instância da API; com várias
-/// instâncias é preciso uma trava no banco (sp_getapplock) ou um token de concorrência na tabela.
+/// Trava por empresa ao redor dos comandos <see cref="ISerializadoPorEmpresa"/> em dois níveis: um semáforo em memória (os pedidos da mesma instância
+/// fazem fila sem ocupar conexões do banco) e, em seguida, a trava de aplicação do SQL Server (<see cref="TravaNoBanco"/>), que vale entre
+/// instâncias da API. Sem banco SQL Server (testes em memória) só o semáforo age.
 /// </summary>
-public sealed class SerializarPorEmpresaBehavior<TRequest, TResponse>(ITenantProvider tenant) : IPipelineBehavior<TRequest, TResponse>
+public sealed class SerializarPorEmpresaBehavior<TRequest, TResponse>(ITenantProvider tenant, LocadoraDeVeiculosDbContext? banco = null)
+    : IPipelineBehavior<TRequest, TResponse>
     where TRequest : notnull
 {
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
@@ -42,6 +45,8 @@ public sealed class SerializarPorEmpresaBehavior<TRequest, TResponse>(ITenantPro
 
         try
         {
+            await using var travaNoBanco = await TravaNoBanco.AdquirirAsync(banco, empresa, cancellationToken);
+
             return await next(cancellationToken);
         }
         finally
