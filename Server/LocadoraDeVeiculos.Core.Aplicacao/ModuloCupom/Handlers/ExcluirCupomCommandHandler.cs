@@ -41,6 +41,11 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloCupom.Handlers
                     return Result.Fail(ResultadosErro.ExclusaoBloqueadaErro(
                         "Não é possível excluir um cupom em uso por um aluguel em aberto."));
 
+                // Cupom que é a recompensa de um desafio não sai: o desafio continuaria prometendo um prêmio que não existe mais.
+                if (await _repositorioCupom.ExisteDesafioVinculadoAsync(command.Id))
+                    return Result.Fail(ResultadosErro.ExclusaoBloqueadaErro(
+                        "Não é possível excluir um cupom usado como recompensa de um desafio. Exclua ou troque o desafio antes."));
+
                 await _repositorioCupom.ExcluirAsync(cupom.Id);
                 await _dbContext.SaveChangesAsync(cancellationToken);
 

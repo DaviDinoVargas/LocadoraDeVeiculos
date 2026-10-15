@@ -9,5 +9,7 @@ namespace LocadoraDeVeiculos.Core.Dominio.ModuloCupom
         Task<bool> ExisteCupomComCodigoAsync(string codigo, Guid? idExcluir = null);
         Task<Cupom?> SelecionarPorCodigoAsync(string codigo);
         Task<bool> ExisteAluguelVinculadoAsync(Guid cupomId);
+        /// <summary>O cupom é a recompensa de algum desafio de fidelidade?</summary>
+        Task<bool> ExisteDesafioVinculadoAsync(Guid cupomId);
     }
 }

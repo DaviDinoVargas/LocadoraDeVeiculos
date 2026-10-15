@@ -54,5 +54,10 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloCupom
                 a.CupomId == cupomId &&
                 (a.Status == StatusAluguel.Reservado || a.Status == StatusAluguel.EmAndamento));
         }
+
+        public async Task<bool> ExisteDesafioVinculadoAsync(Guid cupomId)
+        {
+            return await dbContext.DesafiosCupom.AnyAsync(d => d.CupomRecompensaId == cupomId);
+        }
     }
 }
