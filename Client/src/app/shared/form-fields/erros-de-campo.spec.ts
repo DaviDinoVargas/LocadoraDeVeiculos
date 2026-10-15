@@ -49,6 +49,25 @@ describe('distribuirErrosNosCampos — mensagens da API no campo certo', () => {
     expect(restantes).toEqual(['O CPF já existe.']);
   });
 
+  it('o nome inteiro do campo vence uma palavra solta: "Já existe um cliente com este CPF" vai para cpf, não para clientePessoaJuridicaId', () => {
+    const form = new FormGroup({ nome: new FormControl(''), cpf: new FormControl(''), clientePessoaJuridicaId: new FormControl('') });
+
+    const restantes = distribuirErrosNosCampos(form, ['Já existe um cliente com este CPF.']);
+
+    expect(restantes).toEqual([]);
+    expect(form.controls.cpf.errors).toEqual({ servidor: 'Já existe um cliente com este CPF.' });
+    expect(form.controls.clientePessoaJuridicaId.errors).toBeNull();
+  });
+
+  it('se dois campos têm o nome inteiro na mensagem, continua ambíguo e fica no alerta', () => {
+    const form = new FormGroup({ cpf: new FormControl(''), cnh: new FormControl('') });
+
+    const restantes = distribuirErrosNosCampos(form, ['CPF e CNH não conferem.']);
+
+    expect(restantes).toEqual(['CPF e CNH não conferem.']);
+    expect(form.controls.cpf.errors).toBeNull();
+  });
+
   it('apelidos ligam palavras diferentes do nome do campo', () => {
     const form = formulario();
 

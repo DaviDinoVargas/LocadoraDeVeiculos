@@ -38,7 +38,8 @@ export function distribuirErrosNosCampos(
 ): string[] {
   const campos = Object.entries(form.controls).map(([nome, controle]) => ({
     controle: controle as AbstractControl,
-    palavras: [...palavrasDoCampo(nome), ...(apelidos[nome] ?? []).map(normalizar)]
+    palavras: palavrasDoCampo(nome),
+    apelidos: (apelidos[nome] ?? []).map(normalizar)
   }));
 
   const restantes: string[] = [];
@@ -46,8 +47,13 @@ export function distribuirErrosNosCampos(
 
   for (const mensagem of mensagens) {
     const texto = normalizar(mensagem);
-    const candidatos = campos.filter(c => c.palavras.some(p => contemPalavra(texto, p)));
-    const alvo = candidatos.length === 1 ? candidatos[0].controle : null;
+    const acertos = campos.map(c => ({ campo: c, quantas: c.palavras.filter(p => contemPalavra(texto, p)).length, apelido: c.apelidos.some(a => contemPalavra(texto, a)) }));
+    // O nome INTEIRO do campo (ou um apelido) aparecer na mensagem vale mais do que uma palavra solta: "Já existe um cliente com este CPF"
+    // cita "cliente", que também é parte de `clientePessoaJuridicaId`, mas o campo da mensagem é `cpf` (nome inteiro presente).
+    const completos = acertos.filter(a => a.apelido || (a.campo.palavras.length > 0 && a.quantas === a.campo.palavras.length));
+    const parciais = acertos.filter(a => a.quantas > 0);
+    const escolhidos = completos.length > 0 ? completos : parciais;
+    const alvo = escolhidos.length === 1 ? escolhidos[0].campo.controle : null;
 
     if (alvo && !usados.has(alvo)) {
       usados.add(alvo);
