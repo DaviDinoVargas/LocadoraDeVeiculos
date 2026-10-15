@@ -1,7 +1,5 @@
 import cv2
 import mediapipe as mp
-import time
-from PIL import Image
 
 # Modelo pré-treinado genérico (MediaPipe FaceMesh) usado como extrator de
 # landmarks faciais. Não há treinamento próprio: a "identidade" de uma
@@ -72,82 +70,3 @@ def comparar_faces(novos_landmarks, landmarks_salvos, threshold=0.02, similarida
 
     similaridade = pontos_similares / len(novos_landmarks)
     return similaridade >= similaridade_minima, similaridade
-
-
-# --- Classe legada, usada apenas pela demonstração local via webcam (main.py) ---
-class FaceRecognition:
-    """Captura ao vivo de uma câmera local para testes manuais fora do
-    fluxo web (não é usada pela API/Angular, que fazem enroll/verify por
-    imagem única através de FaceAuth/router.py)."""
-
-    def __init__(self):
-        self.face_landmarks_data = []
-        self.last_face_detection = time.time()
-        self.cap = None
-        self.running = False
-
-    def run_face_mesh(self, on_frame=None):
-        mp_drawing = mp.solutions.drawing_utils
-        mp_drawing_styles = mp.solutions.drawing_styles
-        mp_face_mesh = mp.solutions.face_mesh
-
-        self.cap = cv2.VideoCapture(0)
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-
-        try:
-            with mp_face_mesh.FaceMesh(
-                max_num_faces=1,
-                refine_landmarks=True,
-                min_detection_confidence=0.9,
-                min_tracking_confidence=0.9
-            ) as face_mesh:
-                self.running = True
-
-                while self.running and self.cap.isOpened():
-                    success, image = self.cap.read()
-                    if not success:
-                        continue
-
-                    image = cv2.resize(image, (320, 240))
-                    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-                    results = face_mesh.process(image)
-
-                    has_face = False
-
-                    if results.multi_face_landmarks:
-                        has_face = True
-                        for face_landmarks in results.multi_face_landmarks:
-                            mp_drawing.draw_landmarks(
-                                image=image,
-                                landmark_list=face_landmarks,
-                                connections=mp_face_mesh.FACEMESH_TESSELATION,
-                                landmark_drawing_spec=None,
-                                connection_drawing_spec=mp_drawing_styles
-                                    .get_default_face_mesh_tesselation_style()
-                            )
-                            self.face_landmarks_data = [
-                                {'x': lm.x, 'y': lm.y, 'z': lm.z} for lm in face_landmarks.landmark
-                            ]
-                    else:
-                        self.face_landmarks_data = []
-
-                    if has_face:
-                        self.last_face_detection = time.time()
-                    else:
-                        if time.time() - self.last_face_detection > 1:
-                            self.face_landmarks_data = []
-
-                    if on_frame:
-                        on_frame(Image.fromarray(image))
-
-        except Exception as e:
-            print(f"Error: {e}")
-        finally:
-            self.stop()
-
-    def stop(self):
-        self.running = False
-        if self.cap:
-            self.cap.release()
-            self.cap = None
