@@ -112,7 +112,20 @@ public class CadastrarFuncionarioCommandHandler(
         catch (Exception ex)
         {
             if (usuario is not null)
-                await userManager.DeleteAsync(usuario);
+            {
+                // Se a gravação do funcionário falhou (ex.: índice único do CPF numa corrida), a linha dele continua "pendente" no contexto: sem
+                // descartá-la, o DeleteAsync abaixo tenta gravá-la de novo e estoura outra vez, trocando o 409 por um 500.
+                appDbContext.ChangeTracker.Clear();
+
+                try
+                {
+                    await userManager.DeleteAsync(usuario);
+                }
+                catch (Exception limpeza)
+                {
+                    logger.LogError(limpeza, "Não foi possível desfazer o usuário criado no cadastro de funcionário que falhou.");
+                }
+            }
 
             logger.LogError(
                 ex,
