@@ -9,6 +9,7 @@ from lib import ambiente
 from lib.http import id_de as _id, ip_unico, requisitar
 
 from .h_negocio import _agora, _corpo_aluguel, _iso, _montar
+from .f_conta_e_privacidade import totp
 from .j_concorrencia import _registros
 
 CAT = 'Duas instâncias'
@@ -118,3 +119,23 @@ def _corridas(ctx, base_a, base_b):
         r.checar('N05', CAT, 'Iniciar e cancelar o mesmo aluguel nas duas instâncias termina num estado final válido, sem 5xx',
                  'sem 5xx; Cancelado ou EmAndamento', f'{estado}; {sorted(x.status for x in res)}',
                  max(x.status for x in res) < 500 and estado in ('Cancelado', 'EmAndamento'), 'media')
+
+
+    # --- N06: anti-replay do código do autenticador entre instâncias (LIMITE CONHECIDO, em memória por processo) ----------------------------------------
+    conta = ambiente.nova_empresa(base_a, 'totp')
+    ctx.lembrar(conta.senha, conta.token)
+    config = requisitar('POST', f'{base_a}/api/auth/2fa/iniciar', token=conta.token, ip=ip_unico()).json() or {}
+    chave = config.get('chave')
+    if chave and requisitar('POST', f'{base_a}/api/auth/2fa/ativar', token=conta.token, ip=ip_unico(), json_corpo={'codigo': totp(chave)}).ok:
+        codigo = totp(chave, 1)   # o código da janela atual já foi gasto na ativação; o do próximo passo é aceito pela tolerância do Identity
+        corpo = {'email': conta.email, 'senha': conta.senha, 'codigoAutenticador': codigo}
+        na_a = requisitar('POST', f'{base_a}/api/auth/autenticar', ip=ip_unico(), json_corpo=corpo)
+        na_a_de_novo = requisitar('POST', f'{base_a}/api/auth/autenticar', ip=ip_unico(), json_corpo=corpo)
+        na_b = requisitar('POST', f'{base_b}/api/auth/autenticar', ip=ip_unico(), json_corpo=corpo)
+        r.checar('N06a', CAT, 'Na MESMA instância o mesmo código do autenticador só vale uma vez', 'primeira 200, segunda 400',
+                 f'{na_a.status}/{na_a_de_novo.status}', na_a.ok and na_a_de_novo.status == 400, 'alta', 'S18')
+        if na_b.status == 400:
+            r.checar('N06b', CAT, 'Entre instâncias o mesmo código do autenticador também só vale uma vez', '400 na outra instância', na_b.status, True, 'media', 'S18')
+        else:
+            r.pendente('N06b', CAT, 'Entre instâncias o código do autenticador já usado ainda vale uma vez em cada instância (anti-replay em memória por processo); '
+                       'fechar exige registrar o código usado no banco. Aceito enquanto a API rodar em uma instância só', f'outra instância respondeu {na_b.status}', 'S18')

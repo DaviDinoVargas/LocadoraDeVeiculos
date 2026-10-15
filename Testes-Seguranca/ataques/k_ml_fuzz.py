@@ -141,8 +141,15 @@ def executar(ctx):
 
     def chat(mensagem=None, bruto=None, tipo='application/json'):
         cab = {'Content-Type': tipo}
-        return requisitar('POST', f'{ml}/chat', token=emp.token, ip=ip_unico(), json_corpo=None if bruto else {'message': mensagem},
-                          bruto=bruto, cabecalhos=cab if bruto else None, timeout=30)
+
+        def enviar():
+            return requisitar('POST', f'{ml}/chat', token=emp.token, ip=ip_unico(), json_corpo=None if bruto else {'message': mensagem},
+                              bruto=bruto, cabecalhos=cab if bruto else None, timeout=30)
+        resp = enviar()
+        if resp.status == 429:   # o limite do /chat é 30 por minuto por usuário e outros módulos já gastaram a janela: espera ela virar e repete
+            time.sleep(61)
+            resp = enviar()
+        return resp
 
     hostis = {
         'regex da placa em loop (2000 letras)': 'A' * 2000,
