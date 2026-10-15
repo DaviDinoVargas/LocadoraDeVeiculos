@@ -1,4 +1,5 @@
-﻿using FluentResults;
+﻿using Microsoft.EntityFrameworkCore;
+using FluentResults;
 using FluentValidation;
 using LocadoraDeVeiculos.Core.Aplicacao.Compartilhado;
 using LocadoraDeVeiculos.Core.Dominio.ModuloAutenticacao;
@@ -44,6 +45,10 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloPlanoCobranca.Handlers
             if (!valid.IsValid)
                 return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(
                     valid.Errors.Select(x => x.ErrorMessage)));
+
+            // O grupo precisa ser da própria empresa (o filtro por empresa do banco esconde os das outras).
+            if (!await db.GruposAutomovel.AnyAsync(g => g.Id == command.GrupoAutomovelId, cancellationToken))
+                return Result.Fail(ResultadosErro.RegistroNaoEncontradoErro(command.GrupoAutomovelId));
 
             var editado = new PlanoCobranca(
                 command.GrupoAutomovelId,

@@ -1,4 +1,5 @@
-﻿using FluentResults;
+﻿using Microsoft.EntityFrameworkCore;
+using FluentResults;
 using FluentValidation;
 using FluentValidation.Results;
 using LocadoraDeVeiculos.Core.Aplicacao.Compartilhado;
@@ -55,6 +56,11 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAutomovel.Handlers
                 var erros = resultadoValidacao.Errors.Select(e => e.ErrorMessage);
                 return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(erros));
             }
+
+            // O grupo precisa ser da própria empresa (o filtro por empresa do banco esconde os das outras): sem isto, dava para
+            // ligar um carro ao grupo de outra empresa.
+            if (!await _appDbContext.GruposAutomovel.AnyAsync(g => g.Id == command.GrupoAutomovelId, cancellationToken))
+                return Result.Fail(ResultadosErro.RegistroNaoEncontradoErro(command.GrupoAutomovelId));
 
             // Verificar duplicidade de placa (excluindo o próprio)
             if (await _repositorioAutomovel.ExisteAutomovelComPlacaAsync(command.Placa, command.Id))
