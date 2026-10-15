@@ -8,7 +8,7 @@ import time
 from typing import List, Optional
 
 import cv2
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Path, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -48,10 +48,15 @@ MAX_DETECCOES = 200
 FPS_MAXIMO_STREAM = 20
 
 
+# Índice de câmera plausível (a busca só olha os primeiros): número negativo ou gigante (acima de 64 bits) quebrava o OpenCV com 500.
+MAXIMO_INDICE_CAMERA = 63
+IndiceDeCamera = Path(ge=0, le=MAXIMO_INDICE_CAMERA)
+
+
 class StartCameraRequest(BaseModel):
-    camera: int
+    camera: int = Field(ge=0, le=MAXIMO_INDICE_CAMERA)
     # 0, negativo ou milhares de quadros por segundo travariam a CPU da máquina que roda o ML: limite sensato, 422 fora dele
-    fps: float = Field(default=10.0, gt=0, le=30)
+    fps: float = Field(default=10.0, gt=0, le=30, allow_inf_nan=False)
 
 
 class DetectionResult(BaseModel):
@@ -128,7 +133,7 @@ def start_camera(req: StartCameraRequest):
 
 
 @router.post("/stop/{camera_id}", dependencies=[_limite_acao])
-def stop_camera(camera_id: int):
+def stop_camera(camera_id: int = IndiceDeCamera):
     """Para o processamento de uma câmera"""
     if service is None or not service.stop_camera(camera_id):
         raise HTTPException(status_code=404, detail="Camera not running")
@@ -148,7 +153,7 @@ def get_last_detections(limit: int = 50, since: float = 0.0, camera: Optional[in
 
 
 @router.get("/test/{camera_id}", dependencies=[_limite_acao])
-def test_camera(camera_id: int):
+def test_camera(camera_id: int = IndiceDeCamera):
     """Testa se uma câmera está funcionando (usa o capturador compartilhado)."""
     if not hub.acquire(camera_id):
         return {"status": "error", "camera": camera_id, "message": "Não foi possível abrir"}
@@ -183,7 +188,7 @@ def _desenhar(frame, camera_id, itens):
 
 
 @stream_router.get("/stream/{camera_id}", dependencies=[Depends(limites.limitar("stream", maximo=20, janela_s=60)), Depends(auth.consumir_ticket_stream)])
-async def video_stream(camera_id: int, request: Request):
+async def video_stream(request: Request, camera_id: int = IndiceDeCamera):
     """Stream MJPEG da câmera, com as caixas do YOLO desenhadas por cima."""
     if not await asyncio.to_thread(hub.acquire, camera_id):
         raise HTTPException(status_code=503, detail=f"Não foi possível abrir a câmera {camera_id}")

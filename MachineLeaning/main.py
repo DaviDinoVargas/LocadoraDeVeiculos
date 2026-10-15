@@ -21,8 +21,10 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from shared import settings
 from yolo_tesseract import router as cameras
@@ -46,6 +48,14 @@ app = FastAPI(
     redoc_url=None,
     openapi_url="/openapi.json" if settings.DOCS_HABILITADOS else None,
 )
+
+@app.exception_handler(RequestValidationError)
+async def erro_de_validacao(_: Request, erro: RequestValidationError):
+    """422 enxuto: onde e por quê, sem devolver o valor recebido. O padrão do FastAPI repete a entrada na resposta, e um `Infinity` ou `NaN`
+    no JSON fazia a própria serialização do erro falhar (500). Também evita ecoar de volta dados que o chamador mandou."""
+    detalhes = [{"loc": list(e.get("loc", ())), "msg": str(e.get("msg", "")), "type": str(e.get("type", ""))} for e in erro.errors()]
+    return JSONResponse(status_code=422, content={"detail": detalhes})
+
 
 app.add_middleware(
     CORSMiddleware,

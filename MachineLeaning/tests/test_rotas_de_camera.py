@@ -269,3 +269,64 @@ def test_listar_cameras_com_falha_na_busca_devolve_as_abertas_com_o_aviso(api, m
 
     assert corpo == {'cameras': [3], 'error': 'Falha ao procurar câmeras', 'count': 1}
     assert 'driver de vídeo' not in str(corpo), 'o detalhe interno do erro não vaza para o cliente'
+
+# ---------------------------------------------------------------- entradas fora do esperado (fuzz) ----------------------------------
+
+@pytest.fixture
+def api_com_o_tratador_do_main(api):
+    """A mesma resposta de validação da API de verdade (main.py), em cima do router de câmeras."""
+    import main
+    app = FastAPI()
+    app.add_exception_handler(main.RequestValidationError, main.erro_de_validacao)
+    app.dependency_overrides[auth.exigir_dono_das_cameras] = lambda: auth.Usuario(usuario_id='u1', empresa_id='e1', cargo='Empresa')
+    app.include_router(cam.router)
+    return TestClient(app)
+
+
+@pytest.mark.parametrize('corpo', [
+    '{"camera": -1}',                              # índice negativo
+    '{"camera": 64}',                              # acima do último índice plausível
+    '{"camera": 99999999999999999999}',            # maior que 64 bits: quebrava o OpenCV com 500
+    '{"camera": "abc"}', '{"camera": [0]}', '{"camera": null}', '{}',
+    '{"camera": 0, "fps": 0}', '{"camera": 0, "fps": -5}', '{"camera": 0, "fps": 31}',
+    '{"camera": 0, "fps": Infinity}', '{"camera": 0, "fps": -Infinity}', '{"camera": 0, "fps": NaN}',   # a serialização do erro dava 500
+])
+def test_iniciar_com_camera_ou_fps_fora_do_esperado_e_422_e_nao_chega_ao_servico(api_com_o_tratador_do_main, monkeypatch, corpo):
+    servico = ServicoFalso()
+    monkeypatch.setattr(cam, 'service', servico)
+
+    resposta = api_com_o_tratador_do_main.post('/start', content=corpo, headers={'Content-Type': 'application/json'})
+
+    assert resposta.status_code == 422
+    assert servico.inicios == [], 'a câmera não pode ser aberta com parâmetro inválido'
+
+
+def test_o_erro_de_validacao_diz_onde_e_por_que_mas_nao_repete_o_valor_recebido(api_com_o_tratador_do_main, monkeypatch):
+    monkeypatch.setattr(cam, 'service', ServicoFalso())
+
+    resposta = api_com_o_tratador_do_main.post('/start', json={'camera': 'segredo-digitado-pelo-usuario'})
+
+    assert resposta.status_code == 422
+    erro = resposta.json()['detail'][0]
+    assert erro['loc'] == ['body', 'camera']
+    assert set(erro) == {'loc', 'msg', 'type'}
+    assert 'segredo-digitado-pelo-usuario' not in resposta.text
+
+
+@pytest.mark.parametrize('rota', ['/stop/abc', '/stop/-1', '/stop/64', '/stop/99999999999999999999',
+                                  '/test/abc', '/test/-1', '/test/99999999999999999999'])
+def test_id_de_camera_invalido_na_rota_e_422(api_com_o_tratador_do_main, monkeypatch, rota):
+    monkeypatch.setattr(cam, 'service', ServicoFalso())
+    monkeypatch.setattr(cam, 'hub', HubFalso())
+
+    metodo = api_com_o_tratador_do_main.post if rota.startswith('/stop') else api_com_o_tratador_do_main.get
+
+    assert metodo(rota).status_code == 422
+
+
+def test_o_ultimo_indice_de_camera_valido_e_aceito(api_com_o_tratador_do_main, monkeypatch):
+    servico = ServicoFalso()
+    monkeypatch.setattr(cam, 'service', servico)
+
+    assert api_com_o_tratador_do_main.post('/start', json={'camera': 63}).status_code == 200
+    assert servico.inicios[0][0] == 63
