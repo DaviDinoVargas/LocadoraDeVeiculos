@@ -10,7 +10,7 @@ from typing import List, Optional
 import cv2
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from shared import auth, limites
 from shared.camera_manager import CameraHub
@@ -50,7 +50,8 @@ FPS_MAXIMO_STREAM = 20
 
 class StartCameraRequest(BaseModel):
     camera: int
-    fps: float = 10.0
+    # 0, negativo ou milhares de quadros por segundo travariam a CPU da máquina que roda o ML: limite sensato, 422 fora dele
+    fps: float = Field(default=10.0, gt=0, le=30)
 
 
 class DetectionResult(BaseModel):
