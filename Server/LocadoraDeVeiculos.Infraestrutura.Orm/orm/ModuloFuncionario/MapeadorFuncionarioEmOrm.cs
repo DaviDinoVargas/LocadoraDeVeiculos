@@ -46,5 +46,9 @@ public class MapeadorFuncionarioEmOrm : IEntityTypeConfiguration<Funcionario>
                .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(f => new { f.EmpresaId, f.Excluido });
+        // O banco é a defesa final contra dois cadastros simultâneos do mesmo CPF (a checagem do handler e a fila por empresa não valem entre instâncias).
+        builder.HasIndex(f => new { f.EmpresaId, f.Cpf })
+               .IsUnique()
+               .HasFilter("[Excluido] = 0");
     }
 }

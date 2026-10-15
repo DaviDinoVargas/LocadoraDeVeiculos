@@ -743,6 +743,10 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.Migrations
                     b.HasIndex("UsuarioId")
                         .IsUnique();
 
+                    b.HasIndex("EmpresaId", "Cpf")
+                        .IsUnique()
+                        .HasFilter("[Excluido] = 0");
+
                     b.HasIndex("EmpresaId", "Excluido");
 
                     b.ToTable("Funcionarios");
