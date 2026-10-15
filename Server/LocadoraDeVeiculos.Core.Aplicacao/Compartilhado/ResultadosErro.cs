@@ -77,6 +77,11 @@ public abstract class ResultadosErro
 
     public static Error ExcecaoInternaErro(Exception ex)
     {
+        // Corrida de cadastro: dois pedidos iguais passaram juntos pela checagem e o índice único do banco barrou o segundo.
+        // Para quem chamou, é o mesmo que "já existe": 409 com mensagem fixa (nada do texto do SQL vai para a resposta).
+        if (ViolacaoDeUnicidade.Eh(ex))
+            return RegistroDuplicadoErro("Já existe um registro com estes dados (outro pedido idêntico acabou de ser gravado).");
+
         // Importante: NÃO usar .CausedBy(ex) aqui. FluentResults guarda ex.Message como um
         // "Reason" que o MainController serializa de volta na resposta HTTP — isso vazaria
         // detalhes internos (mensagens de SQL, caminhos, stack) para quem chama a API.
