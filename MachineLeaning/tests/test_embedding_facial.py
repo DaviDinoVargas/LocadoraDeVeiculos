@@ -149,3 +149,9 @@ def test_modelo_real_confere_e_gera_vetor_de_128_numeros_normalizado_e_determini
     assert len(v1) == TAMANHO_DO_VETOR
     assert np.linalg.norm(v1) == pytest.approx(1.0)
     assert similaridade_cosseno(v1, v2) == pytest.approx(1.0)
+
+def test_cosseno_com_nan_ou_infinito_nunca_parece_semelhante_a_ninguem():
+    bom = [1.0] + [0.0] * 127
+    for ruim in ([float('nan')] + [0.0] * 127, [float('inf')] + [0.0] * 127, [float('-inf')] * 128, [float('nan')] * 128):
+        assert similaridade_cosseno(bom, ruim) == -1.0
+        assert similaridade_cosseno(ruim, bom) == -1.0

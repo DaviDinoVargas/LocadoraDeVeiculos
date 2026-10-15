@@ -109,7 +109,7 @@ def similaridade_cosseno(a: list[float], b: list[float]) -> float:
 
     va, vb = np.asarray(a, dtype=np.float64), np.asarray(b, dtype=np.float64)
     na, nb = np.linalg.norm(va), np.linalg.norm(vb)
-    if na == 0 or nb == 0:
+    if not np.isfinite(na) or not np.isfinite(nb) or na == 0 or nb == 0:
         return -1.0
 
     return float(np.dot(va, vb) / (na * nb))
