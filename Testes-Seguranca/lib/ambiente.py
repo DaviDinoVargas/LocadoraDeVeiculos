@@ -30,6 +30,18 @@ PORTA_ML = 8001
 # (e que trava as DLLs de bin/Debug) não atrapalha os testes, e os testes não derrubam a API de uso.
 SAIDA_DO_BUILD = RAIZ.parent / 'Seguranca-Build' / 'web-api'
 
+# Tudo que os testes escrevem em pasta temporária (certificado exportado, perfil do ZAP, arquivos do dotnet/Java/Python) vai para o disco A:,
+# não para o TEMP do C:, que é pequeno e já chegou a encher por completo durante uma rodada.
+PASTA_TEMP = RAIZ.parent / 'Seguranca-Temp'
+PASTA_TEMP.mkdir(parents=True, exist_ok=True)
+tempfile.tempdir = str(PASTA_TEMP)
+
+
+def env_com_temp_no_disco_a(base=None) -> dict:
+    env = dict(base if base is not None else os.environ)
+    env.update({'TEMP': str(PASTA_TEMP), 'TMP': str(PASTA_TEMP), 'TMPDIR': str(PASTA_TEMP)})
+    return env
+
 
 def pasta_de_resultados() -> Path:
     destino = Path(os.environ.get('SEGURANCA_RESULTADOS') or (RAIZ.parent / 'Seguranca-Resultados')).resolve()
@@ -81,7 +93,7 @@ def senha_forte() -> str:
 def construir_api() -> None:
     print('Compilando a Web API...', flush=True)
     r = subprocess.run(['dotnet', 'build', str(RAIZ / 'Server' / 'web-api'), '-c', 'Debug', '-o', str(SAIDA_DO_BUILD), '-v', 'q', '--nologo'],
-                       capture_output=True, text=True, cwd=RAIZ)
+                       capture_output=True, text=True, cwd=RAIZ, env=env_com_temp_no_disco_a())
     if r.returncode != 0:
         raise SystemExit('Falha ao compilar a Web API.\n' + r.stdout[-1500:])
 
@@ -133,7 +145,7 @@ class Servico:
 def iniciar_api(pasta_logs: Path, porta: int, extras: dict | None = None, nome='api') -> Servico:
     if not porta_livre(porta):
         raise SystemExit(f'A porta {porta} já está em uso.')
-    env = dict(os.environ)
+    env = env_com_temp_no_disco_a()
     env.update({
         'ASPNETCORE_ENVIRONMENT': 'Development',   # as user-secrets (chave JWT etc.) só carregam em Development
         'ASPNETCORE_URLS': f'http://127.0.0.1:{porta}',
@@ -170,7 +182,7 @@ def iniciar_api_producao(pasta_logs: Path, segredos_gerados: list, nome='api-pro
     chave_facial = '1:' + base64.b64encode(secrets.token_bytes(32)).decode()
     token_interno = secrets.token_urlsafe(40)   # em produção a API recusa o token padrão de desenvolvimento (S2)
     segredos_gerados.extend([senha_pfx, chave_facial, token_interno])
-    env = dict(os.environ)
+    env = env_com_temp_no_disco_a()
     for chave, valor in _segredos().items():
         env[chave.replace(':', '__')] = valor
     env.update({
@@ -206,7 +218,7 @@ def iniciar_ml(pasta_logs: Path, token_interno: str, url_api: str, empresa_das_c
     """ML em modo de ambiente real (ML_ENV=production): é como ele precisa se comportar fora do desenvolvimento."""
     if not porta_livre(PORTA_ML):
         raise SystemExit(f'A porta {PORTA_ML} já está em uso.')
-    env = dict(os.environ)
+    env = env_com_temp_no_disco_a()
     env.update({
         'ML_ENV': 'production',
         'ML_INTERNAL_TOKEN': token_interno,

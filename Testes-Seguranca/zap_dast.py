@@ -19,6 +19,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -76,8 +77,15 @@ class ZapApi:
     def chamar(self, caminho: str, **params):
         params['apikey'] = self.chave
         url = f'{self.base}/JSON/{caminho}/?{urllib.parse.urlencode(params)}'
-        with urllib.request.urlopen(url, timeout=120) as r:
-            return json.loads(r.read().decode('utf-8'))
+        ultimo = None
+        for tentativa in range(5):   # o ZAP às vezes devolve 500 enquanto grava o banco interno (checkpoint do HSQLDB): espera e repete
+            try:
+                with urllib.request.urlopen(url, timeout=120) as r:
+                    return json.loads(r.read().decode('utf-8'))
+            except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError) as ex:
+                ultimo = ex
+                time.sleep(5)
+        raise ultimo
 
 
 def subir_zap(pasta: Path, chave: str):
@@ -86,11 +94,14 @@ def subir_zap(pasta: Path, chave: str):
         if not jars:
             raise SystemExit(f'ZAP não encontrado em {ZAP_HOME}. Veja o README (seção ZAP).')
     jar = sorted(ZAP_HOME.glob('zap-*.jar'))[-1]
-    perfil = Path(tempfile.mkdtemp(prefix='zap-perfil-'))
+    # o perfil do ZAP guarda o banco interno com as requisições da varredura (centenas de MB): fica no mesmo disco do ZAP, não no TEMP do sistema
+    pasta_perfis = ZAP_HOME.parent / 'perfis'
+    pasta_perfis.mkdir(exist_ok=True)
+    perfil = Path(tempfile.mkdtemp(prefix='zap-perfil-', dir=pasta_perfis))
     log = open(pasta / 'zap.log', 'wb')
-    env = dict(os.environ)
+    env = ambiente.env_com_temp_no_disco_a()
     env['JAVA_HOME'] = str(java_exe().parents[1])
-    proc = subprocess.Popen([str(java_exe()), '-Xmx1g', '-jar', str(jar), '-daemon', '-port', str(PORTA_ZAP), '-host', '127.0.0.1', '-dir', str(perfil),
+    proc = subprocess.Popen([str(java_exe()), '-Xmx1g', f'-Djava.io.tmpdir={perfil}', '-jar', str(jar), '-daemon', '-port', str(PORTA_ZAP), '-host', '127.0.0.1', '-dir', str(perfil),
                              '-silent', '-config', f'api.key={chave}', '-config', 'api.addrs.addr.name=127.0.0.1', '-config', 'api.addrs.addr.regex=false'],
                             cwd=ZAP_HOME, env=env, stdout=log, stderr=subprocess.STDOUT)
     return proc, perfil, log
@@ -199,6 +210,16 @@ def main():
         if not versao:
             raise SystemExit(f'O ZAP não respondeu; veja {pasta / "zap.log"}')
         print(f'ZAP {versao} pronto.', flush=True)
+        # a API do ZAP responde antes de os complementos (replacer, openapi, ascan) terminarem de carregar: espera todos aparecerem
+        limite = time.time() + 180
+        while time.time() < limite:
+            try:
+                zap.chamar('replacer/view/rules')
+                zap.chamar('ascan/view/scans')
+                zap.chamar('openapi/view/version') if False else None
+                break
+            except Exception:
+                time.sleep(3)
 
         zap.chamar('core/action/newSession', overwrite='true')
         zap.chamar('core/action/setMode', mode='attack')
@@ -238,7 +259,7 @@ def main():
         urls = zap.chamar('core/view/urls', baseurl=base)['urls']
         total = int(zap.chamar('core/view/numberOfMessages', baseurl=base)['numberOfMessages'])
         ok2xx = set()
-        for inicio_pag in range(0, min(total, 40000), 1000):
+        for inicio_pag in range(0, total, 1000):
             for m in zap.chamar('core/view/messages', baseurl=base, start=str(inicio_pag), count='1000')['messages']:
                 if m['responseHeader'].startswith('HTTP/1.1 2'):
                     ok2xx.add((m['requestHeader'].split(' ', 2)[0], m['requestHeader'].split(' ', 2)[1].split('?')[0]))
