@@ -23,7 +23,7 @@ Só a biblioteca padrão do Python é usada (nenhuma dependência para instalar)
 ./Testes-Seguranca/rodar.sh limpar             # apaga o banco de teste
 ```
 
-Opções: `--sem-ml` (não sobe o ML), `--sem-build` (não recompila a API). **Pare a Web API de uso antes** (o build troca os binários).
+Opções: `--sem-ml` (não sobe o ML), `--sem-build` (não recompila a API). A API de teste é compilada em `../Seguranca-Build` (fora do repositório), então **não precisa parar** a Web API que você deixou rodando.
 Portas usadas: 5180 (API de ataque), 5181 (API de carga, com limite global alto), 8001 (ML em modo produção).
 
 ## O que é testado

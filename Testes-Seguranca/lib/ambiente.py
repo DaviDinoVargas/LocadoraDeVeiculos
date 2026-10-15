@@ -23,6 +23,9 @@ BANCO_DE_TESTE = 'LocadoraDeVeiculos_Seguranca'
 PORTA_API = 5180          # limites padrão (testes de ataque)
 PORTA_API_CARGA = 5181    # limite global alto (testes de carga)
 PORTA_ML = 8001
+# A API de teste é compilada numa pasta FORA do repositório: assim a Web API que a pessoa deixa rodando para usar o sistema
+# (e que trava as DLLs de bin/Debug) não atrapalha os testes, e os testes não derrubam a API de uso.
+SAIDA_DO_BUILD = RAIZ.parent / 'Seguranca-Build' / 'web-api'
 
 
 def pasta_de_resultados() -> Path:
@@ -74,10 +77,10 @@ def senha_forte() -> str:
 
 def construir_api() -> None:
     print('Compilando a Web API...', flush=True)
-    r = subprocess.run(['dotnet', 'build', str(RAIZ / 'Server' / 'web-api'), '-c', 'Debug', '-v', 'q', '--nologo'],
+    r = subprocess.run(['dotnet', 'build', str(RAIZ / 'Server' / 'web-api'), '-c', 'Debug', '-o', str(SAIDA_DO_BUILD), '-v', 'q', '--nologo'],
                        capture_output=True, text=True, cwd=RAIZ)
     if r.returncode != 0:
-        raise SystemExit('Falha ao compilar a Web API (ela está rodando? pare-a antes).\n' + r.stdout[-1500:])
+        raise SystemExit('Falha ao compilar a Web API.\n' + r.stdout[-1500:])
 
 
 class Servico:
@@ -134,7 +137,7 @@ def iniciar_api(pasta_logs: Path, porta: int, extras: dict | None = None, nome='
     })
     env.update(extras or {})
     api_dir = RAIZ / 'Server' / 'web-api'
-    dll = api_dir / 'bin' / 'Debug' / 'net8.0' / 'LocadoraDeVeiculos.WebApi.dll'
+    dll = SAIDA_DO_BUILD / 'LocadoraDeVeiculos.WebApi.dll'
     return Servico(nome, ['dotnet', str(dll)], api_dir, env, f'http://127.0.0.1:{porta}/api/auth/sessao', pasta_logs)
 
 
