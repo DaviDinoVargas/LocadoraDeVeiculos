@@ -11,6 +11,12 @@ public static class RefreshTokenCookieService
 {
     private static readonly string nome = "LocadoraDeVeiculos.RefreshToken";
 
+    /// <summary>
+    /// O navegador só envia o cookie às rotas de autenticação (rotacionar, sair...), não a cada chamada da API. O front e o nginx falam com a
+    /// API por /api, então o caminho público é o mesmo do interno. Limpar o cookie precisa do MESMO Path, senão o navegador não o apaga.
+    /// </summary>
+    public const string Caminho = "/api/auth";
+
     public static void EnviarCookie(HttpResponse response, string tokenBruto, DateTime expiraEmUtc)
     {
         var options = new CookieOptions
@@ -18,6 +24,7 @@ public static class RefreshTokenCookieService
             HttpOnly = true,
             Secure = true,
             SameSite = SameSiteMode.Lax,
+            Path = Caminho,
             Expires = expiraEmUtc
         };
 
@@ -31,7 +38,8 @@ public static class RefreshTokenCookieService
         {
             HttpOnly = true,
             Secure = true,
-            SameSite = SameSiteMode.Lax
+            SameSite = SameSiteMode.Lax,
+            Path = Caminho
         });
     }
 
