@@ -111,6 +111,7 @@ public sealed class CatalogoComercialHttpTests
         Assert.AreEqual(HttpStatusCode.UnprocessableEntity, exclusao.Status);
         Assert.AreEqual(50m, (await empresa.GetAsync($"/api/taxas-servicos/{usada}")).Propriedade("preco").GetDecimal(), "o preço contratado não pode mudar");
         Assert.IsTrue(exclusaoLivre.Ok, exclusaoLivre.TextoDosErros);
+        Assert.AreEqual(HttpStatusCode.NotFound, (await empresa.GetAsync($"/api/taxas-servicos/{livre}")).Status, "a taxa excluída deixa de existir");
     }
 
     [TestMethod]

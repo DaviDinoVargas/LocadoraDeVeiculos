@@ -662,6 +662,26 @@ public sealed class AluguelEDevolucaoHttpTests
     }
 
     [TestMethod]
+    public async Task Aluguel_Editar_ComCupom_ContaOUsoUmaVezSo_ETrocarDeCupomConsomeOutro()
+    {
+        using var empresa = await NovaEmpresa();
+        var cenario = await empresa.MontarCenarioAsync();
+        var dez = (await empresa.CriarCupomAsync("DEZ", "Percentual", 10m, limiteUsos: 5)).Id;
+        var vinte = (await empresa.CriarCupomAsync("VINTE", "Percentual", 20m, limiteUsos: 5)).Id;
+        var aluguel = (await empresa.CriarAluguelAsync(cenario, duracao: 3)).Id;
+        async Task<int> Usos(Guid cupom) => (await empresa.GetAsync($"/api/cupons/{cupom}")).Propriedade("usosAtuais").GetInt32();
+
+        await empresa.PutAsync($"/api/alugueis/{aluguel}", CorpoDeEdicao(cenario, cupom: "DEZ"));
+        Assert.AreEqual(1, await Usos(dez), "aplicar o cupom pela primeira vez conta um uso");
+
+        await empresa.PutAsync($"/api/alugueis/{aluguel}", CorpoDeEdicao(cenario, cupom: "DEZ", duracao: 4));
+        Assert.AreEqual(1, await Usos(dez), "salvar de novo o mesmo aluguel com o mesmo cupom não pode contar outro uso");
+
+        await empresa.PutAsync($"/api/alugueis/{aluguel}", CorpoDeEdicao(cenario, cupom: "VINTE"));
+        Assert.AreEqual(1, await Usos(vinte), "trocar de cupom consome o novo");
+    }
+
+    [TestMethod]
     public async Task Aluguel_Editar_RecusaTaxaInexistente_CondutorDeOutroClienteECarroJaReservado()
     {
         using var empresa = await NovaEmpresa();
