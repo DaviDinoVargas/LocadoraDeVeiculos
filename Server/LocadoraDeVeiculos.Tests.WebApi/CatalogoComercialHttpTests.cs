@@ -526,4 +526,72 @@ public sealed class CatalogoComercialHttpTests
         Assert.AreEqual(HttpStatusCode.Forbidden, (await funcionario.DefinirPrecoDoCombustivelAsync(1m)).Status);
         Assert.AreEqual(9m, (await a.GetAsync("/api/configuracoes")).Propriedade("precoCombustivel").GetDecimal());
     }
+
+    [TestMethod]
+    public async Task Cupom_Validar_CupomVencidoDizExpirado_ECupomInvalidoNuncaVemComoValido()
+    {
+        using var empresa = await NovaEmpresa();
+        await empresa.CriarCupomAsync("CURTO", validoAte: DateTimeOffset.UtcNow.AddMilliseconds(300));
+        await Task.Delay(500);
+
+        var resposta = await empresa.PostAsync("/api/cupons/validar", new { codigo = "CURTO", valorBase = 200m });
+
+        Assert.IsFalse(resposta.Propriedade("valido").GetBoolean());
+        Assert.AreEqual("Cupom expirado.", resposta.Propriedade("motivoInvalido").GetString());
+        Assert.AreEqual(0m, resposta.Propriedade("valorDesconto").GetDecimal());
+        Assert.AreEqual(200m, resposta.Propriedade("valorComDesconto").GetDecimal());
+    }
+
+    [TestMethod]
+    public async Task Cupom_Exclusao_BloqueadaPorAluguelOuPorDesafio_ExplicaOMotivoDeCada()
+    {
+        using var empresa = await NovaEmpresa();
+        var cenario = await empresa.MontarCenarioAsync();
+        var emAluguel = (await empresa.CriarCupomAsync("NOALUGUEL")).Id;
+        var emDesafio = (await empresa.CriarCupomAsync("NODESAFIO")).Id;
+        await empresa.CriarAluguelAsync(cenario, cupom: "NOALUGUEL");
+        await CriarDesafioAsync(empresa, emDesafio);
+
+        var porAluguel = await empresa.DeleteAsync($"/api/cupons/{emAluguel}");
+        var porDesafio = await empresa.DeleteAsync($"/api/cupons/{emDesafio}");
+
+        StringAssert.Contains(porAluguel.TextoDosErros, "em uso por um aluguel em aberto");
+        StringAssert.Contains(porDesafio.TextoDosErros, "recompensa de um desafio");
+        StringAssert.Contains(porDesafio.TextoDosErros, "Exclua ou troque o desafio");
+    }
+
+    [TestMethod]
+    public async Task Cupom_Editar_CodigoDeOutroCupom_Recebe409ComMensagem()
+    {
+        using var empresa = await NovaEmpresa();
+        var a = (await empresa.CriarCupomAsync("CUPOMA")).Id;
+        await empresa.CriarCupomAsync("CUPOMB");
+
+        var tomar = await empresa.PutAsync($"/api/cupons/{a}", new
+        {
+            codigo = "cupomb", descricao = "x", tipoDesconto = "Percentual", valorDesconto = 10m, validoAte = DateTimeOffset.UtcNow.AddDays(30),
+            limiteUsos = (int?)null, parceiroId = (Guid?)null, ativo = true
+        });
+
+        Assert.AreEqual(HttpStatusCode.Conflict, tomar.Status);
+        StringAssert.Contains(tomar.TextoDosErros, "Já existe um cupom com este código");
+    }
+
+    [TestMethod]
+    public async Task Taxa_Mensagens_DeNomeRepetidoNaEdicaoEDeExclusaoBloqueada()
+    {
+        using var empresa = await NovaEmpresa();
+        var cenario = await empresa.MontarCenarioAsync();
+        var a = (await empresa.CriarTaxaAsync("GPS", 50m)).Id;
+        await empresa.CriarTaxaAsync("Cadeirinha", 20m);
+        var usada = (await empresa.CriarTaxaAsync("Capa de banco", 15m)).Id;
+        await empresa.CriarAluguelAsync(cenario, taxas: [usada]);
+
+        var nomeRepetido = await empresa.PutAsync($"/api/taxas-servicos/{a}", new { nome = "Cadeirinha", preco = 50m, tipoCalculo = "Fixo" });
+        var exclusao = await empresa.DeleteAsync($"/api/taxas-servicos/{usada}");
+
+        StringAssert.Contains(nomeRepetido.TextoDosErros, "Já existe uma taxa/serviço com este nome");
+        StringAssert.Contains(exclusao.TextoDosErros, "excluir uma taxa/serviço vinculada a um aluguel em aberto");
+        Assert.AreEqual(HttpStatusCode.OK, (await empresa.GetAsync($"/api/taxas-servicos/{usada}")).Status, "a taxa bloqueada continua cadastrada");
+    }
 }

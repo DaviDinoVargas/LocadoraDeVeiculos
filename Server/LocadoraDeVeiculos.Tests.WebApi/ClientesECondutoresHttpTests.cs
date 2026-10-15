@@ -412,4 +412,59 @@ public sealed class ClientesECondutoresHttpTests
         Assert.AreEqual(HttpStatusCode.Created, condutor.Status, condutor.TextoDosErros);
         Assert.AreEqual(1, (await dona.GetAsync("/api/clientes")).Registros.Count, "o que o funcionário cadastra é da empresa, e a dona vê");
     }
+
+    [TestMethod]
+    public async Task Cliente_InformaOTipo_PessoaFisicaOuJuridica_NaListaGeralENoDetalhe()
+    {
+        using var empresa = await NovaEmpresa();
+        var pf = (await empresa.PostAsync("/api/clientes/pessoa-fisica", CorpoClientePf(nome: "Maria Física"))).Id;
+        var pj = (await empresa.PostAsync("/api/clientes/pessoa-juridica", CorpoClientePj(nome: "Empresa Jurídica Ltda"))).Id;
+
+        var lista = (await empresa.GetAsync("/api/clientes")).Registros;
+
+        Assert.AreEqual("PessoaFisica", lista.Single(c => c.GetProperty("id").GetGuid() == pf).GetProperty("tipoCliente").GetString());
+        Assert.AreEqual("PessoaJuridica", lista.Single(c => c.GetProperty("id").GetGuid() == pj).GetProperty("tipoCliente").GetString());
+        Assert.AreEqual("PessoaFisica", (await empresa.GetAsync($"/api/clientes/{pf}")).Propriedade("tipoCliente").GetString());
+        var detalhePj = await empresa.GetAsync($"/api/clientes/{pj}");
+        Assert.AreEqual("PessoaJuridica", detalhePj.Propriedade("tipoCliente").GetString());
+        Assert.AreEqual("Empresa Jurídica Ltda", detalhePj.Propriedade("nome").GetString());
+    }
+
+    [TestMethod]
+    public async Task ClientePj_Editar_GravaOsNovosDados_ERecusaCnpjDeOutroComMensagem()
+    {
+        using var empresa = await NovaEmpresa();
+        var cnpjA = EmpresaDeTeste.Cnpj();
+        var a = (await empresa.PostAsync("/api/clientes/pessoa-juridica", CorpoClientePj(cnpjA, "Empresa A Ltda"))).Id;
+        var cnpjB = EmpresaDeTeste.Cnpj();
+        await empresa.PostAsync("/api/clientes/pessoa-juridica", CorpoClientePj(cnpjB, "Empresa B Ltda"));
+
+        var editada = await empresa.PutAsync($"/api/clientes/pessoa-juridica/{a}", new
+        {
+            nome = "Empresa A Renomeada", cnpj = cnpjA, nomeFantasia = "Nova Fantasia", telefone = "(11) 3333-4444", email = "novo@exemplo.com", endereco = "Avenida Nova, 900"
+        });
+        var tomar = await empresa.PutAsync($"/api/clientes/pessoa-juridica/{a}", CorpoClientePj(cnpjB));
+
+        Assert.IsTrue(editada.Ok, editada.TextoDosErros);
+        var lida = await empresa.GetAsync($"/api/clientes/{a}");
+        Assert.AreEqual("Empresa A Renomeada", lida.Propriedade("nome").GetString(), "a edição precisa ser gravada");
+        Assert.AreEqual("Nova Fantasia", lida.Propriedade("nomeFantasia").GetString());
+        Assert.AreEqual("Avenida Nova, 900", lida.Propriedade("endereco").GetString());
+        StringAssert.Contains(tomar.TextoDosErros, "Já existe um cliente com este CNPJ");
+        Assert.AreEqual("PessoaJuridica", editada.Propriedade("tipoCliente").GetString());
+    }
+
+    [TestMethod]
+    public async Task Exclusao_BloqueadaDeClienteECondutor_ExplicaOMotivo()
+    {
+        using var empresa = await NovaEmpresa();
+        var cenario = await empresa.MontarCenarioAsync();
+        await empresa.CriarAluguelAsync(cenario);
+
+        var cliente = await empresa.DeleteAsync($"/api/clientes/{cenario.Cliente}");
+        var condutor = await empresa.DeleteAsync($"/api/condutores/{cenario.Condutor}");
+
+        StringAssert.Contains(cliente.TextoDosErros, "excluir um cliente com aluguel em aberto");
+        StringAssert.Contains(condutor.TextoDosErros, "excluir um condutor com aluguel em aberto");
+    }
 }

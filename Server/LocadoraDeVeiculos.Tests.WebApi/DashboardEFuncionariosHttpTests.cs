@@ -236,4 +236,59 @@ public sealed class DashboardEFuncionariosHttpTests
         Assert.AreEqual(1, (await intrusa.GetAsync("/api/funcionarios")).Registros.Count, "só o dela");
         Assert.AreEqual(1, (await dona.GetAsync("/api/funcionarios")).Registros.Count);
     }
+
+    [TestMethod]
+    public async Task Funcionario_Excluido_TemOAcessoJaEmitidoEncerrado_NaoSoOProximoLogin()
+    {
+        using var empresa = await NovaEmpresa();
+        var email = Email();
+        var criado = await empresa.PostAsync("/api/funcionarios", CorpoFuncionario(email));
+        using var login = await LoginAsync(email, "Senha@12345");
+        var token = (await login.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>()).GetProperty("chave").GetString()!;
+        using var sessao = _fabrica.CriarClienteAutenticado(token);
+        Assert.AreEqual(HttpStatusCode.OK, (await sessao.GetAsync("/api/clientes")).StatusCode, "antes de excluir, a sessão funciona");
+
+        Assert.IsTrue((await empresa.DeleteAsync($"/api/funcionarios/{criado.Id}")).Ok);
+
+        Assert.AreEqual(HttpStatusCode.Unauthorized, (await sessao.GetAsync("/api/clientes")).StatusCode,
+            "o token que o funcionário já tinha na mão precisa parar de valer na hora da exclusão");
+    }
+
+    [TestMethod]
+    public async Task Funcionario_ComSenhaRedefinidaPelaEmpresa_PerdeASessaoQueJaTinha()
+    {
+        using var empresa = await NovaEmpresa();
+        var email = Email();
+        var cpf = EmpresaDeTeste.Cpf();
+        var criado = await empresa.PostAsync("/api/funcionarios", CorpoFuncionario(email, cpf));
+        using var login = await LoginAsync(email, "Senha@12345");
+        var token = (await login.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>()).GetProperty("chave").GetString()!;
+        using var sessaoAntiga = _fabrica.CriarClienteAutenticado(token);
+        Assert.AreEqual(HttpStatusCode.OK, (await sessaoAntiga.GetAsync("/api/clientes")).StatusCode);
+
+        await empresa.PutAsync($"/api/funcionarios/{criado.Id}", new { nomeCompleto = "Pedro Atendente", cpf, salario = 3200m, admissaoEmUtc = DateTimeOffset.UtcNow.AddMonths(-2), senha = "NovaSenha@456" });
+
+        Assert.AreEqual(HttpStatusCode.Unauthorized, (await sessaoAntiga.GetAsync("/api/clientes")).StatusCode,
+            "quem redefine a senha de um funcionário (por suspeita de vazamento, por exemplo) espera que a sessão antiga caia");
+    }
+
+    [TestMethod]
+    public async Task Funcionario_Editar_ComCpfDeOutroFuncionario_Recebe409_EManterOProprioCpfPassa()
+    {
+        using var empresa = await NovaEmpresa();
+        var cpfA = EmpresaDeTeste.Cpf();
+        var cpfB = EmpresaDeTeste.Cpf();
+        var a = (await empresa.PostAsync("/api/funcionarios", CorpoFuncionario(Email(), cpfA, nome: "Funcionário A"))).Id;
+        await empresa.PostAsync("/api/funcionarios", CorpoFuncionario(Email(), cpfB, nome: "Funcionário B"));
+
+        object Corpo(string cpf) => new { nomeCompleto = "Funcionário A Editado", cpf, salario = 3500m, admissaoEmUtc = DateTimeOffset.UtcNow.AddMonths(-2) };
+
+        var tomar = await empresa.PutAsync($"/api/funcionarios/{a}", Corpo(cpfB));
+        var manter = await empresa.PutAsync($"/api/funcionarios/{a}", Corpo(cpfA));
+
+        Assert.AreEqual(HttpStatusCode.Conflict, tomar.Status);
+        StringAssert.Contains(tomar.TextoDosErros, "Um funcionário com este CPF já está cadastrado");
+        Assert.IsTrue(manter.Ok, manter.TextoDosErros);
+        Assert.AreEqual("Funcionário A Editado", (await empresa.GetAsync($"/api/funcionarios/{a}")).Propriedade("nomeCompleto").GetString());
+    }
 }

@@ -603,4 +603,161 @@ public sealed class AluguelEDevolucaoHttpTests
 
         Assert.AreEqual(HttpStatusCode.Created, devolucao.Status, devolucao.TextoDosErros);
     }
+
+    // ---------------------------------------------------------------- edição do aluguel (o que a mutação mostrou faltar) -----------
+
+    private static object CorpoDeEdicao(Cenario c, Guid? automovel = null, int diasAteSaida = 5, int duracao = 3, Guid[]? taxas = null, string? cupom = null,
+        Guid? condutor = null)
+    {
+        var saida = DateTimeOffset.UtcNow.AddDays(diasAteSaida);
+        return new
+        {
+            condutorId = condutor ?? c.Condutor, automovelId = automovel ?? c.Automoveis[0], clienteId = c.Cliente, dataSaida = saida,
+            dataRetornoPrevisto = saida.AddDays(duracao), valorPrevisto = 1m, taxasServicosIds = taxas ?? [], cupomCodigo = cupom
+        };
+    }
+
+    [TestMethod]
+    public async Task Aluguel_Editar_TrocaAsTaxas_ORecalculoSegueAsTaxasEscolhidas()
+    {
+        using var empresa = await NovaEmpresa();
+        var cenario = await empresa.MontarCenarioAsync();
+        var fixa = (await empresa.CriarTaxaAsync("GPS", 50m, "Fixo")).Id;
+        var diaria = (await empresa.CriarTaxaAsync("Cadeirinha", 20m, "Diario")).Id;
+        var aluguel = (await empresa.CriarAluguelAsync(cenario, duracao: 3, taxas: [fixa])).Id;     // 300 + 50 = 350
+
+        async Task<(decimal Valor, int Taxas)> Ler()
+        {
+            var a = await empresa.GetAsync($"/api/alugueis/{aluguel}");
+            return (a.Propriedade("valorPrevisto").GetDecimal(), a.Propriedade("taxasServicos").GetArrayLength());
+        }
+
+        Assert.AreEqual((350m, 1), await Ler());
+        Assert.IsTrue((await empresa.PutAsync($"/api/alugueis/{aluguel}", CorpoDeEdicao(cenario, taxas: [fixa, diaria]))).Ok);
+        Assert.AreEqual((410m, 2), await Ler());                         // 300 + 50 + 3 x 20
+        Assert.IsTrue((await empresa.PutAsync($"/api/alugueis/{aluguel}", CorpoDeEdicao(cenario, taxas: [diaria]))).Ok);
+        Assert.AreEqual((360m, 1), await Ler());                         // a taxa fixa saiu: 300 + 3 x 20
+        Assert.IsTrue((await empresa.PutAsync($"/api/alugueis/{aluguel}", CorpoDeEdicao(cenario))).Ok);
+        Assert.AreEqual((300m, 0), await Ler());                         // sem taxas
+    }
+
+    [TestMethod]
+    public async Task Aluguel_Editar_AplicaCupomValido_ERecusaOInvalido_SemAlterarOAluguel()
+    {
+        using var empresa = await NovaEmpresa();
+        var cenario = await empresa.MontarCenarioAsync();
+        await empresa.CriarCupomAsync("DEZ", "Percentual", 10m);
+        var aluguel = (await empresa.CriarAluguelAsync(cenario, duracao: 3)).Id;
+
+        var invalido = await empresa.PutAsync($"/api/alugueis/{aluguel}", CorpoDeEdicao(cenario, cupom: "NAOEXISTE"));
+        var valido = await empresa.PutAsync($"/api/alugueis/{aluguel}", CorpoDeEdicao(cenario, cupom: "dez"));
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, invalido.Status);
+        StringAssert.Contains(invalido.TextoDosErros, "Cupom inválido, expirado ou esgotado");
+        Assert.IsTrue(valido.Ok, valido.TextoDosErros);
+        var lido = await empresa.GetAsync($"/api/alugueis/{aluguel}");
+        Assert.AreEqual(270m, lido.Propriedade("valorPrevisto").GetDecimal());
+        Assert.AreEqual(30m, lido.Propriedade("valorDesconto").GetDecimal());
+        Assert.AreEqual("DEZ", lido.Propriedade("cupomCodigo").GetString());
+    }
+
+    [TestMethod]
+    public async Task Aluguel_Editar_RecusaTaxaInexistente_CondutorDeOutroClienteECarroJaReservado()
+    {
+        using var empresa = await NovaEmpresa();
+        var cenario = await empresa.MontarCenarioAsync(carros: 2);
+        var outroCliente = (await empresa.CriarClienteAsync("Outro Cliente")).Id;
+        var condutorDeOutro = (await empresa.CriarCondutorAsync(outroCliente)).Id;
+        var aluguel = (await empresa.CriarAluguelAsync(cenario, cenario.Automoveis[0], diasAteSaida: 5, duracao: 3)).Id;
+        await empresa.CriarAluguelAsync(cenario, cenario.Automoveis[1], diasAteSaida: 5, duracao: 3);      // o outro carro está ocupado no mesmo período
+
+        var taxaFantasma = await empresa.PutAsync($"/api/alugueis/{aluguel}", CorpoDeEdicao(cenario, taxas: [Guid.NewGuid()]));
+        var condutorAlheio = await empresa.PutAsync($"/api/alugueis/{aluguel}", CorpoDeEdicao(cenario, condutor: condutorDeOutro));
+        var carroOcupado = await empresa.PutAsync($"/api/alugueis/{aluguel}", CorpoDeEdicao(cenario, cenario.Automoveis[1], diasAteSaida: 6));
+
+        StringAssert.Contains(taxaFantasma.TextoDosErros, "taxas de serviço informadas não existem");
+        Assert.AreEqual(HttpStatusCode.BadRequest, condutorAlheio.Status);
+        StringAssert.Contains(condutorAlheio.TextoDosErros, "não pertence ao cliente do aluguel");
+        Assert.AreEqual(HttpStatusCode.Conflict, carroOcupado.Status);
+        StringAssert.Contains(carroOcupado.TextoDosErros, "já está reservado para este período");
+        Assert.AreEqual(cenario.Automoveis[0], (await empresa.GetAsync($"/api/alugueis/{aluguel}")).Propriedade("automovelId").GetGuid(), "nenhuma edição recusada pode ter trocado o carro");
+    }
+
+    [TestMethod]
+    public async Task Aluguel_Editar_NoProprioPeriodo_NaoConflitaComSiMesmo()
+    {
+        using var empresa = await NovaEmpresa();
+        var cenario = await empresa.MontarCenarioAsync();
+        var aluguel = (await empresa.CriarAluguelAsync(cenario, diasAteSaida: 5, duracao: 3)).Id;
+
+        var mesmoPeriodo = await empresa.PutAsync($"/api/alugueis/{aluguel}", CorpoDeEdicao(cenario, diasAteSaida: 5, duracao: 3));
+
+        Assert.IsTrue(mesmoPeriodo.Ok, "o aluguel não pode bloquear o próprio carro ao ser editado: " + mesmoPeriodo.TextoDosErros);
+    }
+
+    [TestMethod]
+    public async Task Aluguel_Listas_E_Detalhe_MostramNomeDoCondutorDoClienteEPlaca_NuncaNA()
+    {
+        using var empresa = await NovaEmpresa();
+        var cenario = await empresa.MontarCenarioAsync(carros: 2);
+        var placa = (await empresa.GetAsync($"/api/automoveis/{cenario.Automoveis[0]}")).Propriedade("placa").GetString();
+        var reservado = (await empresa.CriarAluguelAsync(cenario, cenario.Automoveis[0])).Id;
+        var outro = (await empresa.CriarAluguelAsync(cenario, cenario.Automoveis[1])).Id;
+        await empresa.IniciarAluguelAsync(outro);
+
+        var linhas = new[]
+        {
+            ("/api/alugueis", (await empresa.GetAsync("/api/alugueis")).Registros.Single(r => r.GetProperty("id").GetGuid() == reservado)),
+            ("/api/alugueis/status/Reservado", (await empresa.GetAsync("/api/alugueis/status/Reservado")).Registros.Single()),
+            ("/api/alugueis/em-aberto", (await empresa.GetAsync("/api/alugueis/em-aberto")).Registros.Single(r => r.GetProperty("id").GetGuid() == reservado))
+        };
+
+        foreach (var (rota, linha) in linhas)
+        {
+            Assert.AreEqual("Condutor de Teste", linha.GetProperty("condutorNome").GetString(), rota);
+            Assert.AreEqual("Cliente de Teste", linha.GetProperty("clienteNome").GetString(), rota);
+            Assert.AreEqual(placa, linha.GetProperty("automovelPlaca").GetString(), rota);
+        }
+
+        var detalhe = await empresa.GetAsync($"/api/alugueis/{reservado}");
+        Assert.AreEqual("Condutor de Teste", detalhe.Propriedade("condutorNome").GetString());
+        Assert.AreEqual("Cliente de Teste", detalhe.Propriedade("clienteNome").GetString());
+        Assert.AreEqual(placa, detalhe.Propriedade("automovelPlaca").GetString());
+    }
+
+    [TestMethod]
+    public async Task Devolucao_PorId_MostraCondutorEClienteDoAluguel_NuncaNA()
+    {
+        using var empresa = await NovaEmpresa();
+        var (aluguel, _) = await AluguelEmAndamentoAsync(empresa);
+        var devolucao = (await empresa.RegistrarDevolucaoAsync(aluguel, DateTimeOffset.UtcNow.AddDays(7))).Id;
+
+        var lida = await empresa.GetAsync($"/api/devolucoes/{devolucao}");
+
+        Assert.AreEqual("Condutor de Teste", lida.Propriedade("condutorNome").GetString());
+        Assert.AreEqual("Cliente de Teste", lida.Propriedade("clienteNome").GetString());
+        Assert.AreEqual("Cheio", lida.Propriedade("nivelCombustivel").GetString());
+    }
+
+    [TestMethod]
+    public async Task Simulacao_ComTaxas_SomaAsTaxasFixasEDiarias_ERecusaPeriodoInvalido()
+    {
+        using var empresa = await NovaEmpresa();
+        var cenario = await empresa.MontarCenarioAsync();
+        var fixa = (await empresa.CriarTaxaAsync("GPS", 50m, "Fixo")).Id;
+        var diaria = (await empresa.CriarTaxaAsync("Cadeirinha", 20m, "Diario")).Id;
+        var saida = DateTimeOffset.UtcNow.AddDays(5);
+
+        var com = await empresa.PostAsync("/api/alugueis/simular", new { automovelId = cenario.Automoveis[0], dataSaida = saida, dataRetornoPrevisto = saida.AddDays(2), taxasServicosIds = new[] { fixa, diaria } });
+        var sem = await empresa.PostAsync("/api/alugueis/simular", new { automovelId = cenario.Automoveis[0], dataSaida = saida, dataRetornoPrevisto = saida.AddDays(2), taxasServicosIds = Array.Empty<Guid>() });
+        var invertido = await empresa.PostAsync("/api/alugueis/simular", new { automovelId = cenario.Automoveis[0], dataSaida = saida, dataRetornoPrevisto = saida.AddDays(-1) });
+
+        Assert.AreEqual(2, com.Propriedade("dias").GetInt32());
+        Assert.AreEqual(90m, com.Propriedade("valorTaxas").GetDecimal(), "50 fixa + 2 dias x 20");
+        Assert.AreEqual(290m, com.Propriedade("valorPrevisto").GetDecimal());
+        Assert.AreEqual(0m, sem.Propriedade("valorTaxas").GetDecimal());
+        Assert.AreEqual(200m, sem.Propriedade("valorPrevisto").GetDecimal());
+        Assert.AreEqual(HttpStatusCode.BadRequest, invertido.Status);
+        StringAssert.Contains(invertido.TextoDosErros, "após a data de saída");
+    }
 }
