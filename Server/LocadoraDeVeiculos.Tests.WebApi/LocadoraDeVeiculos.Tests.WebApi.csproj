@@ -21,6 +21,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\web-api\LocadoraDeVeiculos.WebApi.csproj" />
+    <!-- referência direta (já era transitiva via web-api): o Stryker.NET exige o projeto sob teste referenciado pelo projeto de teste -->
+    <ProjectReference Include="..\LocadoraDeVeiculos.Core.Aplicacao\LocadoraDeVeiculos.Core.Aplicacao.csproj" />
   </ItemGroup>
 
 </Project>
