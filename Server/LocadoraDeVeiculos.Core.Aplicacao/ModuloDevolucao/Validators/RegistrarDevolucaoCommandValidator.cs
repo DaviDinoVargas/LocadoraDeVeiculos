@@ -17,8 +17,8 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloDevolucao.Validators
                 .NotEmpty().WithMessage("O campo Quilometragem Final é obrigatório.")
                 .GreaterThan(0).WithMessage("A quilometragem final deve ser maior que zero.");
 
+            // Sem NotEmpty: 0 litro é um valor válido (carro devolvido com o tanque vazio) e NotEmpty recusa o zero de um decimal.
             RuleFor(p => p.CombustivelNoTanque)
-                .NotEmpty().WithMessage("O campo Combustível no Tanque é obrigatório.")
                 .GreaterThanOrEqualTo(0).WithMessage("O combustível no tanque não pode ser negativo.");
 
             RuleFor(p => p.NivelCombustivel)
