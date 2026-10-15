@@ -163,6 +163,39 @@ public sealed class EmpresaDeTeste : IDisposable
         };
     }
 
+    public Task<Resposta> CriarTaxaAsync(string nome, decimal preco, string tipoCalculo = "Fixo") =>
+        PostAsync("/api/taxas-servicos", new { nome, preco, tipoCalculo });
+
+    public Task<Resposta> CriarCupomAsync(string codigo, string tipo = "Percentual", decimal valor = 10m, int? limiteUsos = null,
+        DateTimeOffset? validoAte = null, Guid? parceiroId = null) =>
+        PostAsync("/api/cupons", new
+        {
+            codigo, descricao = "Cupom de teste", tipoDesconto = tipo, valorDesconto = valor, validoAte = validoAte ?? DateTimeOffset.UtcNow.AddDays(60),
+            limiteUsos, parceiroId
+        });
+
+    public Task<Resposta> DefinirPrecoDoCombustivelAsync(decimal preco) => PutAsync("/api/configuracoes/preco-combustivel", new { precoCombustivel = preco });
+    public Task<Resposta> DefinirValorDaGarantiaAsync(decimal valor) => PutAsync("/api/configuracoes/valor-garantia", new { valorGarantia = valor });
+
+    public Task<Resposta> CriarAluguelAsync(Cenario c, Guid? automovel = null, int diasAteSaida = 5, int duracao = 3, Guid[]? taxas = null, string? cupom = null)
+    {
+        // as duas datas saem do MESMO instante: a API cobra por dia iniciado (arredonda para cima), então ler o relógio duas vezes
+        // somaria uns milissegundos e cobraria um dia a mais
+        var saida = DateTimeOffset.UtcNow.AddDays(diasAteSaida);
+        return PostAsync("/api/alugueis", new
+        {
+            condutorId = c.Condutor, automovelId = automovel ?? c.Automoveis[0], clienteId = c.Cliente,
+            dataSaida = saida, dataRetornoPrevisto = saida.AddDays(duracao),
+            valorPrevisto = 1m /* ignorado de propósito: quem calcula é o servidor */, taxasServicosIds = taxas ?? [], cupomCodigo = cupom
+        });
+    }
+
+    public Task<Resposta> IniciarAluguelAsync(Guid id) => PostAsync($"/api/alugueis/{id}/iniciar");
+    public Task<Resposta> CancelarAluguelAsync(Guid id) => PostAsync($"/api/alugueis/{id}/cancelar");
+
+    public Task<Resposta> RegistrarDevolucaoAsync(Guid aluguel, DateTimeOffset data, decimal km = 15_000m, decimal litros = 50m, string nivel = "Cheio") =>
+        PostAsync("/api/devolucoes", new { aluguelId = aluguel, dataDevolucao = data, quilometragemFinal = km, combustivelNoTanque = litros, nivelCombustivel = nivel });
+
     public void Dispose() => Http.Dispose();
 }
 
