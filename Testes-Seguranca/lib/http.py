@@ -4,6 +4,7 @@ import base64
 import http.client
 import json
 import secrets
+import ssl
 import threading
 import time
 from dataclasses import dataclass, field
@@ -48,15 +49,22 @@ def ip_unico() -> str:
 _local = threading.local()
 
 
-def _conexao(host, porta, timeout, reutilizar):
+def _nova_conexao(esquema, host, porta, timeout):
+    if esquema == 'https':
+        # Só contra a API de teste em 127.0.0.1, que usa o certificado de desenvolvimento (não confiável de propósito): sem verificação.
+        return http.client.HTTPSConnection(host, porta, timeout=timeout, context=ssl._create_unverified_context())
+    return http.client.HTTPConnection(host, porta, timeout=timeout)
+
+
+def _conexao(host, porta, timeout, reutilizar, esquema='http'):
     if not reutilizar:
-        return http.client.HTTPConnection(host, porta, timeout=timeout)
+        return _nova_conexao(esquema, host, porta, timeout)
     cache = getattr(_local, 'conexoes', None)
     if cache is None:
         cache = _local.conexoes = {}
     chave = (host, porta)
     if chave not in cache:
-        cache[chave] = http.client.HTTPConnection(host, porta, timeout=timeout)
+        cache[chave] = _nova_conexao(esquema, host, porta, timeout)
     return cache[chave]
 
 
@@ -89,9 +97,9 @@ def requisitar(metodo: str, url: str, *, json_corpo=None, bruto: bytes | None = 
 
     resposta = Resposta()
     inicio = time.perf_counter()
-    porta = partes.port or 80
+    porta = partes.port or (443 if partes.scheme == 'https' else 80)
     for tentativa in range(2 if reutilizar else 1):
-        conexao = _conexao(partes.hostname, porta, timeout, reutilizar)
+        conexao = _conexao(partes.hostname, porta, timeout, reutilizar, partes.scheme)
         try:
             conexao.request(metodo, caminho, body=corpo, headers=h)
             r = conexao.getresponse()

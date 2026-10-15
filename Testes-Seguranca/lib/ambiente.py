@@ -6,13 +6,16 @@ Segurança do próprio teste:
 - senhas e tokens são gerados na hora, não existem no código;
 - os resultados vão para fora do repositório (variável SEGURANCA_RESULTADOS).
 """
+import base64
 import hashlib
 import os
 import re
 import secrets
+import shutil
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -89,6 +92,7 @@ class Servico:
         self.caminho_log = pasta_logs / f'{nome}.log'
         self.timeout = timeout
         self.proc = None
+        self.pastas_temporarias = []
 
     def iniciar(self):
         self._log = open(self.caminho_log, 'wb')
@@ -114,6 +118,8 @@ class Servico:
                 pass
         if getattr(self, '_log', None):
             self._log.close()
+        for pasta in self.pastas_temporarias:
+            shutil.rmtree(pasta, ignore_errors=True)
 
     def memoria_mb(self):
         """Memória residente (MB) do processo, via tasklist (sem dependências)."""
@@ -139,6 +145,52 @@ def iniciar_api(pasta_logs: Path, porta: int, extras: dict | None = None, nome='
     api_dir = RAIZ / 'Server' / 'web-api'
     dll = SAIDA_DO_BUILD / 'LocadoraDeVeiculos.WebApi.dll'
     return Servico(nome, ['dotnet', str(dll)], api_dir, env, f'http://127.0.0.1:{porta}/api/auth/sessao', pasta_logs)
+
+
+PORTA_API_PRODUCAO_HTTP = 5182
+PORTA_API_PRODUCAO_HTTPS = 5183
+HOST_PUBLICO_DE_TESTE = 'api.locadora.teste'   # nome "de verdade": o HSTS do ASP.NET não é emitido para localhost/127.0.0.1
+
+
+def iniciar_api_producao(pasta_logs: Path, segredos_gerados: list, nome='api-producao') -> Servico:
+    """A API em modo PRODUÇÃO (ASPNETCORE_ENVIRONMENT=Production) e com HTTPS de verdade (Kestrel com certificado), nas portas 5182 (http, só
+    para redirecionar) e 5183 (https). É como ela se comporta fora do desenvolvimento: HSTS, sem Swagger, erros genéricos, cookie Secure.
+    Usa o banco de TESTE; os segredos vêm das user-secrets para variáveis de ambiente do processo e nunca são impressos."""
+    for porta in (PORTA_API_PRODUCAO_HTTP, PORTA_API_PRODUCAO_HTTPS):
+        if not porta_livre(porta):
+            raise SystemExit(f'A porta {porta} já está em uso.')
+
+    pasta_cert = Path(tempfile.mkdtemp(prefix='locadora-cert-'))
+    pfx, senha_pfx = pasta_cert / 'dev-cert.pfx', secrets.token_urlsafe(16)
+    r = subprocess.run(['dotnet', 'dev-certs', 'https', '-ep', str(pfx), '-p', senha_pfx], capture_output=True, text=True)
+    if r.returncode != 0 or not pfx.exists():
+        shutil.rmtree(pasta_cert, ignore_errors=True)
+        raise SystemExit('Não foi possível exportar o certificado de desenvolvimento (dotnet dev-certs https).')
+
+    chave_facial = '1:' + base64.b64encode(secrets.token_bytes(32)).decode()
+    token_interno = secrets.token_urlsafe(40)   # em produção a API recusa o token padrão de desenvolvimento (S2)
+    segredos_gerados.extend([senha_pfx, chave_facial, token_interno])
+    env = dict(os.environ)
+    for chave, valor in _segredos().items():
+        env[chave.replace(':', '__')] = valor
+    env.update({
+        'ASPNETCORE_ENVIRONMENT': 'Production',
+        'DOTNET_ENVIRONMENT': 'Production',
+        'ASPNETCORE_URLS': f'http://127.0.0.1:{PORTA_API_PRODUCAO_HTTP};https://127.0.0.1:{PORTA_API_PRODUCAO_HTTPS}',
+        'ASPNETCORE_HTTPS_PORT': str(PORTA_API_PRODUCAO_HTTPS),
+        'ASPNETCORE_Kestrel__Certificates__Default__Path': str(pfx),
+        'ASPNETCORE_Kestrel__Certificates__Default__Password': senha_pfx,
+        'SQL_CONNECTION_STRING': cadeia_do_banco_de_teste(),
+        'FACE_ENCRYPTION_KEYS': chave_facial,
+        'MlApi__InternalToken': token_interno,
+        'AllowedHosts': f'{HOST_PUBLICO_DE_TESTE};127.0.0.1;localhost',
+        'CORS_ALLOWED_ORIGINS': 'http://localhost:4200',
+    })
+    api_dir = RAIZ / 'Server' / 'web-api'
+    servico = Servico(nome, ['dotnet', str(SAIDA_DO_BUILD / 'LocadoraDeVeiculos.WebApi.dll')], api_dir, env,
+                      f'https://127.0.0.1:{PORTA_API_PRODUCAO_HTTPS}/api/auth/sessao', pasta_logs)
+    servico.pastas_temporarias.append(pasta_cert)
+    return servico
 
 
 def sha256_do_peso() -> str | None:

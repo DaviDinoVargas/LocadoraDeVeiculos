@@ -19,7 +19,7 @@ from lib.contexto import Contexto  # noqa: E402
 from lib.registro import Registro  # noqa: E402
 
 MODULOS_ATAQUE = ['a_autenticacao', 'b_autorizacao', 'c_entradas', 'd_configuracao', 'e_ml', 'f_conta_e_privacidade', 'g_robustez', 'h_negocio',
-                  'j_concorrencia', 'k_ml_fuzz']
+                  'j_concorrencia', 'k_ml_fuzz', 'm_sessoes_e_https']
 
 
 def verificar_logs(ctx, pastas_logs):
@@ -143,6 +143,7 @@ def main():
             api_carga.parar()
 
         print('\n== logs ==', flush=True)
+        servicos.extend(ctx.servicos_extras)
         for s in servicos:
             s.parar()
         verificar_logs(ctx, [s.caminho_log for s in servicos])
