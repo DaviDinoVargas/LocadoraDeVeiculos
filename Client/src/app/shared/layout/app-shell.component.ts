@@ -49,6 +49,7 @@ function lerRecolhido(): boolean {
 
         <!-- Barra lateral: tablet = trilho de ícones, desktop = completa ou recolhida -->
         <aside
+          aria-label="Barra lateral"
           class="border-border bg-surface-low hidden shrink-0 flex-col border-r transition-[width] duration-200 md:flex"
           [class.w-[72px]]="recolhidoEfetivo()"
           [class.w-[260px]]="!recolhidoEfetivo()"
