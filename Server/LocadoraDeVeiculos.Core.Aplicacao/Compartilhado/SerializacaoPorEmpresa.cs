@@ -15,20 +15,28 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.Compartilhado;
 public interface ISerializadoPorEmpresa;
 
 /// <summary>
+/// As travas ficam FORA do behavior de propósito: o behavior é genérico (um tipo fechado por comando) e um campo estático dentro de classe genérica
+/// existe uma vez para cada combinação de tipos. Com a trava lá dentro, "cancelar" e "iniciar" o mesmo aluguel teriam travas diferentes e rodariam juntos.
+/// Aqui existe um único semáforo por empresa, compartilhado por todos os comandos marcados.
+/// </summary>
+internal static class TravasPorEmpresa
+{
+    public static readonly ConcurrentDictionary<Guid, SemaphoreSlim> Travas = new();
+}
+
+/// <summary>
 /// Trava em memória por empresa ao redor dos comandos <see cref="ISerializadoPorEmpresa"/>. Vale para UMA instância da API; com várias
 /// instâncias é preciso uma trava no banco (sp_getapplock) ou um token de concorrência na tabela.
 /// </summary>
 public sealed class SerializarPorEmpresaBehavior<TRequest, TResponse>(ITenantProvider tenant) : IPipelineBehavior<TRequest, TResponse>
     where TRequest : notnull
 {
-    private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> Travas = new();
-
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
     {
         if (request is not ISerializadoPorEmpresa || tenant.EmpresaId is not { } empresa)
             return await next(cancellationToken);
 
-        var trava = Travas.GetOrAdd(empresa, _ => new SemaphoreSlim(1, 1));
+        var trava = TravasPorEmpresa.Travas.GetOrAdd(empresa, _ => new SemaphoreSlim(1, 1));
 
         await trava.WaitAsync(cancellationToken);
 

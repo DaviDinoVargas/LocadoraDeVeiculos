@@ -19,6 +19,7 @@ public sealed class SerializacaoPorEmpresaTests
 
     private sealed record ComandoMarcado : IRequest<int>, ISerializadoPorEmpresa;
     private sealed record ComandoComum : IRequest<int>;
+    private sealed record OutroComandoMarcado : IRequest<int>, ISerializadoPorEmpresa;
 
     private sealed class Medidor
     {
@@ -61,6 +62,21 @@ public sealed class SerializacaoPorEmpresaTests
         await Task.WhenAll(Enumerable.Range(0, 10).Select(_ => Task.Run(() => Rodar(new ComandoMarcado(), Guid.NewGuid(), medidor))));
 
         Assert.IsTrue(medidor.MaximoSimultaneo > 1, "empresas diferentes seguem em paralelo");
+    }
+
+    [TestMethod]
+    public async Task ComandosDeTiposDiferentes_DaMesmaEmpresa_TambemRodamUmDeCadaVez()
+    {
+        // "iniciar" e "cancelar" são comandos diferentes: se cada tipo tivesse a sua própria fila, os dois passariam juntos pela checagem
+        var empresa = Guid.NewGuid();
+        var medidor = new Medidor();
+
+        await Task.WhenAll(Enumerable.Range(0, 20).Select(i => Task.Run(() => i % 2 == 0
+            ? Rodar(new ComandoMarcado(), empresa, medidor)
+            : Rodar(new OutroComandoMarcado(), empresa, medidor))));
+
+        Assert.AreEqual(1, medidor.MaximoSimultaneo, "a fila é da empresa, não do tipo do comando");
+        Assert.AreEqual(20, medidor.Total);
     }
 
     [TestMethod]
