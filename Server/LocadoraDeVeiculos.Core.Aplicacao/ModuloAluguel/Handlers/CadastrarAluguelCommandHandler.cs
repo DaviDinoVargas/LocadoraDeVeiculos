@@ -75,6 +75,11 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAluguel.Handlers
             if (!await _appDbContext.Clientes.AnyAsync(c => c.Id == command.ClienteId, cancellationToken))
                 return Result.Fail(ResultadosErro.RegistroNaoEncontradoErro(command.ClienteId));
 
+            // O condutor precisa ser do cliente do aluguel (a tela só oferece os condutores do cliente escolhido; a API impõe o mesmo).
+            // Condutor de outra empresa também cai aqui: o filtro por empresa do banco o esconde.
+            if (!await _appDbContext.Condutores.AnyAsync(c => c.Id == command.CondutorId && c.ClienteId == command.ClienteId, cancellationToken))
+                return Result.Fail(ResultadosErro.RequisicaoInvalidaErro("O condutor informado não pertence ao cliente do aluguel."));
+
             // Verificar disponibilidade do automóvel
             if (await _repositorioAluguel.ExisteAluguelAtivoParaAutomovelAsync(command.AutomovelId, command.DataSaida, command.DataRetornoPrevisto))
             {
