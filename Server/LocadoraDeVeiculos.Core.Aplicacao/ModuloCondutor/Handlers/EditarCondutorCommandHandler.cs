@@ -1,4 +1,5 @@
-﻿using FluentResults;
+﻿using Microsoft.EntityFrameworkCore;
+using FluentResults;
 using FluentValidation;
 using FluentValidation.Results;
 using LocadoraDeVeiculos.Core.Aplicacao.Compartilhado;
@@ -51,6 +52,11 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloCondutor.Handlers
                 var erros = resultadoValidacao.Errors.Select(e => e.ErrorMessage);
                 return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(erros));
             }
+
+            // O cliente do condutor precisa ser da própria empresa (o filtro por empresa do banco esconde os das outras).
+            if (command.ClienteId.HasValue &&
+                !await _appDbContext.Clientes.AnyAsync(c => c.Id == command.ClienteId.Value, cancellationToken))
+                return Result.Fail(ResultadosErro.RegistroNaoEncontradoErro(command.ClienteId.Value));
 
             if (await _repositorioCondutor.ExisteCondutorComCpfAsync(command.Cpf, command.Id))
             {

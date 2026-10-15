@@ -1,4 +1,5 @@
-﻿using FluentResults;
+﻿using Microsoft.EntityFrameworkCore;
+using FluentResults;
 using FluentValidation;
 using FluentValidation.Results;
 using LocadoraDeVeiculos.Core.Aplicacao.Compartilhado;
@@ -48,6 +49,12 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloCliente.Handlers
                 var erros = resultadoValidacao.Errors.Select(e => e.ErrorMessage);
                 return Result.Fail(ResultadosErro.RequisicaoInvalidaErro(erros));
             }
+
+            // A empresa-cliente a que a pessoa se vincula precisa ser da própria locadora (o filtro por empresa do banco esconde as
+            // de outras): sem isto, dava para ligar um cliente a dados de outra empresa.
+            if (command.ClientePessoaJuridicaId.HasValue &&
+                !await _appDbContext.Clientes.AnyAsync(c => c.Id == command.ClientePessoaJuridicaId.Value, cancellationToken))
+                return Result.Fail(ResultadosErro.RegistroNaoEncontradoErro(command.ClientePessoaJuridicaId.Value));
 
             if (await _repositorioCliente.ExisteClienteComCpfAsync(command.Cpf))
             {
