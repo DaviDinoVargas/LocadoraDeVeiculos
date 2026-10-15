@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.AspNetCore.Server.Kestrel.Https;
+using System.Security.Authentication;
 using System.Net;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
@@ -15,6 +17,7 @@ public static class SegurancaHttpConfig
 {
     public const string PoliticaAutenticacao = "auth";
     public const string PoliticaRegistro = "registro";
+    public const string PoliticaSessao = "sessao";
 
     // Corpo máximo aceito pela API. As maiores cargas reais são imagens de webcam (640x480,
     // ~100 KB em base64); o padrão do Kestrel (~30 MB) só serve para quem quer estourar memória.
@@ -22,6 +25,7 @@ public static class SegurancaHttpConfig
 
     public const int LimiteGlobalPorMinutoPadrao = 300;
     public const int LimiteAutenticacaoPorMinuto = 10;
+    public const int LimiteSessaoPorMinuto = 60;
     public const int LimiteRegistroPorHoraPadrao = 5;
 
     public static IServiceCollection AddSegurancaHttp(this IServiceCollection services, IConfiguration configuration)
@@ -29,7 +33,11 @@ public static class SegurancaHttpConfig
         services.Configure<ForwardedHeadersOptions>(opcoes => ConfigurarProxiesConfiaveis(opcoes, configuration));
 
         var limiteCorpo = LerInteiroPositivo(configuration, "MAX_REQUEST_BODY_BYTES", LimiteCorpoPadraoEmBytes);
-        services.Configure<KestrelServerOptions>(opcoes => opcoes.Limits.MaxRequestBodySize = limiteCorpo);
+        services.Configure<KestrelServerOptions>(opcoes =>
+        {
+            opcoes.Limits.MaxRequestBodySize = limiteCorpo;
+            opcoes.ConfigureHttpsDefaults(ConfigurarTls);
+        });
 
         var limiteGlobal = (int)LerInteiroPositivo(configuration, "RATE_LIMIT_PER_MINUTE", LimiteGlobalPorMinutoPadrao);
         var limiteRegistro = (int)LerInteiroPositivo(configuration, "REGISTRATION_LIMIT_PER_HOUR", LimiteRegistroPorHoraPadrao);
@@ -37,6 +45,12 @@ public static class SegurancaHttpConfig
 
         return services;
     }
+
+    /// <summary>
+    /// Quando o próprio Kestrel termina o HTTPS, só TLS 1.2 e 1.3. Sem isto vale o padrão do sistema operacional, que no Windows ainda aceita TLS
+    /// 1.0 e 1.1 (protocolos com falhas conhecidas e fora de uso desde 2020). Atrás de um proxy (nginx) quem decide é o proxy.
+    /// </summary>
+    public static void ConfigurarTls(HttpsConnectionAdapterOptions opcoes) => opcoes.SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13;
 
     /// <summary>
     /// Só aceita X-Forwarded-For/Proto de proxies listados em TRUSTED_PROXIES (IPs ou CIDR separados por ';').
@@ -89,13 +103,25 @@ public static class SegurancaHttpConfig
                     QueueLimit = 0
                 }));
 
-        // Login, cadastro e rotação de token: força bruta e spam de contas. Sempre por IP, porque
+        // Login, cadastro e recuperação de senha: força bruta e spam de contas. Sempre por IP, porque
         // nesses pontos ainda não há usuário autenticado.
         opcoes.AddPolicy(PoliticaAutenticacao, contexto => RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: ChaveDoIp(contexto.Connection.RemoteIpAddress),
             factory: _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = LimiteAutenticacaoPorMinuto,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+
+        // Renovar a sessão (rotacionar) e sair: o front renova a cada carga de página e a cada expiração do token de acesso, então mais de uma
+        // pessoa atrás do mesmo IP (uma locadora inteira atrás de um roteador) estouraria os 10/min do login e seria deslogada. Aqui a credencial
+        // é um segredo de 256 bits no cookie, impossível de adivinhar por força bruta; o limite só protege o banco de repetição em massa.
+        opcoes.AddPolicy(PoliticaSessao, contexto => RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: ChaveDoIp(contexto.Connection.RemoteIpAddress),
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = LimiteSessaoPorMinuto,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             }));

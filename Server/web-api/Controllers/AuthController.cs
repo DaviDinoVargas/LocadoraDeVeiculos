@@ -243,6 +243,7 @@ public class AutenticacaoController(IMediator mediator) : MainController
         });
     }
 
+    [EnableRateLimiting(SegurancaHttpConfig.PoliticaSessao)]
     [HttpPost("rotacionar")]
     [ExigirCabecalhoCliente]
     public async Task<ActionResult<AccessToken>> Rotacionar()
@@ -257,6 +258,7 @@ public class AutenticacaoController(IMediator mediator) : MainController
         return ProcessarResultado(result, ResponderComToken);
     }
 
+    [EnableRateLimiting(SegurancaHttpConfig.PoliticaSessao)]
     [HttpPost("sair")]
     [ExigirCabecalhoCliente]
     public async Task<IActionResult> Sair()

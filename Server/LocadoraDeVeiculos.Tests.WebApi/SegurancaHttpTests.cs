@@ -67,6 +67,16 @@ public sealed class SegurancaHttpTests
     }
 
     [TestMethod]
+    public void TlsDoKestrel_AceitaSoAsVersoes12E13_NuncaAs10E11()
+    {
+        var opcoes = new Microsoft.AspNetCore.Server.Kestrel.Https.HttpsConnectionAdapterOptions();
+
+        SegurancaHttpConfig.ConfigurarTls(opcoes);
+
+        Assert.AreEqual(System.Security.Authentication.SslProtocols.Tls12 | System.Security.Authentication.SslProtocols.Tls13, opcoes.SslProtocols);
+    }
+
+    [TestMethod]
     public void LimiteDeCorpo_PadraoEhDeDoisMegabytes()
     {
         using var fabrica = new ApiFactory();
