@@ -1,9 +1,11 @@
 import base64
+import io
 from typing import Annotated
 
 import cv2
 import numpy as np
 from fastapi import APIRouter, Depends, HTTPException
+from PIL import Image
 from pydantic import BaseModel, Field
 
 from shared import limites, settings
@@ -45,11 +47,35 @@ class CompararRequest(BaseModel):
     samples: list[Annotated[list[float], Field(max_length=MAXIMO_DE_NUMEROS_POR_AMOSTRA)]] = Field(max_length=MAXIMO_DE_AMOSTRAS)
 
 
+# Uma foto de webcam tem 0,3 megapixel; 16 megapixels (4000x4000) já cobrem qualquer câmera de celular. Um PNG de 136 KB pode declarar
+# 144 milhões de pixels e custar mais de 1 GB de memória ao ser decodificado: o tamanho é lido do cabeçalho, sem decodificar (S9).
+MAXIMO_DE_PIXELS = 16_000_000
+
+
+def _conferir_tamanho_da_imagem(binario: bytes) -> None:
+    try:
+        with Image.open(io.BytesIO(binario)) as imagem:
+            largura, altura = imagem.size
+    except Image.DecompressionBombError:
+        raise HTTPException(status_code=413, detail="Imagem grande demais")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Não foi possível decodificar a imagem enviada")
+
+    if largura * altura > MAXIMO_DE_PIXELS:
+        raise HTTPException(status_code=413, detail="Imagem grande demais")
+
+
 def _decodificar_imagem(image_base64: str):
     try:
         if ',' in image_base64:
             image_base64 = image_base64.split(',', 1)[1]
         binario = base64.b64decode(image_base64)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Não foi possível decodificar a imagem enviada")
+
+    _conferir_tamanho_da_imagem(binario)
+
+    try:
         arr = np.frombuffer(binario, dtype=np.uint8)
         imagem = cv2.imdecode(arr, cv2.IMREAD_COLOR)
         if imagem is None:
