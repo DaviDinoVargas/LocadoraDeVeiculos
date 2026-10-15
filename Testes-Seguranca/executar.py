@@ -19,7 +19,7 @@ from lib.contexto import Contexto  # noqa: E402
 from lib.registro import Registro  # noqa: E402
 
 MODULOS_ATAQUE = ['a_autenticacao', 'b_autorizacao', 'c_entradas', 'd_configuracao', 'e_ml', 'f_conta_e_privacidade', 'g_robustez', 'h_negocio',
-                  'j_concorrencia']
+                  'j_concorrencia', 'k_ml_fuzz']
 
 
 def verificar_logs(ctx, pastas_logs):
@@ -115,6 +115,7 @@ def main():
                 servicos.append(ml)
                 ml.iniciar()
                 ctx.ml, ctx.token_ml = f'http://127.0.0.1:{ambiente.PORTA_ML}', token_ml
+                ctx.ml_servico = ml
             except SystemExit as ex:
                 print(f'ML indisponível: {ex}', flush=True)
                 ctx.ml = None
