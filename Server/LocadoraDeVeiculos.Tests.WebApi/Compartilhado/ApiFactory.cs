@@ -37,9 +37,12 @@ public class ApiFactory : WebApplicationFactory<LocadoraDeVeiculos.WebApi.Progra
     public const string ChaveJwt = "chave-de-teste-com-mais-de-trinta-e-dois-caracteres";
 
     private readonly Dictionary<string, string> _configuracoes;
+    private readonly TimeProvider? _relogio;
 
-    public ApiFactory(Dictionary<string, string>? configuracoes = null)
+    /// <param name="relogio">Opcional: troca o relógio da API (TimeProvider) para testar regras que dependem da data, como o painel.</param>
+    public ApiFactory(Dictionary<string, string>? configuracoes = null, TimeProvider? relogio = null)
     {
+        _relogio = relogio;
         _configuracoes = new Dictionary<string, string>
         {
             ["SQL_CONNECTION_STRING"] = "Server=nao-usado;Database=teste",
@@ -156,6 +159,13 @@ public class ApiFactory : WebApplicationFactory<LocadoraDeVeiculos.WebApi.Progra
                 servicos.Remove(descritor);
 
             servicos.AddDbContext<LocadoraDeVeiculosDbContext>(o => o.UseInMemoryDatabase(nomeDoBanco));
+
+            if (_relogio is not null)
+            {
+                foreach (var descritor in servicos.Where(d => d.ServiceType == typeof(TimeProvider)).ToList())
+                    servicos.Remove(descritor);
+                servicos.AddSingleton(_relogio);
+            }
 
             // O TestServer não tem IP remoto; com X-Test-Ip o teste escolhe de "onde" a requisição vem.
             servicos.AddTransient<IStartupFilter, IpDeTesteStartupFilter>();
