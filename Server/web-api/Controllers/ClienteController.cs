@@ -130,7 +130,6 @@ namespace LocadoraDeVeiculos.WebApi.Controllers
         }
 
         [HttpGet]
-        [HttpGet]
         public async Task<ActionResult<SelecionarClientesResponse>> SelecionarTodos(
     CancellationToken cancellationToken)
         {
