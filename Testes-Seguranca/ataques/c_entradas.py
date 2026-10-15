@@ -96,3 +96,25 @@ def executar(ctx):
     r.checar('C11b', CAT, 'Foto https legítima continua aceita (a funcionalidade não quebrou)', '2xx', boa.status, boa.ok, 'baixa', 'S31')
     enorme = automovel('data:image/png;base64,' + 'A' * (1_500_000), 'ABC1D26')
     r.checar('C12', CAT, 'Foto gigante (1,5 MB) é recusada', '400', enorme.status, enorme.status == 400, 'baixa', 'S31')
+
+    # --- C13/C14: as técnicas do scanner de SQL injection por diferença de resposta e de travessia de caminho, aplicadas à mão ---------------------------
+    # (o OWASP ZAP marcou /api/grupos-automovel como "SQL Injection" e "Path Traversal"; estas provas explicam por quê foi falso positivo)
+    def grupo(nome):
+        return requisitar('POST', f'{base}/api/grupos-automovel', token=emp.token, ip=ip_unico(), json_corpo={'nome': nome, 'descricao': 'prova'})
+    sufixo = ambiente.secrets.token_hex(3)
+    par = {f'Prova {sufixo} AND 1=1 -- ': None, f'Prova {sufixo} AND 1=2 -- ': None, f"Prova {sufixo}' OR '1'='1": None}
+    status = {nome: grupo(nome).status for nome in par}
+    lista = requisitar('GET', f'{base}/api/grupos-automovel', token=emp.token, ip=ip_unico()).json() or {}
+    nomes = [g.get('nome') for g in (lista.get('registros', []) if isinstance(lista, dict) else [])]
+    r.checar('C13', CAT, 'Condições booleanas no campo texto (AND 1=1 / AND 1=2 / OR 1=1) viram apenas texto: os três registros nascem iguais e voltam letra por letra',
+             'todos 201 e gravados literalmente', f'status {sorted(status.values())}; gravados literalmente: {all(n in nomes for n in par)}',
+             all(s == 201 for s in status.values()) and all(n in nomes for n in par), 'alta', 'S12')
+
+    caminhos = ['../../../../etc/passwd', '..\..\..\windows\win.ini', 'grupos-automovel', '%2e%2e%2f%2e%2e%2fetc%2fpasswd']
+    vazou = []
+    for c in caminhos:
+        resp = grupo(f'{c}{sufixo}')
+        if resp.status >= 500 or 'root:x' in resp.texto or '[fonts]' in resp.texto.lower():
+            vazou.append(c)
+    r.checar('C14', CAT, 'Sequências de travessia de caminho (../, ..\, %2e%2e%2f) em campos de texto viram texto: nenhuma resposta traz arquivo do servidor nem 5xx',
+             'nenhum vazamento', vazou or 'nenhum', not vazou, 'alta', 'S12')
