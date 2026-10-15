@@ -38,7 +38,7 @@ export class CuponsListComponent {
     { id: 'descricao', cabecalho: 'Descrição', truncar: 34, prioridade: 'baixa' },
     { id: 'valorDesconto', cabecalho: 'Desconto', tipo: 'numero', formatar: c => this.formatarValor(c) },
     { id: 'validoAte', cabecalho: 'Válido até', tipo: 'data' },
-    { id: 'usos', cabecalho: 'Usos', tipo: 'numero', valor: c => c.usosAtuais ?? 0, formatar: c => `${c.usosAtuais ?? 0} / ${c.limiteUsos}` },
+    { id: 'usos', cabecalho: 'Usos', tipo: 'numero', valor: c => c.usosAtuais ?? 0, formatar: c => this.formatarUsos(c) },
     { id: 'parceiroNome', cabecalho: 'Parceiro', filtravel: true },
     {
       id: 'ativo',
@@ -64,6 +64,12 @@ export class CuponsListComponent {
       return `${cupom.valorDesconto}%`;
     }
     return formatarMoeda(cupom.valorDesconto);
+  }
+
+  /** "2 / 5" com limite; sem limite (limiteUsos nulo) não escreve "null": "3 (sem limite)". */
+  formatarUsos(cupom: CupomDto): string {
+    const usos = cupom.usosAtuais ?? 0;
+    return cupom.limiteUsos == null ? `${usos} (sem limite)` : `${usos} / ${cupom.limiteUsos}`;
   }
 
   formatarData(dataString?: string): string {
