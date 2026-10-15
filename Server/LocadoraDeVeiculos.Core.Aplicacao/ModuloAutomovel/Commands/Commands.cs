@@ -1,6 +1,7 @@
 ﻿using FluentResults;
 using LocadoraDeVeiculos.Core.Dominio.ModuloAutomovel;
 using MediatR;
+using LocadoraDeVeiculos.Core.Aplicacao.Compartilhado;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -47,7 +48,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloAutomovel.Commands
         Guid GrupoAutomovelId
     );
 
-    public record ExcluirAutomovelCommand(Guid Id) : IRequest<Result<ExcluirAutomovelResult>>;
+    public record ExcluirAutomovelCommand(Guid Id) : IRequest<Result<ExcluirAutomovelResult>>, ISerializadoPorEmpresa;
 
     public record ExcluirAutomovelResult();
 

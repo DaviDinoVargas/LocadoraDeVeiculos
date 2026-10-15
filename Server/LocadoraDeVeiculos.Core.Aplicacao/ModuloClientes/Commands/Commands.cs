@@ -1,5 +1,6 @@
 ﻿using FluentResults;
 using MediatR;
+using LocadoraDeVeiculos.Core.Aplicacao.Compartilhado;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -53,7 +54,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloCliente.Commands
     ) : IRequest<Result<EditarClienteResult>>;
 
     // Commands comuns
-    public record ExcluirClienteCommand(Guid Id) : IRequest<Result<ExcluirClienteResult>>;
+    public record ExcluirClienteCommand(Guid Id) : IRequest<Result<ExcluirClienteResult>>, ISerializadoPorEmpresa;
 
     // Results
     public record CadastrarClienteResult(Guid Id);

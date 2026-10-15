@@ -97,6 +97,27 @@ public sealed class ComandosSerializadosPorReflexaoTests
         Assert.AreEqual(0, foraDoPipeline.Count, "marcador em tipo que nunca passa pelo behavior: " + string.Join("; ", foraDoPipeline));
     }
 
+    [TestMethod]
+    public void ExclusoesQueDisputamComAlugueis_ECadastroDeFuncionario_TambemEntramNaFila()
+    {
+        // Achado pelo ataque J15/J10: excluir um cliente/condutor/carro/taxa enquanto um aluguel dele é criado deixava aluguel órfão, e dois
+        // cadastros de funcionário com o mesmo CPF passavam juntos pela checagem. Estes comandos competem com os de aluguel pela mesma fila.
+        var fora = new[]
+            {
+                typeof(LocadoraDeVeiculos.Core.Aplicacao.ModuloCliente.Commands.ExcluirClienteCommand),
+                typeof(LocadoraDeVeiculos.Core.Aplicacao.ModuloCondutor.Commands.ExcluirCondutorCommand),
+                typeof(LocadoraDeVeiculos.Core.Aplicacao.ModuloAutomovel.Commands.ExcluirAutomovelCommand),
+                typeof(LocadoraDeVeiculos.Core.Aplicacao.ModuloTaxaServico.Commands.ExcluirTaxaServicoCommand),
+                typeof(LocadoraDeVeiculos.Core.Aplicacao.ModuloFuncionario.Commands.CadastrarFuncionarioCommand),
+                typeof(LocadoraDeVeiculos.Core.Aplicacao.ModuloFuncionario.Commands.EditarFuncionarioCommand)
+            }
+            .Where(tipo => !typeof(ISerializadoPorEmpresa).IsAssignableFrom(tipo))
+            .Select(tipo => tipo.Name)
+            .ToList();
+
+        Assert.AreEqual(0, fora.Count, "sem o marcador: " + string.Join("; ", fora));
+    }
+
     // -------- A varredura realmente pega o esquecimento: tipos de propósito, no mesmo formato dos reais --------
 
     private sealed record NovoComandoEsquecido(Guid Id) : IRequest<int>;

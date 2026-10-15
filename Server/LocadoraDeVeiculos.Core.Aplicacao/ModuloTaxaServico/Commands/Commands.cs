@@ -1,6 +1,7 @@
 ﻿using FluentResults;
 using LocadoraDeVeiculos.Core.Dominio.ModuloTaxaServico;
 using MediatR;
+using LocadoraDeVeiculos.Core.Aplicacao.Compartilhado;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -29,7 +30,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloTaxaServico.Commands
         TipoCalculo TipoCalculo
     );
 
-    public record ExcluirTaxaServicoCommand(Guid Id) : IRequest<Result<ExcluirTaxaServicoResult>>;
+    public record ExcluirTaxaServicoCommand(Guid Id) : IRequest<Result<ExcluirTaxaServicoResult>>, ISerializadoPorEmpresa;
 
     public record ExcluirTaxaServicoResult();
 

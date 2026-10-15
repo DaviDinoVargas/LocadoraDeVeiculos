@@ -1,5 +1,6 @@
 ﻿using FluentResults;
 using MediatR;
+using LocadoraDeVeiculos.Core.Aplicacao.Compartilhado;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -41,7 +42,7 @@ namespace LocadoraDeVeiculos.Core.Aplicacao.ModuloCondutor.Commands
         Guid? ClienteId
     );
 
-    public record ExcluirCondutorCommand(Guid Id) : IRequest<Result<ExcluirCondutorResult>>;
+    public record ExcluirCondutorCommand(Guid Id) : IRequest<Result<ExcluirCondutorResult>>, ISerializadoPorEmpresa;
 
     public record ExcluirCondutorResult();
 

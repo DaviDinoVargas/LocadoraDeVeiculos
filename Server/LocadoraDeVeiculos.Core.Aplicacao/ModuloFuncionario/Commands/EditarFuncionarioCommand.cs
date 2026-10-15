@@ -1,5 +1,6 @@
 ﻿using FluentResults;
 using MediatR;
+using LocadoraDeVeiculos.Core.Aplicacao.Compartilhado;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,7 +16,7 @@ public record EditarFuncionarioCommand(
     decimal Salario,
     DateTimeOffset AdmissaoEmUtc,
     string? Senha = null
-) : IRequest<Result<EditarFuncionarioResult>>;
+) : IRequest<Result<EditarFuncionarioResult>>, ISerializadoPorEmpresa;
 
 public record EditarFuncionarioResult(
     string NomeCompleto,

@@ -1,5 +1,6 @@
 ﻿using FluentResults;
 using MediatR;
+using LocadoraDeVeiculos.Core.Aplicacao.Compartilhado;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,6 +17,6 @@ public record CadastrarFuncionarioCommand(
     string ConfirmarSenha,
     decimal Salario,
     DateTimeOffset AdmissaoEmUtc
-) : IRequest<Result<CadastrarFuncionarioResult>>;
+) : IRequest<Result<CadastrarFuncionarioResult>>, ISerializadoPorEmpresa;
 
 public record CadastrarFuncionarioResult(Guid Id);
