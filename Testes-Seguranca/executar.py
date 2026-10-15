@@ -18,7 +18,8 @@ from lib import ambiente  # noqa: E402
 from lib.contexto import Contexto  # noqa: E402
 from lib.registro import Registro  # noqa: E402
 
-MODULOS_ATAQUE = ['a_autenticacao', 'b_autorizacao', 'c_entradas', 'd_configuracao', 'e_ml', 'f_conta_e_privacidade', 'g_robustez', 'h_negocio']
+MODULOS_ATAQUE = ['a_autenticacao', 'b_autorizacao', 'c_entradas', 'd_configuracao', 'e_ml', 'f_conta_e_privacidade', 'g_robustez', 'h_negocio',
+                  'j_concorrencia']
 
 
 def verificar_logs(ctx, pastas_logs):
@@ -76,6 +77,7 @@ def main():
     ap.add_argument('modo', nargs='?', default='tudo', choices=['ataques', 'carga', 'tudo'])
     ap.add_argument('--sem-ml', action='store_true')
     ap.add_argument('--sem-build', action='store_true')
+    ap.add_argument('--so', nargs='+', metavar='MODULO', help='roda só estes módulos de ataque (ex.: --so j_concorrencia), para iterar rápido')
     args = ap.parse_args()
 
     destino_base = ambiente.pasta_de_resultados()
@@ -118,7 +120,7 @@ def main():
                 ctx.ml = None
 
         if args.modo in ('ataques', 'tudo'):
-            for nome in MODULOS_ATAQUE:
+            for nome in (args.so or MODULOS_ATAQUE):
                 print(f'\n== {nome} ==', flush=True)
                 try:
                     importlib.import_module(f'ataques.{nome}').executar(ctx)
