@@ -1040,7 +1040,7 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.Migrations
 
                     b.HasIndex("ClientePessoaJuridicaId");
 
-                    b.HasIndex("Cpf")
+                    b.HasIndex("EmpresaId", "Cpf")
                         .IsUnique()
                         .HasFilter("[TipoCliente] = 1 AND [Excluido] = 0");
 
@@ -1059,7 +1059,7 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(200)");
 
-                    b.HasIndex("Cnpj")
+                    b.HasIndex("EmpresaId", "Cnpj")
                         .IsUnique()
                         .HasFilter("[TipoCliente] = 2 AND [Excluido] = 0");
 

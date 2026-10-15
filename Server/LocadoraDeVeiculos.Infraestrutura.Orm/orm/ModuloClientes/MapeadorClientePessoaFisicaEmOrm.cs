@@ -20,7 +20,7 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloCliente
             builder.Property(c => c.ValidadeCnh)
                 .HasColumnType("datetime2");
 
-            builder.HasIndex(c => c.Cpf)
+            builder.HasIndex(c => new { c.EmpresaId, c.Cpf })
                 .IsUnique()
                 .HasFilter("[TipoCliente] = 1 AND [Excluido] = 0");
 

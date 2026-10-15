@@ -15,7 +15,7 @@ namespace LocadoraDeVeiculos.Infraestrutura.Orm.orm.ModuloCliente
             builder.Property(c => c.NomeFantasia)
                 .HasColumnType("nvarchar(200)");
 
-            builder.HasIndex(c => c.Cnpj)
+            builder.HasIndex(c => new { c.EmpresaId, c.Cnpj })
                 .IsUnique()
                 .HasFilter("[TipoCliente] = 2 AND [Excluido] = 0");
         }
